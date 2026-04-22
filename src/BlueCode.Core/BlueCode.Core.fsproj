@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- COMPILE ORDER IS LOAD-BEARING. F# compiles top-to-bottom.
+       Rule: each file may only reference types/modules defined in earlier files.
+       Domain.fs MUST be first; Ports.fs MUST be last.
+       Plan 01-03 will insert ContextBuffer.fs and ToolRegistry.fs between
+       Router.fs and Ports.fs — the "Domain first, Ports last" invariant is
+       preserved across both Plan 01-01's 3-file state and Plan 01-03's final
+       5-file state. -->
+  <ItemGroup>
+    <Compile Include="Domain.fs" />
+    <Compile Include="Router.fs" />
+    <Compile Include="Ports.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="5.2.0" />
+  </ItemGroup>
+
+</Project>

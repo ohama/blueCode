@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BlueCode.Cli/BlueCode.Cli.fsproj" />
+    <Project Path="src/BlueCode.Core/BlueCode.Core.fsproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BlueCode.Tests/BlueCode.Tests.fsproj" />
+  </Folder>
+</Solution>
