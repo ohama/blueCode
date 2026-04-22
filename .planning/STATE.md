@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 2 of 5 (LLM Client) — In progress
-Plan: 1 of 4 in Phase 2 — COMPLETE
-Status: Phase 2 Plan 1 complete — adapter foundation scaffolded
-Last activity: 2026-04-22 — Completed 02-01-PLAN.md (Message types, Router helpers, Adapters/ scaffold)
+Plan: 2 of 4 in Phase 2 — COMPLETE
+Status: Phase 2 Plan 2 complete — JSON extraction pipeline + schema validator + 13 unit tests
+Last activity: 2026-04-22 — Completed 02-02-PLAN.md (parseLlmResponse pipeline, llmStepSchema, LlmPipelineTests)
 
-Progress: [████░░░░░░] 27% (4/15 plans)
+Progress: [█████░░░░░] 33% (5/15 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 9 min
-- Total execution time: 0.61 hours
+- Total plans completed: 5
+- Average duration: 8 min
+- Total execution time: 0.71 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 32 min | 11 min |
-| 02-llm-client | 1/4 | 4 min | 4 min |
+| 02-llm-client | 2/4 | 10 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (15 min), 01-02 (7 min), 01-03 (10 min), 02-01 (4 min)
-- Trend: stable ~9 min/plan
+- Last 5 plans: 01-02 (7 min), 01-03 (10 min), 02-01 (4 min), 02-02 (6 min)
+- Trend: stable ~7 min/plan
 
 *Updated after each plan completion*
 
@@ -60,6 +60,9 @@ Recent decisions affecting current work:
 - 02-01: FSharp.SystemTextJson 1.4.36 does NOT have JsonFSharpOptions.ToJsonSerializerOptions() — correct pattern is JsonSerializerOptions() + opts.Converters.Add(JsonFSharpConverter()); open System.Text.Json.Serialization (not open FSharp.SystemTextJson)
 - 02-01: Adapter compile order LlmWire.fs -> Json.fs -> QwenHttpClient.fs -> Program.fs is load-bearing for Plan 02-02 Json.fs extension (Plan 02-02 opens BlueCode.Cli.Adapters.LlmWire for LlmStep deserialization)
 - 02-01: QwenHttpClient.CompleteAsync returns Error (SchemaViolation stub) after POST — deliberate placeholder until Plans 02-02/02-03 wire extraction pipeline and spinner
+- 02-02: extractLlmStep returns Result<string, AgentError> (raw JSON) not Result<LlmStep, AgentError> — extraction checks JSON validity (tryParseJsonObject), not LlmStep shape; schema validation enforces shape
+- 02-02: jsonOptions uses JsonFSharpConverter(JsonFSharpOptions.Default().WithUnionUnwrapFieldlessTags(true)) — produces bare-string DU encoding ("System") required for LLM-04; default JsonFSharpConverter() produces {Case/Fields} form
+- 02-02: 7 private helpers in Json.fs (tryBareParse + tryParseJsonObject + extractFirstJsonObject + fencePattern + tryFenceExtract + extractLlmStep + validateAndDeserialize); 3 public bindings (jsonOptions, llmStepSchema, parseLlmResponse)
 
 ### Pending Todos
 
@@ -72,6 +75,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22T09:06:44Z
-Stopped at: Completed 02-01-PLAN.md — Message types, Router helpers, Adapters/ scaffold (LlmWire/Json/QwenHttpClient)
+Last session: 2026-04-22T09:16:15Z
+Stopped at: Completed 02-02-PLAN.md — JSON extraction pipeline, schema validator, LlmPipelineTests (29 tests total)
 Resume file: None
