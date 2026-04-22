@@ -127,8 +127,6 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 
 ## Traceability
 
-Roadmap에서 채워짐.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FND-01 | Phase 1 | Pending |
@@ -138,7 +136,6 @@ Roadmap에서 채워짐.
 | ROU-01 | Phase 1 | Pending |
 | ROU-02 | Phase 1 | Pending |
 | ROU-03 | Phase 1 | Pending |
-| ROU-04 | Phase 5 | Pending |
 | LLM-01 | Phase 2 | Pending |
 | LLM-02 | Phase 2 | Pending |
 | LLM-03 | Phase 2 | Pending |
@@ -168,12 +165,13 @@ Roadmap에서 채워짐.
 | CLI-05 | Phase 5 | Pending |
 | CLI-06 | Phase 5 | Pending |
 | OBS-03 | Phase 5 | Pending |
+| ROU-04 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 36 total
-- Mapped to phases: 36
+- v1 requirements: 37 total
+- Mapped to phases: 37
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-22*
-*Last updated: 2026-04-22 after initial definition*
+*Last updated: 2026-04-22 — traceability finalized after roadmap creation*
