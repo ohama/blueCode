@@ -11,7 +11,7 @@ blueCode is a strong-typed F# agent loop that drives locally-served Qwen 32B/72B
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Foundation** - DU spine, routing pure functions, and project skeleton ✓ 2026-04-22
-- [ ] **Phase 2: LLM Client** - HTTP client, JSON extraction pipeline, schema validation
+- [x] **Phase 2: LLM Client** - HTTP client, JSON extraction pipeline, schema validation ✓ 2026-04-22
 - [ ] **Phase 3: Tool Executor** - 4 tools with security layer and output truncation
 - [ ] **Phase 4: Agent Loop** - End-to-end loop, guards, JSONL step log, Ctrl+C
 - [ ] **Phase 5: CLI Polish** - Multi-turn REPL, verbose/compact toggle, daily-driver switch
@@ -50,9 +50,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: QwenHttpClient.fs — HTTP POST, disposal pattern, temperature defaults, FSharp.SystemTextJson converter
-- [ ] 02-02: JSON extraction pipeline — bare → brace-nest → fence-strip → ParseFailure; JsonSchema.Net validator
-- [ ] 02-03: Error mapping + spinner integration (Spectre.Console); manual smoke test against live localhost:8000
+- [x] 02-01: QwenHttpClient.fs — HTTP POST, disposal pattern, temperature defaults, FSharp.SystemTextJson converter
+- [x] 02-02: JSON extraction pipeline — bare → brace-nest → fence-strip → ParseFailure; JsonSchema.Net validator
+- [x] 02-03: Error mapping + spinner integration (Spectre.Console); manual smoke test against live localhost:8000
 
 ---
 
@@ -124,7 +124,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | ✓ Complete | 2026-04-22 |
-| 2. LLM Client | 0/3 | Not started | - |
+| 2. LLM Client | 3/3 | ✓ Complete | 2026-04-22 |
 | 3. Tool Executor | 0/3 | Not started | - |
 | 4. Agent Loop | 0/3 | Not started | - |
 | 5. CLI Polish | 0/3 | Not started | - |

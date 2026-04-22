@@ -138,12 +138,12 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 | ROU-01 | Phase 1 | ✓ Complete |
 | ROU-02 | Phase 1 | ✓ Complete |
 | ROU-03 | Phase 1 | ✓ Complete |
-| LLM-01 | Phase 2 | Pending |
-| LLM-02 | Phase 2 | Pending |
-| LLM-03 | Phase 2 | Pending |
-| LLM-04 | Phase 2 | Pending |
-| LLM-05 | Phase 2 | Pending |
-| LLM-06 | Phase 2 | Pending |
+| LLM-01 | Phase 2 | ✓ Complete (automated + manual smoke via BLUECODE_SMOKE_TEST=1) |
+| LLM-02 | Phase 2 | ✓ Complete |
+| LLM-03 | Phase 2 | ✓ Complete |
+| LLM-04 | Phase 2 | ✓ Complete |
+| LLM-05 | Phase 2 | ✓ Complete |
+| LLM-06 | Phase 2 | ✓ Complete |
 | TOOL-01 | Phase 3 | Pending |
 | TOOL-02 | Phase 3 | Pending |
 | TOOL-03 | Phase 3 | Pending |
@@ -178,6 +178,8 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 - Unmapped: 0 ✓
 
 **Phase 1 (Foundation) completed 2026-04-22:** 7 requirements + TOOL-07 DU shape marked Complete.
+
+**Phase 2 (LLM Client) completed 2026-04-22:** 6 requirements (LLM-01~06) marked Complete. 34/34 automated tests pass. SC-01 live Qwen round-trip is a manual verification gate — run `BLUECODE_SMOKE_TEST=1 dotnet test BlueCode.slnx --filter "Smoke"` with vLLM serving at localhost:8000.
 
 **Added 2026-04-22 (post-Phase 1):** OBS-04 (Phase 4, step timing) + CLI-07 (Phase 5, `--trace` flag). Step timing fields require additive change to `Step` record in Domain.fs during Phase 4 implementation — Phase 1 delivery remains valid (Step record was defined with the intent to accept additive fields).
 
