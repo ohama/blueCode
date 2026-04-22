@@ -93,6 +93,7 @@ let rootTests = testList "all" [
     BlueCode.Tests.ToLlmOutputTests.toLlmOutputTests
     BlueCode.Tests.SmokeTests.smokeTests
     BlueCode.Tests.FileToolsTests.fileToolsTests
+    BlueCode.Tests.BashSecurityTests.bashSecurityTests
 ]
 
 [<EntryPoint>]
