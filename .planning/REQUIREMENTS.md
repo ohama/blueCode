@@ -144,14 +144,14 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 | LLM-04 | Phase 2 | ✓ Complete |
 | LLM-05 | Phase 2 | ✓ Complete |
 | LLM-06 | Phase 2 | ✓ Complete |
-| TOOL-01 | Phase 3 | Pending |
-| TOOL-02 | Phase 3 | Pending |
-| TOOL-03 | Phase 3 | Pending |
-| TOOL-04 | Phase 3 | Pending |
-| TOOL-05 | Phase 3 | Pending |
-| TOOL-06 | Phase 3 | Pending |
+| TOOL-01 | Phase 3 | ✓ Complete |
+| TOOL-02 | Phase 3 | ✓ Complete |
+| TOOL-03 | Phase 3 | ✓ Complete |
+| TOOL-04 | Phase 3 | ✓ Complete |
+| TOOL-05 | Phase 3 | ✓ Complete |
+| TOOL-06 | Phase 3 | ✓ Complete |
 | TOOL-07 (DU shape) | Phase 1 | ✓ Complete (shipped as part of FND-02 so Tool DU is exhaustively matchable; see FND-02 note) |
-| TOOL-07 (semantic contract) | Phase 3 | Pending (case-by-case generation rules, security denier chain, timeout semantics) |
+| TOOL-07 (semantic contract) | Phase 3 | ✓ Complete (case-by-case generation rules, security denier chain, timeout semantics) |
 | LOOP-01 | Phase 4 | Pending |
 | LOOP-02 | Phase 4 | Pending |
 | LOOP-03 | Phase 4 | Pending |
@@ -180,6 +180,8 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 **Phase 1 (Foundation) completed 2026-04-22:** 7 requirements + TOOL-07 DU shape marked Complete.
 
 **Phase 2 (LLM Client) completed 2026-04-22:** 6 requirements (LLM-01~06) marked Complete. 34/34 automated tests pass. SC-01 live Qwen round-trip is a manual verification gate — run `BLUECODE_SMOKE_TEST=1 dotnet test BlueCode.slnx --filter "Smoke"` with vLLM serving at localhost:8000.
+
+**Phase 3 (Tool Executor) completed 2026-04-23:** 7 requirements (TOOL-01~07) marked Complete. 153/153 automated tests pass (1 smoke ignored). bash_security.py 1262줄을 BashSecurity.fs (1061줄, 22 validators, 7 helpers, 7 constants)로 충실 포팅. SecurityDenied 게이트가 Process.Start 전에 실행됨을 sentinel-file 보존으로 검증.
 
 **Added 2026-04-22 (post-Phase 1):** OBS-04 (Phase 4, step timing) + CLI-07 (Phase 5, `--trace` flag). Step timing fields require additive change to `Step` record in Domain.fs during Phase 4 implementation — Phase 1 delivery remains valid (Step record was defined with the intent to accept additive fields).
 

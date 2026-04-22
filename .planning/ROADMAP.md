@@ -12,7 +12,7 @@ blueCode is a strong-typed F# agent loop that drives locally-served Qwen 32B/72B
 
 - [x] **Phase 1: Foundation** - DU spine, routing pure functions, and project skeleton ✓ 2026-04-22
 - [x] **Phase 2: LLM Client** - HTTP client, JSON extraction pipeline, schema validation ✓ 2026-04-22
-- [ ] **Phase 3: Tool Executor** - 4 tools with security layer and output truncation
+- [x] **Phase 3: Tool Executor** - 4 tools with security layer and output truncation ✓ 2026-04-23
 - [ ] **Phase 4: Agent Loop** - End-to-end loop, guards, JSONL step log, Ctrl+C
 - [ ] **Phase 5: CLI Polish** - Multi-turn REPL, verbose/compact toggle, daily-driver switch
 
@@ -70,9 +70,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: FsToolExecutor.fs — read_file, write_file, list_dir with path validation and output truncation
-- [ ] 03-02: run_shell — 30s timeout, stdout/stderr caps, working-directory lock
-- [ ] 03-03: Shell security validator chain — port bash_security.py (command substitution, IFS, destructive patterns, fork bomb, redirect chain)
+- [x] 03-01: FsToolExecutor.fs — read_file, write_file, list_dir with path validation and output truncation
+- [x] 03-02: run_shell — 30s timeout, stdout/stderr caps, working-directory lock
+- [x] 03-03: Shell security validator chain — port bash_security.py (command substitution, IFS, destructive patterns, fork bomb, redirect chain)
 
 ---
 
@@ -125,6 +125,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | ✓ Complete | 2026-04-22 |
 | 2. LLM Client | 3/3 | ✓ Complete | 2026-04-22 |
-| 3. Tool Executor | 0/3 | Not started | - |
+| 3. Tool Executor | 3/3 | ✓ Complete | 2026-04-23 |
 | 4. Agent Loop | 0/3 | Not started | - |
 | 5. CLI Polish | 0/3 | Not started | - |
