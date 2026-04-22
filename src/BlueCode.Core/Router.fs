@@ -37,3 +37,18 @@ let modelToEndpoint : Model -> Endpoint = function
 let endpointToUrl : Endpoint -> string = function
     | Port8000 -> "http://127.0.0.1:8000/v1/chat/completions"
     | Port8001 -> "http://127.0.0.1:8001/v1/chat/completions"
+
+/// Maps a Model to the exact model-name string used in the vLLM
+/// OpenAI `"model"` request field. These strings MUST match whatever
+/// vLLM reports via GET /v1/models on the local host (Phase 5 OBS-03
+/// will query this at runtime; Phase 2 hardcodes the served names).
+let modelToName : Model -> string = function
+    | Qwen32B -> "qwen2.5-coder-32b-instruct"
+    | Qwen72B -> "qwen2.5-coder-72b-instruct"
+
+/// Per-model sampling temperature (LLM-05). Hardcoded; MUST NOT be
+/// exposed to users via CLI flags. 32B uses 0.2 (precise code edits);
+/// 72B uses 0.4 (more exploratory reasoning for Debug/Design/Analysis).
+let modelToTemperature : Model -> float = function
+    | Qwen32B -> 0.2
+    | Qwen72B -> 0.4

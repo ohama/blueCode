@@ -130,3 +130,23 @@ type AgentResult = {
     LoopCount   : int
     Model       : Model
 }
+
+// ── LLM wire message (chat history primitive) ────────────────────────────────
+
+/// Role of a single chat message in LLM wire protocol.
+/// Matches OpenAI chat-completions role enum; System = system prompt,
+/// User = end-user turn, Assistant = prior LLM response echoed back
+/// in multi-turn context (Phase 4+).
+type MessageRole =
+    | System
+    | User
+    | Assistant
+
+/// One chat message. Adapter-wire type used by ILlmClient and consumed
+/// by QwenHttpClient to assemble the OpenAI `{role, content}` array.
+/// Phase 2 adds this as an additive Core type so the port signature
+/// can replace `string list` with `Message list` (LLM-01 type safety).
+type Message = {
+    Role    : MessageRole
+    Content : string
+}

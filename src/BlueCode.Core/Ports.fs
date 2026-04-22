@@ -10,7 +10,7 @@ open BlueCode.Core.Domain
 /// Uses task {} semantics; async CE is banned in Core — see scripts/check-no-async.sh.
 type ILlmClient =
     abstract member CompleteAsync :
-        messages : string list
+        messages : Message list
      -> model    : Model
      -> ct       : CancellationToken
      -> Task<Result<LlmOutput, AgentError>>
