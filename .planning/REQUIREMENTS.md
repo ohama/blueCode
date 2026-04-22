@@ -129,13 +129,13 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
-| FND-02 | Phase 1 | Pending |
-| FND-03 | Phase 1 | Pending |
-| FND-04 | Phase 1 | Pending |
-| ROU-01 | Phase 1 | Pending |
-| ROU-02 | Phase 1 | Pending |
-| ROU-03 | Phase 1 | Pending |
+| FND-01 | Phase 1 | ✓ Complete |
+| FND-02 | Phase 1 | ✓ Complete |
+| FND-03 | Phase 1 | ✓ Complete |
+| FND-04 | Phase 1 | ✓ Complete |
+| ROU-01 | Phase 1 | ✓ Complete |
+| ROU-02 | Phase 1 | ✓ Complete |
+| ROU-03 | Phase 1 | ✓ Complete |
 | LLM-01 | Phase 2 | Pending |
 | LLM-02 | Phase 2 | Pending |
 | LLM-03 | Phase 2 | Pending |
@@ -148,7 +148,7 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 | TOOL-04 | Phase 3 | Pending |
 | TOOL-05 | Phase 3 | Pending |
 | TOOL-06 | Phase 3 | Pending |
-| TOOL-07 (DU shape) | Phase 1 | Pending (shipped as part of FND-02 so Tool DU is exhaustively matchable; see FND-02 note) |
+| TOOL-07 (DU shape) | Phase 1 | ✓ Complete (shipped as part of FND-02 so Tool DU is exhaustively matchable; see FND-02 note) |
 | TOOL-07 (semantic contract) | Phase 3 | Pending (case-by-case generation rules, security denier chain, timeout semantics) |
 | LOOP-01 | Phase 4 | Pending |
 | LOOP-02 | Phase 4 | Pending |
@@ -172,6 +172,8 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 - v1 requirements: 37 total (TOOL-07 split into two rows for Phase 1 DU shape vs. Phase 3 semantic contract — still one requirement, two delivery points)
 - Mapped to phases: 37
 - Unmapped: 0 ✓
+
+**Phase 1 (Foundation) completed 2026-04-22:** 7 requirements + TOOL-07 DU shape marked Complete.
 
 ---
 *Requirements defined: 2026-04-22*

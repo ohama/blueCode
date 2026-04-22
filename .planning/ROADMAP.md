@@ -10,7 +10,7 @@ blueCode is a strong-typed F# agent loop that drives locally-served Qwen 32B/72B
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Foundation** - DU spine, routing pure functions, and project skeleton
+- [x] **Phase 1: Foundation** - DU spine, routing pure functions, and project skeleton ✓ 2026-04-22
 - [ ] **Phase 2: LLM Client** - HTTP client, JSON extraction pipeline, schema validation
 - [ ] **Phase 3: Tool Executor** - 4 tools with security layer and output truncation
 - [ ] **Phase 4: Agent Loop** - End-to-end loop, guards, JSONL step log, Ctrl+C
@@ -31,9 +31,9 @@ blueCode is a strong-typed F# agent loop that drives locally-served Qwen 32B/72B
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Solution scaffold — two-project layout, NuGet refs, F# compile order in .fsproj files
-- [ ] 01-02: Domain.fs + Router.fs — all DU cases, classifyIntent, intentToModel, modelToEndpoint
-- [ ] 01-03: Ports.fs + ContextBuffer.fs + ToolRegistry stub + async-ban CI script (CLI entry stays literal stub until Phase 5)
+- [x] 01-01: Solution scaffold — two-project layout, NuGet refs, F# compile order in .fsproj files
+- [x] 01-02: Domain.fs + Router.fs — all DU cases, classifyIntent, intentToModel, modelToEndpoint
+- [x] 01-03: Ports.fs + ContextBuffer.fs + ToolRegistry stub + async-ban CI script (CLI entry stays literal stub until Phase 5)
 
 ---
 
@@ -121,7 +121,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 3/3 | ✓ Complete | 2026-04-22 |
 | 2. LLM Client | 0/3 | Not started | - |
 | 3. Tool Executor | 0/3 | Not started | - |
 | 4. Agent Loop | 0/3 | Not started | - |
