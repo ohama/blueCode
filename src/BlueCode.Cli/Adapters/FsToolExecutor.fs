@@ -2,10 +2,12 @@ module BlueCode.Cli.Adapters.FsToolExecutor
 
 open System
 open System.IO
+open System.Diagnostics
 open System.Threading
 open System.Threading.Tasks
 open BlueCode.Core.Domain
 open BlueCode.Core.Ports
+open BlueCode.Cli.Adapters.BashSecurity
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -18,6 +20,28 @@ let private MESSAGE_HISTORY_CAP = 2000
 /// Maximum list_dir recursion depth. Requests above this are silently
 /// clamped to DEFAULT_LIST_DEPTH_MAX.
 let private DEFAULT_LIST_DEPTH_MAX = 5
+
+/// TOOL-04: raw stdout cap for run_shell. 100KB. Applied BEFORE TOOL-06
+/// message-history truncation.
+let private SHELL_STDOUT_CAP = 100 * 1024
+
+/// TOOL-04: raw stderr cap for run_shell. 10KB.
+let private SHELL_STDERR_CAP = 10 * 1024
+
+/// TOOL-04: shell timeout in seconds. Hardcoded per requirement.
+/// Tool.RunShell carries Timeout in MILLISECONDS; we take that value if
+/// it is less than or equal to the global cap, otherwise clamp to 30s.
+let private SHELL_TIMEOUT_SECONDS = 30
+
+/// Cap a raw string to maxBytes characters. (Characters, not bytes —
+/// F# strings are UTF-16 .NET strings. For this resource-limit layer
+/// we treat one character as one "byte" of budget; this is an
+/// approximation that is conservative for ASCII and slightly under-caps
+/// for multi-byte UTF-8. Acceptable for a 100KB cap.)
+let private capOutput (raw: string) (maxChars: int) : string =
+    if isNull raw then "" else
+    if raw.Length <= maxChars then raw
+    else raw.Substring(0, maxChars)
 
 /// Default list_dir depth when Tool.ListDir carries None for depth.
 let private DEFAULT_LIST_DEPTH = 1
@@ -202,11 +226,111 @@ let private listDirImpl
                 return Ok (Failure (1, ex.Message))
     }
 
-// ── run_shell stub (Plan 03-02 replaces) ──────────────────────────────────────
+// ── run_shell (TOOL-04, TOOL-05 integration) ─────────────────────────────────
+//
+// Flow (sequentially, abort at first failure):
+//   1. BashSecurity.validateCommand cmd
+//        -> Error reason -> Ok (SecurityDenied reason). Process NEVER spawned.
+//        -> Ok ()         -> continue.
+//   2. Spawn /bin/bash -c cmd with:
+//        ProcessStartInfo.WorkingDirectory = projectRoot   (working-dir lock)
+//        RedirectStandardOutput = true
+//        RedirectStandardError  = true
+//        UseShellExecute        = false
+//   3. Create a linked CancellationTokenSource:
+//        cts = CancellationTokenSource.CreateLinkedTokenSource(ct)
+//        cts.CancelAfter(TimeSpan.FromSeconds SHELL_TIMEOUT_SECONDS)
+//      The inner token fires either when the CALLER cancels (outer ct) OR
+//      when the 30s timer elapses.
+//   4. Read stdout AND stderr CONCURRENTLY (F# 10 `let! ... and! ...`) —
+//      sequential read deadlocks when the process fills whichever buffer
+//      is not being drained (dotnet/runtime #98347; PITFALLS.md C-2).
+//   5. Await WaitForExitAsync(cts.Token).
+//   6. On OperationCanceledException:
+//        If outer ct was cancelled -> Error UserCancelled
+//        Else (timeout fired)       -> kill entire process tree; Ok (Timeout 30)
+//   7. On success: apply stdout 100KB cap, stderr 10KB cap (capOutput),
+//      THEN apply 2000-char TOOL-06 truncation (truncateOutput) before
+//      wrapping in ToolResult.Success or ToolResult.Failure.
+//
+// SHELL CHOICE: /bin/bash -c (NOT /bin/sh). The BashSecurity validators
+// assume bash semantics (brace expansion, $() substitution, etc.).
+// /bin/bash is always available on macOS (primary target). If bash is
+// absent, Process.Start throws; caught as Error (ToolFailure ...).
 
-let private runShellStub () : Task<Result<ToolResult, AgentError>> =
+let private runShellImpl
+    (projectRoot: string)
+    (cmd: string)
+    (ct: CancellationToken)
+    : Task<Result<ToolResult, AgentError>>
+    =
     task {
-        return Ok (Failure (-1, "run_shell not implemented in 03-01 — completed by Plan 03-02"))
+        // Step 1: security gate — ALWAYS runs first; process is NEVER spawned
+        //         if validateCommand returns Error.
+        match validateCommand cmd with
+        | Error reason ->
+            return Ok (SecurityDenied reason)
+        | Ok () ->
+            // Step 2: process setup
+            let psi = ProcessStartInfo("/bin/bash")
+            psi.ArgumentList.Add("-c")
+            psi.ArgumentList.Add(cmd)
+            psi.RedirectStandardOutput <- true
+            psi.RedirectStandardError  <- true
+            psi.UseShellExecute        <- false
+            psi.CreateNoWindow         <- true
+            psi.WorkingDirectory       <- projectRoot
+
+            // Step 3: linked CTS for 30s timeout + caller cancellation
+            use cts = CancellationTokenSource.CreateLinkedTokenSource(ct)
+            cts.CancelAfter(TimeSpan.FromSeconds(float SHELL_TIMEOUT_SECONDS))
+
+            // Attempt to start the process. Return early if Process.Start throws.
+            let startResult =
+                try
+                    Ok (Process.Start(psi))
+                with ex ->
+                    Error ex
+
+            match startResult with
+            | Error ex ->
+                // 30s hardcoded — _timeoutMs reserved for Phase 5 --timeout flag (see plan objective).
+                // The Timeout field on Tool.RunShell is carried for error-reporting fidelity
+                // only; runtime always uses SHELL_TIMEOUT_SECONDS in this phase.
+                return Error (ToolFailure (RunShell (Command cmd, BlueCode.Core.Domain.Timeout (SHELL_TIMEOUT_SECONDS * 1000)), ex))
+            | Ok proc ->
+                use _ = proc   // Dispose proc when this scope exits.
+                try
+                    // Step 4: CONCURRENT read (deadlock avoidance — dotnet/runtime #98347)
+                    let! stdout = proc.StandardOutput.ReadToEndAsync(cts.Token)
+                    and! stderr = proc.StandardError.ReadToEndAsync(cts.Token)
+                    // Step 5: wait for exit (both streams already closed at this point)
+                    do! proc.WaitForExitAsync(cts.Token)
+
+                    // Step 7: apply two-stage cap — raw resource cap first, then
+                    //         TOOL-06 message-history cap.
+                    let stdoutCapped = stdout |> fun s -> capOutput s SHELL_STDOUT_CAP |> truncateOutput
+                    let stderrCapped = stderr |> fun s -> capOutput s SHELL_STDERR_CAP |> truncateOutput
+
+                    if proc.ExitCode = 0 then
+                        return Ok (Success stdoutCapped)
+                    else
+                        return Ok (Failure (proc.ExitCode, stderrCapped))
+                with
+                | :? OperationCanceledException ->
+                    // Step 6: disambiguate caller cancel vs 30s timeout
+                    if ct.IsCancellationRequested then
+                        // Caller cancelled — kill tree, propagate as UserCancelled.
+                        try proc.Kill(entireProcessTree = true) with _ -> ()
+                        return Error UserCancelled
+                    else
+                        // Timeout fired — kill tree, return ToolResult.Timeout.
+                        try proc.Kill(entireProcessTree = true) with _ -> ()
+                        return Ok (ToolResult.Timeout SHELL_TIMEOUT_SECONDS)
+                | ex ->
+                    try proc.Kill(entireProcessTree = true) with _ -> ()
+                    // 30s hardcoded — _timeoutMs reserved for Phase 5 --timeout flag (see plan objective).
+                    return Error (ToolFailure (RunShell (Command cmd, BlueCode.Core.Domain.Timeout (SHELL_TIMEOUT_SECONDS * 1000)), ex))
     }
 
 // ── Public factory ────────────────────────────────────────────────────────────
@@ -225,5 +349,5 @@ let create (projectRoot: string) : IToolExecutor =
             | ReadFile  (FilePath path, lineRange)        -> readFileImpl  rootNormalized path lineRange ct
             | WriteFile (FilePath path, content)          -> writeFileImpl rootNormalized path content   ct
             | ListDir   (FilePath path, depth)            -> listDirImpl   rootNormalized path depth     ct
-            | RunShell  (_, _)                            -> runShellStub ()
+            | RunShell  (Command cmd, BlueCode.Core.Domain.Timeout _timeoutMs) -> runShellImpl rootNormalized cmd ct
     }
