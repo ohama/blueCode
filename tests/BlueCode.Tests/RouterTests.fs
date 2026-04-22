@@ -90,6 +90,8 @@ let allTests = testList "Router" [
 let rootTests = testList "all" [
     allTests
     BlueCode.Tests.LlmPipelineTests.allTests
+    BlueCode.Tests.ToLlmOutputTests.toLlmOutputTests
+    BlueCode.Tests.SmokeTests.smokeTests
 ]
 
 [<EntryPoint>]
