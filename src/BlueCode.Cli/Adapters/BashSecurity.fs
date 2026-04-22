@@ -926,7 +926,11 @@ let private validateZshDangerousCommands (ctx: ValidationCtx) : SecurityDecision
 let private runChain (ctx: ValidationCtx) : SecurityDecision =
     // Step 3 — early validators (order matches Python)
     // validateGitCommit MUST be here — do NOT comment out.
-    let early = [ validateEmpty; validateIncompleteCommands; validateGitCommit ]
+    let early = [
+        validateEmpty
+        validateIncompleteCommands
+        validateGitCommit
+    ]
 
     let earlyResult =
         early
