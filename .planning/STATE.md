@@ -9,29 +9,30 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 1 of 5 (Foundation) — COMPLETE
-Plan: 3 of 3 in Phase 1 — COMPLETE
-Status: Phase 1 complete — all 5 Success Criteria verified
-Last activity: 2026-04-22 — Completed 01-03-PLAN.md (Ports/ContextBuffer/ToolRegistry/async-ban)
+Phase: 2 of 5 (LLM Client) — In progress
+Plan: 1 of 4 in Phase 2 — COMPLETE
+Status: Phase 2 Plan 1 complete — adapter foundation scaffolded
+Last activity: 2026-04-22 — Completed 02-01-PLAN.md (Message types, Router helpers, Adapters/ scaffold)
 
-Progress: [███░░░░░░░] 20% (3/15 plans)
+Progress: [████░░░░░░] 27% (4/15 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 11 min
-- Total execution time: 0.54 hours
+- Total plans completed: 4
+- Average duration: 9 min
+- Total execution time: 0.61 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 32 min | 11 min |
+| 02-llm-client | 1/4 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (15 min), 01-02 (7 min), 01-03 (10 min)
-- Trend: stable ~10 min/plan
+- Last 5 plans: 01-01 (15 min), 01-02 (7 min), 01-03 (10 min), 02-01 (4 min)
+- Trend: stable ~9 min/plan
 
 *Updated after each plan completion*
 
@@ -56,6 +57,9 @@ Recent decisions affecting current work:
 - 01-03: ContextBuffer.fs and ToolRegistry.fs placed in Phase 1 (ARCHITECTURE.md labels Phase 2/Phase 4) for compile-order slot reservation — avoids future FS0433/FS0039 restructuring
 - 01-03: Ports.fs comment containing literal `async {}` token triggers false-positive in grep script — always rephrase to avoid the literal token in Core *.fs comments
 - 01-03: Phase 1 all 5 Success Criteria verified empirically; PHASE-SUMMARY.md records both SC2 FS0025 messages (Intent + ToolResult)
+- 02-01: FSharp.SystemTextJson 1.4.36 does NOT have JsonFSharpOptions.ToJsonSerializerOptions() — correct pattern is JsonSerializerOptions() + opts.Converters.Add(JsonFSharpConverter()); open System.Text.Json.Serialization (not open FSharp.SystemTextJson)
+- 02-01: Adapter compile order LlmWire.fs -> Json.fs -> QwenHttpClient.fs -> Program.fs is load-bearing for Plan 02-02 Json.fs extension (Plan 02-02 opens BlueCode.Cli.Adapters.LlmWire for LlmStep deserialization)
+- 02-01: QwenHttpClient.CompleteAsync returns Error (SchemaViolation stub) after POST — deliberate placeholder until Plans 02-02/02-03 wire extraction pipeline and spinner
 
 ### Pending Todos
 
@@ -68,6 +72,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22T07:46:55Z
-Stopped at: Completed 01-03-PLAN.md — Ports/ContextBuffer/ToolRegistry stubs + async-ban script; Phase 1 complete
+Last session: 2026-04-22T09:06:44Z
+Stopped at: Completed 02-01-PLAN.md — Message types, Router helpers, Adapters/ scaffold (LlmWire/Json/QwenHttpClient)
 Resume file: None
