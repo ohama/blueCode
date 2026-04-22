@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** Phase 3 — Tool Handlers
+**Current focus:** Phase 4 — Agent Loop
 
 ## Current Position
 
-Phase: 3 of 5 (Tool Executor) — In progress
-Plan: 3 of 3 in Phase 3 — COMPLETE (Phase 3 plan 03-03 done; only 03-02 run_shell remains)
-Status: Phase 3, Plan 2 complete (BashSecurity port) — 22 validators, 97 new tests, 146 total passing
-Last activity: 2026-04-22 — Completed 03-03-PLAN.md (BashSecurity.fs full port of bash_security.py, BashSecurityTests.fs with 97 Expecto tests)
+Phase: 3 of 5 (Tool Executor) — COMPLETE
+Plan: 3 of 3 in Phase 3 — COMPLETE
+Status: Phase 3 complete — all 6 ROADMAP success criteria met, 153 tests pass (1 ignored smoke)
+Last activity: 2026-04-22 — Completed 03-02-PLAN.md (runShellImpl wired: BashSecurity gate + /bin/bash process + 30s timeout + concurrent read + two-stage cap; RunShellTests.fs with 8 tests; TOOL-07 ToolResult semantic contract closed)
 
-Progress: [████████░░] 60% (9/15 plans)
+Progress: [████████████░░] 60% (9/15 plans)
 
 ## Performance Metrics
 
@@ -29,10 +29,10 @@ Progress: [████████░░] 60% (9/15 plans)
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 32 min | 11 min |
 | 02-llm-client | 3/3 | 13 min | 4 min |
-| 03-tool-executor | 2/3 | 20 min | 10 min |
+| 03-tool-executor | 3/3 | 27 min | 9 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (6 min), 02-03 (3 min), 03-01 (5 min), 03-03 (15 min)
+- Last 5 plans: 02-03 (3 min), 03-01 (5 min), 03-03 (15 min), 03-02 (7 min)
 - Trend: stable ~4-10 min/plan (03-03 longer due to 1261-line Python port)
 
 *Updated after each plan completion*
@@ -78,6 +78,12 @@ Recent decisions affecting current work:
 - 03-03: Fork bomb :(){ :|:& };: NOT blocked by validator chain (matches Python behavior — no destructive pattern covers it)
 - 03-03: READ_ONLY_COMMANDS / is_command_read_only intentionally skipped — informational only in Python, never a deny gate
 - 03-03: unicodeWsRe uses UTF-8 embedded chars in source (verified correct); test file uses char 0x00A0 / char 0xFEFF to avoid invisible-char hazard
+- 03-02: 30s timeout hardcoded in SHELL_TIMEOUT_SECONDS — Tool.RunShell Timeout field deferred to Phase 5 --timeout flag; both ToolFailure sites carry inline comment
+- 03-02: /bin/bash -c (not /bin/sh) — BashSecurity validators assume bash semantics
+- 03-02: Process.Start wrapped in Ok/Error (not try/finally) — avoids F# task CE type constraint errors with nested try/finally inside match branches
+- 03-02: use _ = proc for Dispose scope — idiomatic F# without try/finally in task CE
+- 03-02: ToolResult.Timeout 30 (seconds) returned on timeout; SHELL_TIMEOUT_SECONDS * 1000 in ToolFailure for error fidelity
+- 03-02: Concurrent stdout/stderr read via F# 10 let!/and! — sequential read deadlocks when stderr buffer fills (dotnet/runtime #98347)
 
 ### Pending Todos
 
@@ -90,6 +96,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-22T23:01:00Z
-Stopped at: Completed 03-03-PLAN.md — BashSecurity.fs full port (22 validators, 7 helpers, 7 constants), BashSecurityTests.fs (97 tests), 146 total tests passing
+Last session: 2026-04-22T23:12:00Z
+Stopped at: Completed 03-02-PLAN.md — Phase 3 complete. runShellImpl wired (BashSecurity gate, /bin/bash process lifecycle, concurrent streams, 30s timeout, two-stage cap). RunShellTests.fs (8 tests). TOOL-07 closed. 153 tests pass. PHASE-SUMMARY.md written.
 Resume file: None
