@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 2 of 5 (LLM Client) — COMPLETE
-Plan: 3 of 3 in Phase 2 — COMPLETE
-Status: Phase 2 complete — QwenHttpClient fully wired, 34 tests pass (1 smoke skipped), PHASE-SUMMARY.md written
-Last activity: 2026-04-22 — Completed 02-03-PLAN.md (CompleteAsync wiring, spinner, error mapping, toLlmOutput, ToLlmOutputTests, SmokeTests)
+Phase: 3 of 5 (Tool Executor) — In progress
+Plan: 1 of 3 in Phase 3 — COMPLETE
+Status: Phase 3, Plan 1 complete — FsToolExecutor scaffolded, path validation, truncation, 15 new tests, 49 total passing
+Last activity: 2026-04-22 — Completed 03-01-PLAN.md (Domain.fs Tool DU amendment, BashSecurity.fs placeholder, FsToolExecutor.fs with read_file/write_file/list_dir + RunShell stub, FileToolsTests.fs)
 
-Progress: [██████░░░░] 40% (6/15 plans)
+Progress: [███████░░░] 47% (7/15 plans)
 
 ## Performance Metrics
 
@@ -29,10 +29,11 @@ Progress: [██████░░░░] 40% (6/15 plans)
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 32 min | 11 min |
 | 02-llm-client | 3/3 | 13 min | 4 min |
+| 03-tool-executor | 1/3 | 5 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (10 min), 02-01 (4 min), 02-02 (6 min), 02-03 (3 min)
-- Trend: accelerating ~4-6 min/plan
+- Last 5 plans: 02-01 (4 min), 02-02 (6 min), 02-03 (3 min), 03-01 (5 min)
+- Trend: stable ~4-6 min/plan
 
 *Updated after each plan completion*
 
@@ -67,6 +68,11 @@ Recent decisions affecting current work:
 - 02-03: withSpinner wraps postAsync ONLY; parseLlmResponse + toLlmOutput outside spinner scope
 - 02-03: ToolInput._raw passthrough is Phase 2 placeholder — Phase 3 TOOL-01..04 replaces with typed per-action input parsing
 - 02-03: TaskCanceledException disambiguation — ex.CancellationToken = ct -> UserCancelled; fallthrough -> LlmUnreachable (timeout)
+- 03-01: Domain.fs Tool DU amendment is additive only — ReadFile gains lineRange option, ListDir gains depth option. ToolResult DU frozen.
+- 03-01: BashSecurity.fs validateCommand always Ok (stub). RunShell is Failure stub. Both are compensating controls — neither is live until 03-02 (run_shell) + 03-03 (validators) complete.
+- 03-01: Trailing-separator fix: rootWithSep = projectRoot + Path.DirectorySeparatorChar prevents sibling-directory prefix attack (PITFALLS.md D-3)
+- 03-01: FileToolsTests.fs compiled BEFORE RouterTests.fs (F# FS0433: [<EntryPoint>] must be in last compiled file)
+- 03-01: Timeout DU name collision (Domain.Timeout type vs ToolResult.Timeout case) — resolve with BlueCode.Core.Domain.Timeout in test code
 
 ### Pending Todos
 
@@ -79,6 +85,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-22T09:22:54Z
-Stopped at: Completed 02-03-PLAN.md — QwenHttpClient completion, ToLlmOutputTests, SmokeTests, PHASE-SUMMARY.md (34 tests total)
+Last session: 2026-04-22T22:42:27Z
+Stopped at: Completed 03-01-PLAN.md — FsToolExecutor scaffold, BashSecurity placeholder, FileToolsTests.fs (49 tests total)
 Resume file: None
