@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 3 of 5 (Tool Executor) — In progress
-Plan: 1 of 3 in Phase 3 — COMPLETE
-Status: Phase 3, Plan 1 complete — FsToolExecutor scaffolded, path validation, truncation, 15 new tests, 49 total passing
-Last activity: 2026-04-22 — Completed 03-01-PLAN.md (Domain.fs Tool DU amendment, BashSecurity.fs placeholder, FsToolExecutor.fs with read_file/write_file/list_dir + RunShell stub, FileToolsTests.fs)
+Plan: 3 of 3 in Phase 3 — COMPLETE (Phase 3 plan 03-03 done; only 03-02 run_shell remains)
+Status: Phase 3, Plan 2 complete (BashSecurity port) — 22 validators, 97 new tests, 146 total passing
+Last activity: 2026-04-22 — Completed 03-03-PLAN.md (BashSecurity.fs full port of bash_security.py, BashSecurityTests.fs with 97 Expecto tests)
 
-Progress: [███████░░░] 47% (7/15 plans)
+Progress: [████████░░] 60% (9/15 plans)
 
 ## Performance Metrics
 
@@ -29,11 +29,11 @@ Progress: [███████░░░] 47% (7/15 plans)
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 32 min | 11 min |
 | 02-llm-client | 3/3 | 13 min | 4 min |
-| 03-tool-executor | 1/3 | 5 min | 5 min |
+| 03-tool-executor | 2/3 | 20 min | 10 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (4 min), 02-02 (6 min), 02-03 (3 min), 03-01 (5 min)
-- Trend: stable ~4-6 min/plan
+- Last 5 plans: 02-02 (6 min), 02-03 (3 min), 03-01 (5 min), 03-03 (15 min)
+- Trend: stable ~4-10 min/plan (03-03 longer due to 1261-line Python port)
 
 *Updated after each plan completion*
 
@@ -73,6 +73,11 @@ Recent decisions affecting current work:
 - 03-01: Trailing-separator fix: rootWithSep = projectRoot + Path.DirectorySeparatorChar prevents sibling-directory prefix attack (PITFALLS.md D-3)
 - 03-01: FileToolsTests.fs compiled BEFORE RouterTests.fs (F# FS0433: [<EntryPoint>] must be in last compiled file)
 - 03-01: Timeout DU name collision (Domain.Timeout type vs ToolResult.Timeout case) — resolve with BlueCode.Core.Domain.Timeout in test code
+- 03-03: Python bash_security.py has 22 validate_* functions (not 18 as plan spec stated) — all 22 ported; plan count was inconsistent internal arithmetic
+- 03-03: DenyDeferred DU case used for non-misparsing ASKs (validateNewlines + validateRedirections) to match Python deferred evaluation semantics
+- 03-03: Fork bomb :(){ :|:& };: NOT blocked by validator chain (matches Python behavior — no destructive pattern covers it)
+- 03-03: READ_ONLY_COMMANDS / is_command_read_only intentionally skipped — informational only in Python, never a deny gate
+- 03-03: unicodeWsRe uses UTF-8 embedded chars in source (verified correct); test file uses char 0x00A0 / char 0xFEFF to avoid invisible-char hazard
 
 ### Pending Todos
 
@@ -85,6 +90,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-22T22:42:27Z
-Stopped at: Completed 03-01-PLAN.md — FsToolExecutor scaffold, BashSecurity placeholder, FileToolsTests.fs (49 tests total)
+Last session: 2026-04-22T23:01:00Z
+Stopped at: Completed 03-03-PLAN.md — BashSecurity.fs full port (22 validators, 7 helpers, 7 constants), BashSecurityTests.fs (97 tests), 146 total tests passing
 Resume file: None
