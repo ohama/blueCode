@@ -211,26 +211,11 @@ let listDirTests = testList "FsToolExecutor.ListDir (TOOL-03)" [
         finally cleanup root
 ]
 
-let runShellStubTest = testList "FsToolExecutor.RunShell (Plan 03-01 stub — real impl in 03-02)" [
-
-    testCase "run_shell returns Failure stub with explanatory message" <| fun () ->
-        let root = newFixture ()
-        try
-            let exe = create root
-            let result = exec exe (RunShell (Command "echo hi", BlueCode.Core.Domain.Timeout 30000))
-            match result with
-            | Ok (Failure (code, msg)) ->
-                Expect.equal code -1 "stub exit code should be -1"
-                Expect.stringContains msg "03-02" "stub message should mention 03-02"
-            | other -> failtestf "expected Failure stub, got %A" other
-        finally cleanup root
-]
-
 [<Tests>]
 let fileToolsTests =
     testList "FileTools (Phase 3 Plan 03-01)" [
         readFileTests
         writeFileTests
         listDirTests
-        runShellStubTest
+        // runShellStubTest removed — superseded by RunShellTests in Plan 03-02
     ]
