@@ -9,6 +9,8 @@
     <Compile Include="Adapters/LlmWire.fs" />
     <Compile Include="Adapters/Json.fs" />
     <Compile Include="Adapters/QwenHttpClient.fs" />
+    <Compile Include="Adapters/BashSecurity.fs" />
+    <Compile Include="Adapters/FsToolExecutor.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

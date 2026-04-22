@@ -41,10 +41,19 @@ type Timeout  = Timeout  of int
 
 /// Tool dispatch value. Each case carries typed parameters, not raw strings,
 /// so the executor in Phase 3 cannot dispatch with a misshapen input.
+///
+/// ReadFile.lineRange: optional 1-indexed inclusive (startLine, endLine). None = entire file.
+/// ListDir.depth: optional recursion depth, default 1 (non-recursive), cap 5.
+///
+/// Phase 3 additive amendment: lineRange and depth were added to satisfy
+/// TOOL-01 (line range) and TOOL-03 (depth-limit). The amendment is additive
+/// in behaviour — None preserves Phase 1/2 defaults — but IS a pattern-match
+/// change for any existing callers. Phase 2 code did not construct these cases,
+/// so there is no call-site impact.
 type Tool =
-    | ReadFile  of FilePath
+    | ReadFile  of FilePath * lineRange: (int * int) option
     | WriteFile of FilePath * content: string
-    | ListDir   of FilePath
+    | ListDir   of FilePath * depth: int option
     | RunShell  of Command * Timeout
 
 /// Raw text produced by a successful tool execution.
