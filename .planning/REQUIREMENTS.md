@@ -10,7 +10,7 @@ v1 Minimal scope. 본인 `localLLM/` 설계 노트 + 연구 SUMMARY.md의 Phase 
 ### Foundation
 
 - [ ] **FND-01**: F# / .NET 10 솔루션이 `dotnet run`으로 빌드·실행된다 (BlueCode.Core + BlueCode.Cli 2-project)
-- [ ] **FND-02**: 핵심 도메인 타입이 Discriminated Union으로 정의된다 (`AgentState`, `Intent`, `Model`, `Tool`, `LlmOutput`, `AgentError`, `Step`)
+- [ ] **FND-02**: 핵심 도메인 타입이 Discriminated Union으로 정의된다 (`AgentState`, `Intent`, `Model`, `Tool`, `LlmOutput`, `AgentError`, `Step`, `ToolResult`). `ToolResult`의 DU shape (Success | Failure | SecurityDenied | PathEscapeBlocked | Timeout)은 Phase 1에서 Phase 3의 TOOL-07보다 먼저 정의된다 — 이는 `Tool` DU와 짝을 이루어 Success Criterion 2의 exhaustive-match 증명을 가능하게 하기 위함이다. TOOL-07의 완전한 semantic contract (케이스별 핸들링, security denier 체인 의미, timeout 처리)는 Phase 3에서 완성된다.
 - [ ] **FND-03**: `task {}` CE 일관 사용 정책이 적용된다 (async {} 금지, HttpClient/Process/IO 호환)
 - [ ] **FND-04**: `FsToolkit.ErrorHandling`의 `taskResult {}` CE로 에이전트 루프 에러 흐름이 표현된다
 
@@ -38,7 +38,7 @@ v1 Minimal scope. 본인 `localLLM/` 설계 노트 + 연구 SUMMARY.md의 Phase 
 - [ ] **TOOL-04**: `run_shell` — 쉘 명령 실행. 30s 타임아웃, stdout 100KB cap, stderr 10KB cap
 - [ ] **TOOL-05**: `run_shell` 보안 검증기 체인 — `claw-code-agent/src/bash_security.py` 포팅 (command substitution, IFS injection, fork bomb, destructive 패턴, redirect chain 차단)
 - [ ] **TOOL-06**: 모든 툴 출력은 메시지 히스토리에 추가되기 전 2000자에서 절단 (context overflow 방지)
-- [ ] **TOOL-07**: `ToolResult` DU로 결과 표현 (`Success | Failure | SecurityDenied | PathEscapeBlocked | Timeout`) — 누구나 컴파일 시점에 모든 케이스 처리 강제
+- [ ] **TOOL-07**: `ToolResult` DU의 semantic contract — `Success | Failure | SecurityDenied | PathEscapeBlocked | Timeout` 각 케이스가 실제 툴 실행 결과로 어떻게 생성되는지, 누구나 컴파일 시점에 모든 케이스를 처리하도록 강제. (DU shape 자체는 FND-02의 일부로 Phase 1에서 이미 정의되어 있음; Phase 3은 의미와 동작을 채운다.)
 
 ### Agent Loop
 
@@ -148,7 +148,8 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 | TOOL-04 | Phase 3 | Pending |
 | TOOL-05 | Phase 3 | Pending |
 | TOOL-06 | Phase 3 | Pending |
-| TOOL-07 | Phase 3 | Pending |
+| TOOL-07 (DU shape) | Phase 1 | Pending (shipped as part of FND-02 so Tool DU is exhaustively matchable; see FND-02 note) |
+| TOOL-07 (semantic contract) | Phase 3 | Pending (case-by-case generation rules, security denier chain, timeout semantics) |
 | LOOP-01 | Phase 4 | Pending |
 | LOOP-02 | Phase 4 | Pending |
 | LOOP-03 | Phase 4 | Pending |
@@ -168,10 +169,10 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 | ROU-04 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 37 total
+- v1 requirements: 37 total (TOOL-07 split into two rows for Phase 1 DU shape vs. Phase 3 semantic contract — still one requirement, two delivery points)
 - Mapped to phases: 37
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-22*
-*Last updated: 2026-04-22 — traceability finalized after roadmap creation*
+*Last updated: 2026-04-22 — traceability finalized after roadmap creation; TOOL-07 split Phase 1/Phase 3 after planner revision pass.*
