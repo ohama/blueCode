@@ -87,5 +87,10 @@ let allTests = testList "Router" [
     endpointToUrlTests
 ]
 
+let rootTests = testList "all" [
+    allTests
+    BlueCode.Tests.LlmPipelineTests.allTests
+]
+
 [<EntryPoint>]
-let main args = runTestsWithCLIArgs [] args allTests
+let main args = runTestsWithCLIArgs [] args rootTests

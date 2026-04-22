@@ -34,16 +34,36 @@ let jsonOptions : JsonSerializerOptions =
     opts.Converters.Add(JsonFSharpConverter(JsonFSharpOptions.Default().WithUnionUnwrapFieldlessTags(true)))
     opts
 
-// ── Stage 1: bare parse ──────────────────────────────────────────────────────
+// ── Stage 1: JSON object validity check ──────────────────────────────────────
 
 /// Attempt to deserialize content directly as LlmStep without any pre-processing.
 /// Returns Some step on success, None on any parse error (including malformed JSON,
-/// missing fields, or wrong types).
+/// missing fields, or wrong types). Used as a fast path for bare valid LlmStep JSON.
 ///
-/// PRIVATE: internal helper — only parseLlmResponse is the public API.
+/// NOTE: This helper is intentionally separate from the extraction validity check.
+/// Extraction uses tryParseJsonObject (which accepts ANY valid JSON object) while
+/// tryBareParse additionally requires the JSON to match the LlmStep record shape.
+/// Schema validation (validateAndDeserialize) is what enforces shape correctness
+/// for the pipeline — tryBareParse is only used internally.
+///
+/// PRIVATE: internal helper.
 let private tryBareParse (content: string) : LlmStep option =
     try
         JsonSerializer.Deserialize<LlmStep>(content, jsonOptions) |> Some
+    with _ -> None
+
+/// Check if the string is a valid JSON object (type = Object, any shape).
+/// Used by the extraction stages to determine if we found a JSON object worth
+/// passing to schema validation, without pre-filtering by LlmStep structure.
+/// This is critical: a JSON object missing `action` must reach validateAndDeserialize
+/// so it gets SchemaViolation (not InvalidJsonOutput).
+///
+/// PRIVATE: internal helper — used by extractLlmStep extraction stages.
+let private tryParseJsonObject (s: string) : string option =
+    try
+        use doc = JsonDocument.Parse(s)
+        if doc.RootElement.ValueKind = JsonValueKind.Object then Some s
+        else None
     with _ -> None
 
 // ── Stage 2: stack-based O(N) first-object extraction ────────────────────────
@@ -108,34 +128,41 @@ let private tryFenceExtract (content: string) : string option =
 // ── Stage composition: extract JSON string from any LLM output ───────────────
 
 /// Multi-stage extraction. Attempts stages in order:
-///   1. Bare parse: content is already a valid LlmStep JSON string
+///   1. Bare parse: content is a valid JSON object (any shape)
 ///   2. Brace scan: extract first balanced JSON object from prose-wrapped content
-///   3. Fence strip then re-parse: extract from markdown code block
+///   3. Fence strip then re-extract: extract from markdown code block
 ///   4. ParseFailure: no JSON recoverable → Error (InvalidJsonOutput content)
 ///
-/// Returns Ok step on the first stage that succeeds. Returns
-/// Error (InvalidJsonOutput raw) only if all 3 extraction stages fail.
+/// Returns Ok jsonString on the first stage that produces a valid JSON object.
+/// Returns Error (InvalidJsonOutput raw) only if all stages find no JSON object.
+///
+/// IMPORTANT: extraction checks for JSON validity only — NOT LlmStep structure.
+/// A JSON object missing required fields (e.g. no "action") still returns Ok.
+/// Schema enforcement is the responsibility of validateAndDeserialize (called by
+/// parseLlmResponse), not the extraction stage. This separation ensures that
+/// structurally-invalid-but-extractable JSON reaches the schema validator and
+/// gets Error (SchemaViolation) instead of Error (InvalidJsonOutput).
 ///
 /// PRIVATE: callers MUST use parseLlmResponse (which layers schema
 /// validation on top). Exposing extractLlmStep would let callers bypass
 /// schema enforcement — exactly the drift we are defending against.
-let private extractLlmStep (content: string) : Result<LlmStep, AgentError> =
-    // Stage 1: direct bare parse
-    match tryBareParse content with
-    | Some step -> Ok step
+let private extractLlmStep (content: string) : Result<string, AgentError> =
+    // Stage 1: direct bare JSON object check
+    match tryParseJsonObject content with
+    | Some json -> Ok json
     | None ->
-    // Stage 2: brace-scan extract + parse
-    match extractFirstJsonObject content |> Option.bind tryBareParse with
-    | Some step -> Ok step
+    // Stage 2: brace-scan extract + JSON object check
+    match extractFirstJsonObject content |> Option.bind tryParseJsonObject with
+    | Some json -> Ok json
     | None ->
-    // Stage 3: fence strip + brace-scan (fence content may itself be prose-wrapped)
+    // Stage 3: fence strip + JSON object check (fence content may itself be prose-wrapped)
     match tryFenceExtract content with
     | Some fenced ->
-        match tryBareParse fenced with
-        | Some step -> Ok step
+        match tryParseJsonObject fenced with
+        | Some json -> Ok json
         | None ->
-            match extractFirstJsonObject fenced |> Option.bind tryBareParse with
-            | Some step -> Ok step
+            match extractFirstJsonObject fenced |> Option.bind tryParseJsonObject with
+            | Some json -> Ok json
             | None -> Error (InvalidJsonOutput content)
     | None -> Error (InvalidJsonOutput content)
 
@@ -213,21 +240,23 @@ let private validateAndDeserialize (json: string) : Result<LlmStep, AgentError> 
 ///   Error (InvalidJsonOutput raw)   when no JSON found across all 3 extraction stages
 ///   Error (SchemaViolation detail)  when JSON found but schema rejects it
 ///
-/// The extraction happens BEFORE schema validation: schema runs on the
-/// final extracted JSON string (no per-stage validation — see 02-RESEARCH
-/// Finding 4). This matches LLM-02 + LLM-03 in REQUIREMENTS.md.
+/// The extraction happens BEFORE schema validation: extraction finds the first
+/// valid JSON object string (any shape); schema validation then enforces that the
+/// found JSON has the correct {thought, action, input} shape. This means:
+///   - JSON with missing required fields → SchemaViolation (not InvalidJsonOutput)
+///   - JSON with extra fields (additionalProperties:false) → SchemaViolation
+///   - Completely non-JSON content → InvalidJsonOutput
 ///
 /// PUBLIC: the ONLY public entry point of the pipeline. All internal
-/// helpers (tryBareParse, extractFirstJsonObject, tryFenceExtract,
-/// extractLlmStep, validateAndDeserialize) are `let private` so callers
-/// cannot bypass schema validation by invoking the extractor directly.
+/// helpers (tryBareParse, tryParseJsonObject, extractFirstJsonObject,
+/// tryFenceExtract, extractLlmStep, validateAndDeserialize) are `let private`
+/// so callers cannot bypass schema validation by invoking the extractor directly.
 let parseLlmResponse (content: string) : Result<LlmStep, AgentError> =
     match extractLlmStep content with
     | Error e -> Error e
-    | Ok step ->
-        // Round-trip through JsonSerializer so the schema validator gets a string
-        // it can parse. Slight overhead; acceptable for Phase 2. A future
-        // optimization validates against the JsonElement from each stage
-        // directly (02-RESEARCH.md Finding 4 optimization note).
-        let json = JsonSerializer.Serialize(step, jsonOptions)
+    | Ok json ->
+        // Pass the original extracted JSON to the schema validator.
+        // Do NOT re-serialize a partially-deserialized LlmStep here — that would
+        // drop extra fields before schema validation, hiding additionalProperties
+        // violations. The validator must see the raw extracted JSON.
         validateAndDeserialize json

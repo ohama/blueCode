@@ -6,11 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="LlmPipelineTests.fs" />
     <Compile Include="RouterTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\BlueCode.Core\BlueCode.Core.fsproj" />
+    <ProjectReference Include="..\..\src\BlueCode.Cli\BlueCode.Cli.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
