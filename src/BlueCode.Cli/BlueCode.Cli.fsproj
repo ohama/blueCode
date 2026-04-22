@@ -6,11 +6,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Adapters/LlmWire.fs" />
+    <Compile Include="Adapters/Json.fs" />
+    <Compile Include="Adapters/QwenHttpClient.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BlueCode.Core\BlueCode.Core.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FSharp.SystemTextJson" Version="1.4.36" />
+    <PackageReference Include="JsonSchema.Net" Version="9.2.0" />
+    <PackageReference Include="Spectre.Console" Version="0.55.2" />
   </ItemGroup>
 
 </Project>
