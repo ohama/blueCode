@@ -79,7 +79,7 @@ Plans:
 ### Phase 4: Agent Loop
 **Goal**: A single turn runs prompt → LLM → tool → observe up to 5 times and produces a final answer; every error and limit condition is a typed value the caller handles at compile time.
 **Depends on**: Phase 2 (ILlmClient), Phase 3 (IToolExecutor)
-**Requirements**: LOOP-01, LOOP-02, LOOP-03, LOOP-04, LOOP-05, LOOP-06, LOOP-07, OBS-01, OBS-02
+**Requirements**: LOOP-01, LOOP-02, LOOP-03, LOOP-04, LOOP-05, LOOP-06, LOOP-07, OBS-01, OBS-02, OBS-04
 **Success Criteria** (what must be TRUE):
   1. Running `blueCode "list files in the current directory"` against live Qwen completes in ≤5 tool steps and prints a final answer to stdout.
   2. When the 5-step limit is reached without a final answer, the program exits with `AgentError.MaxLoopsExceeded` rendered as a user-readable message — no stack trace.
@@ -87,6 +87,7 @@ Plans:
   4. A JSON parse failure retries once; if both attempts fail the turn exits with `AgentError.InvalidJsonOutput` — not a crash.
   5. Pressing Ctrl+C during LLM inference prints a one-line step summary and exits cleanly — no `OperationCanceledException` stack trace.
   6. Every step is written as a JSONL line to `~/.bluecode/session_<timestamp>.jsonl` and readable after the process exits.
+  7. Every JSONL step record includes `startedAt`, `endedAt`, and `durationMs` fields (additive extension of the Step record from Phase 1); `--verbose` output also shows per-step elapsed time (OBS-04).
 **Plans**: 3 plans
 
 Plans:
@@ -99,13 +100,14 @@ Plans:
 ### Phase 5: CLI Polish
 **Goal**: blueCode is the daily driver; the Python claw-code-agent is retired; multi-turn REPL, compact/verbose toggle, and context-window warning are in place.
 **Depends on**: Phase 4
-**Requirements**: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-06, OBS-03, ROU-04
+**Requirements**: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-06, CLI-07, OBS-03, ROU-04
 **Success Criteria** (what must be TRUE):
   1. `blueCode "<prompt>"` (single-turn) and `blueCode` (multi-turn REPL with `/exit`) both work; `--help` prints correct usage from Argu.
   2. `blueCode --verbose "<prompt>"` prints thought/action/input/output/status for every step; default compact mode prints one summary line per step (e.g., `> reading file...`).
   3. `blueCode --model 72b "<prompt>"` routes to localhost:8001 regardless of intent classification.
   4. At startup, `/v1/models` is queried and the actual `max_model_len` is used; when accumulated context reaches 80% of that limit, a visible warning is printed before the next LLM call.
   5. `~/projs/claw-code-agent/` has been moved to `~/projs/claw-code-agent-retired/` and at least one real coding task has been completed using blueCode as the sole agent.
+  6. `blueCode --trace "<prompt>"` emits Serilog Debug-level structured JSON (stderr) with each step's full untruncated input, output, and `elapsed_ms`; `--trace` is independent of `--verbose` and default OFF (CLI-07).
 **Plans**: 3 plans
 
 Plans:
