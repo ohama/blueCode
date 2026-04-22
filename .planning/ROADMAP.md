@@ -28,12 +28,12 @@ blueCode is a strong-typed F# agent loop that drives locally-served Qwen 32B/72B
   3. `classifyIntent "fix the null check"` returns `Intent.Debug` and `intentToModel Intent.Debug` returns `Model.Qwen72B` — verifiable in a unit test with no IO.
   4. `task {}` CE compiles throughout Core; any `async {}` expression in Core.fsproj is a build error.
   5. `taskResult {}` CE from FsToolkit.ErrorHandling compiles in at least one module.
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [ ] 01-01: Solution scaffold — two-project layout, NuGet refs, F# compile order in .fsproj files
 - [ ] 01-02: Domain.fs + Router.fs — all DU cases, classifyIntent, intentToModel, modelToEndpoint
-- [ ] 01-03: Ports.fs + ContextBuffer.fs + ToolRegistry stub + CLI entry with Argu
+- [ ] 01-03: Ports.fs + ContextBuffer.fs + ToolRegistry stub + async-ban CI script (CLI entry stays literal stub until Phase 5)
 
 ---
 
@@ -47,7 +47,7 @@ Plans:
   3. A response that is not recoverable JSON returns `AgentError.InvalidJsonOutput` (not an unhandled exception).
   4. An `HttpRequestException` (Qwen unreachable) maps to `AgentError.LlmUnreachable` — no exception propagates out of the adapter.
   5. A Spectre.Console spinner is visible in the terminal during the HTTP wait and disappears when the response arrives.
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [ ] 02-01: QwenHttpClient.fs — HTTP POST, disposal pattern, temperature defaults, FSharp.SystemTextJson converter
@@ -67,7 +67,7 @@ Plans:
   4. A `run_shell` command that runs longer than 30 seconds returns `ToolResult.Timeout`.
   5. Any tool whose output exceeds 2000 characters returns the first 2000 characters with a truncation marker before being appended to message history.
   6. A pattern match on `ToolResult` without all five cases (`Success | Failure | SecurityDenied | PathEscapeBlocked | Timeout`) is a compile error.
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [ ] 03-01: FsToolExecutor.fs — read_file, write_file, list_dir with path validation and output truncation
@@ -87,7 +87,7 @@ Plans:
   4. A JSON parse failure retries once; if both attempts fail the turn exits with `AgentError.InvalidJsonOutput` — not a crash.
   5. Pressing Ctrl+C during LLM inference prints a one-line step summary and exits cleanly — no `OperationCanceledException` stack trace.
   6. Every step is written as a JSONL line to `~/.bluecode/session_<timestamp>.jsonl` and readable after the process exits.
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [ ] 04-01: AgentLoop.fs — recursive task {} loop, loopN parameter, MaxLoopsExceeded, loop guard, 2-attempt JSON retry
@@ -106,7 +106,7 @@ Plans:
   3. `blueCode --model 72b "<prompt>"` routes to localhost:8001 regardless of intent classification.
   4. At startup, `/v1/models` is queried and the actual `max_model_len` is used; when accumulated context reaches 80% of that limit, a visible warning is printed before the next LLM call.
   5. `~/projs/claw-code-agent/` has been moved to `~/projs/claw-code-agent-retired/` and at least one real coding task has been completed using blueCode as the sole agent.
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [ ] 05-01: Multi-turn REPL (Repl.fs extended) + `/exit` + Ctrl+D + `--model` override flag (ROU-04)
