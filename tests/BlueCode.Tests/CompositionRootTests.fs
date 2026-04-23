@@ -11,7 +11,7 @@ let tests =
         testCase "bootstrap returns non-null LlmClient, ToolExecutor, JsonlSink, Config" <| fun _ ->
             let tempRoot = Path.Combine(Path.GetTempPath(), sprintf "bluecode-ct-%s" (Guid.NewGuid().ToString("N")))
             Directory.CreateDirectory(tempRoot) |> ignore
-            let c = bootstrap tempRoot
+            let c = bootstrap tempRoot defaultCliOptions
             try
                 Expect.isNotNull (box c.LlmClient) "LlmClient set"
                 Expect.isNotNull (box c.ToolExecutor) "ToolExecutor set"
@@ -28,7 +28,7 @@ let tests =
 
         testCase "bootstrap SystemPrompt mentions all 5 actions" <| fun _ ->
             let tempRoot = Path.GetTempPath()
-            let c = bootstrap tempRoot
+            let c = bootstrap tempRoot defaultCliOptions
             try
                 let p = c.Config.SystemPrompt
                 for action in [ "read_file"; "write_file"; "list_dir"; "run_shell"; "final" ] do

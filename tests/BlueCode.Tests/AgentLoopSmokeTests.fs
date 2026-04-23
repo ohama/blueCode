@@ -23,7 +23,7 @@ let private smokeTest () =
         // Drop a known file so list_dir has something to return.
         File.WriteAllText(Path.Combine(tempRoot, "README.md"), "hello")
 
-        let c = bootstrap tempRoot
+        let c = bootstrap tempRoot defaultCliOptions
         try
             let captured = ResizeArray<Step>()
             let onStep (s: Step) =

@@ -17,6 +17,33 @@ type AppComponents = {
     LogPath      : string
 }
 
+/// Parsed CLI arguments, consumed by CompositionRoot.bootstrap and threaded
+/// into AgentConfig.ForcedModel and (in Plan 05-02) into Repl.runSingleTurn's
+/// RenderMode parameter. TraceMode is recorded here but not acted upon until
+/// Plan 05-02 flips the Serilog LoggingLevelSwitch.
+type CliOptions = {
+    ForcedModel : BlueCode.Core.Domain.Model option
+    Verbose     : bool
+    Trace       : bool
+}
+
+/// Default options — equivalent to old single-turn invocation with no flags.
+let defaultCliOptions : CliOptions = {
+    ForcedModel = None
+    Verbose     = false
+    Trace       = false
+}
+
+/// Convert the CLI string ("32b"|"72b") to a Model. Raises on invalid input
+/// so Argu-level catch in Program.fs can surface it as a usage error (exit 2).
+let parseForcedModel (s: string option) : BlueCode.Core.Domain.Model option =
+    match s with
+    | None -> None
+    | Some "32b" -> Some BlueCode.Core.Domain.Qwen32B
+    | Some "72b" -> Some BlueCode.Core.Domain.Qwen72B
+    | Some other ->
+        failwithf "Unknown model: %s (valid values: 32b, 72b)" other
+
 /// Default system prompt for Phase 4. Tells Qwen to respond with strict JSON
 /// matching the LLM step schema. Phase 5 may extend this (include CLAUDE.md
 /// discovery, etc.) but Phase 4 keeps it minimal.
@@ -43,7 +70,7 @@ Rules:
 
 /// Construct the component graph. The caller (Program.fs) owns the returned
 /// AppComponents.JsonlSink with `use` to ensure Dispose flushes the session log.
-let bootstrap (projectRoot: string) : AppComponents =
+let bootstrap (projectRoot: string) (opts: CliOptions) : AppComponents =
     let logPath = buildSessionLogPath()
     {
         LlmClient    = Adapters.QwenHttpClient.create()
@@ -53,7 +80,7 @@ let bootstrap (projectRoot: string) : AppComponents =
             MaxLoops        = 5
             ContextCapacity = 3
             SystemPrompt    = defaultSystemPrompt
-            ForcedModel     = None
+            ForcedModel     = opts.ForcedModel
         }
         ProjectRoot  = projectRoot
         LogPath      = logPath

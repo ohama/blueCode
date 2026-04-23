@@ -2,68 +2,68 @@ module Program
 
 open System
 open System.IO
+open Argu
 open Serilog
 open BlueCode.Cli.Adapters.Logging
 open BlueCode.Cli
+open BlueCode.Cli.CliArgs
+open BlueCode.Cli.CompositionRoot
 
-/// Process entry point (Phase 4). Wires the full single-turn pipeline:
-///   1. Logging.configure (MUST be first, before any adapter creation -- research Pitfall 4).
-///   2. Read prompt from argv (joined with spaces). No Argu yet -- that's Phase 5 CLI-06.
-///   3. Bootstrap components at the current working directory as project root.
-///   4. Invoke Repl.runSingleTurn. Unwrap Task<int> synchronously.
-///   5. Dispose JsonlSink (via `use _jsonlSink` -- ensures final flush).
-///   6. Log.CloseAndFlush before returning.
+/// Process entry point (Phase 5). Wires Argu parser for CLI-06 then dispatches
+/// to single-turn (prompt present) or multi-turn REPL (no prompt) per CLI-01/CLI-02.
 ///
-/// Exit codes (from Repl.runSingleTurn):
-///   0   -- success
+/// Exit codes:
+///   0   -- success / REPL exited cleanly
 ///   1   -- agent error
-///   130 -- user cancelled
-///
-/// Usage error (no args): prints to stderr and exits 2.
+///   2   -- usage error (--help, --version, unknown model, unknown flag)
+///   130 -- user cancelled (SIGINT Ctrl+C) in single-turn mode
 [<EntryPoint>]
 let main (argv: string array) : int =
-    // Step 1 -- configure logging FIRST. Serilog's default logger is a silent
-    // no-op; if configure() is skipped, every Log.* call below is discarded.
+    // Step 1: configure logging FIRST (Serilog's default logger is a silent no-op).
     configure()
 
+    let parser = ArgumentParser.Create<CliArgs>(programName = "blueCode")
     try
-        // Step 2 -- prompt from argv. Phase 4 is single-turn positional only.
-        if argv.Length < 1 then
-            eprintfn "Usage: blueCode \"<prompt>\""
-            eprintfn "Example: blueCode \"list files in the current directory\""
-            Log.CloseAndFlush()
-            2
-        else
-            let prompt = String.concat " " argv
-            let projectRoot = Directory.GetCurrentDirectory()
-
-            Log.Information("blueCode starting: cwd={Root} prompt.length={Len}",
-                            projectRoot, prompt.Length)
-
-            // Step 3-5 -- bootstrap, runSingleTurn, dispose JsonlSink.
-            // `use _jsonlSink = components.JsonlSink` binds the JsonlSink value
-            // (implements IDisposable) so F#'s `use` invokes Dispose at scope
-            // exit. This guarantees the JSONL file is flushed and closed before
-            // the process exits, even on exception paths below it.
-            let components = CompositionRoot.bootstrap projectRoot
-            use _jsonlSink = components.JsonlSink
-            Log.Information("Session log: {LogPath}", components.LogPath)
-
-            let exitCode =
-                (Repl.runSingleTurn prompt components)
-                    .GetAwaiter().GetResult()
-
-            // Step 6 -- flush logger before exit.
-            Log.CloseAndFlush()
-            exitCode
-    with ex ->
-        // Any exception outside runSingleTurn's try/with -- log and exit 1.
-        // NOTE: runSingleTurn's own try/with already converts OperationCanceledException
-        // to Error UserCancelled. This outer catch covers pathological cases
-        // (e.g., Logging.configure failure, invalid cwd).
-        try
-            Log.Fatal(ex, "Unhandled exception before or after runSingleTurn")
-        with _ -> ()
+        let results = parser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
+        let promptWords = results.TryGetResult Prompt |> Option.defaultValue []
+        let isVerbose   = results.Contains Verbose
+        let isTrace     = results.Contains Trace
+        let forcedStr   = results.TryGetResult Model
+        // parseForcedModel raises on invalid model string; wrap as usage error (exit 2).
+        let forcedModel =
+            try parseForcedModel forcedStr
+            with ex ->
+                eprintfn "ERROR: %s" ex.Message
+                Log.CloseAndFlush()
+                exit 2
+        let opts = {
+            ForcedModel = forcedModel
+            Verbose     = isVerbose
+            Trace       = isTrace
+        }
+        let projectRoot = Directory.GetCurrentDirectory()
+        Log.Information("blueCode starting: cwd={Root} mode={Mode}",
+                        projectRoot, (if List.isEmpty promptWords then "repl" else "single"))
+        let components = bootstrap projectRoot opts
+        use _jsonlSink = components.JsonlSink
+        let exitCode =
+            match promptWords with
+            | [] ->
+                (Repl.runMultiTurn components).GetAwaiter().GetResult()
+            | words ->
+                let prompt = String.concat " " words
+                (Repl.runSingleTurn prompt components).GetAwaiter().GetResult()
+        Log.CloseAndFlush()
+        exitCode
+    with
+    | :? ArguParseException as e ->
+        // --help, --version, and all usage errors (including unknown model via parseForcedModel raise)
+        // go through this path. Eprintfn to stderr and exit 2 matches usage-error convention.
+        eprintfn "%s" e.Message
+        Log.CloseAndFlush()
+        2
+    | ex ->
+        try Log.Fatal(ex, "Unhandled exception") with _ -> ()
         eprintfn "Fatal: %s" ex.Message
         Log.CloseAndFlush()
         1
