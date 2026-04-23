@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 5 of 5 (CLI Polish)
-Plan: 1 of 4 in Phase 5 — complete (05-01 done)
-Status: 05-01 complete — Argu 6.2.5 wired; CliArgs DU; multi-turn REPL; AgentConfig.ForcedModel; 188 tests pass (1 ignored smoke)
-Last activity: 2026-04-23 — Completed 05-01-PLAN.md (Argu + multi-turn REPL + --model override + AgentConfig.ForcedModel)
+Plan: 2 of 4 in Phase 5 — complete (05-02 done)
+Status: 05-02 complete — LoggingLevelSwitch; RenderMode threading; --trace/--verbose; spinner elapsed; 192 tests pass (1 ignored smoke)
+Last activity: 2026-04-23 — Completed 05-02-PLAN.md (LoggingLevelSwitch + RenderMode threading + --trace/--verbose + spinner elapsed)
 
-Progress: [██████████████████░] 93% (14/16 plans)
+Progress: [███████████████████░] 94% (15/16 plans)
 
 ## Performance Metrics
 
@@ -108,6 +108,11 @@ Recent decisions affecting current work:
 - 05-01: testSequenced wraps ReplTests testList — Expecto runs testList in parallel by default; Console.SetOut is global state so parallel execution causes test interference
 - 05-01: Multi-turn REPL: 130 exit code (SIGINT per-turn cancel) translated to 0 for lastCode tally; REPL continues; process exits 130 only in single-turn mode
 - 05-01: AgentConfig.ForcedModel is the only Core change in Phase 5 — no other src/BlueCode.Core/ file modified beyond AgentLoop.fs
+- 05-02: LoggingLevelSwitch is a module-level let binding in Logging.fs (initialized before configure() runs); ControlledBy(levelSwitch) replaces MinimumLevel.Debug() for runtime level flip
+- 05-02: CliArgs.Verbose ambiguity with RenderMode.Verbose fixed by qualifying all Argu case references as CliArgs.Prompt/Verbose/Trace/Model when both namespaces are open
+- 05-02: Log.Debug always called in onStep regardless of levelSwitch — Serilog suppresses before formatting (zero-cost gate); visible only when --trace flips to Debug
+- 05-02: Step.Thought remains '[not captured in v1]' placeholder — verbose mode displays it; thought capture deferred to Phase 6+ (Open Question 1 resolution)
+- 05-02: withSpinner extended with CTS + background Task.Delay(500) ticker for live elapsed-second spinner label (CLI-05); fire-and-forget pattern; finally-block cancels
 
 ### Pending Todos
 
@@ -122,5 +127,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-04-23
-Stopped at: Completed 05-01-PLAN.md — Argu 6.2.5 + multi-turn REPL + AgentConfig.ForcedModel. 188 total tests pass (1 ignored). Phase 5 plan 1 of 4 complete.
+Stopped at: Completed 05-02-PLAN.md — LoggingLevelSwitch + RenderMode threading + --trace/--verbose + spinner elapsed. 192 total tests pass (1 ignored). Phase 5 plan 2 of 4 complete.
 Resume file: None
