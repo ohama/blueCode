@@ -8,7 +8,7 @@ open BlueCode.Cli.Adapters.QwenHttpClient
 
 /// Tests for tryParseMaxModelLen — the pure JSON parse helper.
 /// These tests exercise all fallback paths without any HTTP network calls.
-let tests =
+let private maxModelLenTests =
     testList
         "QwenHttpClient.tryParseMaxModelLen"
         [
@@ -82,3 +82,84 @@ let tests =
               // Either returns 8192 (fallback) or a real parsed value (if vLLM is running).
               // Either way the function must return a positive int.
               Expect.isGreaterThan result 0 (sprintf "getMaxModelLenAsync must return a positive int (got %d)" result) ]
+
+/// Tests for tryParseModelId — the pure JSON parse helper for data[0].id.
+/// These tests exercise all fallback paths without any HTTP network calls.
+/// Satisfies SC-4: unit test with injected id string wired into rootTests.
+let private modelIdTests =
+    testList
+        "QwenHttpClient.tryParseModelId"
+        [
+
+          testCase "valid JSON with data[0].id = 'qwen2.5-coder-32b' -> Some 'qwen2.5-coder-32b'"
+          <| fun _ ->
+              let json =
+                  """{"object":"list","data":[{"id":"qwen2.5-coder-32b","object":"model","max_model_len":32768}]}"""
+
+              Expect.equal
+                  (tryParseModelId json)
+                  (Some "qwen2.5-coder-32b")
+                  "Valid /v1/models response should extract data[0].id as Some string"
+
+          testCase "valid JSON with absolute-path id (SC-3 wire shape) -> Some that path"
+          <| fun _ ->
+              // This fixture proves SC-4: the parser correctly surfaces whatever id the
+              // server returns — including the exact absolute-path shape the v1.0 hardcode
+              // used. The injected id string case from SC-4.
+              let json =
+                  """{"object":"list","data":[{"id":"/Users/ohama/llm-system/models/qwen32b","object":"model"}]}"""
+
+              Expect.equal
+                  (tryParseModelId json)
+                  (Some "/Users/ohama/llm-system/models/qwen32b")
+                  "Absolute-path id from server must be returned as-is (parser is not path-aware)"
+
+          testCase "valid JSON with id = null -> None"
+          <| fun _ ->
+              let json =
+                  """{"object":"list","data":[{"id":null,"object":"model"}]}"""
+
+              Expect.equal (tryParseModelId json) None "null id field should produce None"
+
+          testCase "valid JSON with id field missing -> None"
+          <| fun _ ->
+              let json =
+                  """{"object":"list","data":[{"object":"model","created":1234567890}]}"""
+
+              Expect.equal (tryParseModelId json) None "Missing id field should produce None"
+
+          testCase "valid JSON with id = empty string -> None"
+          <| fun _ ->
+              // Empty id is functionally unusable; rejecting it here makes the probe
+              // fallback path log the WARN visibly instead of silently succeeding.
+              let json =
+                  """{"object":"list","data":[{"id":"","object":"model"}]}"""
+
+              Expect.equal (tryParseModelId json) None "Empty string id should produce None (unusable)"
+
+          testCase "valid JSON with empty data array -> None"
+          <| fun _ ->
+              let json = """{"object":"list","data":[]}"""
+              Expect.equal (tryParseModelId json) None "Empty data array should produce None"
+
+          testCase "invalid JSON ('not json') -> None"
+          <| fun _ ->
+              Expect.equal (tryParseModelId "not json") None "Invalid JSON should not throw — produces None"
+
+          testCase "valid JSON with id = 42 (non-string number) -> None"
+          <| fun _ ->
+              // Schema defense: vLLM spec says id is string, but we defensively
+              // reject non-string values instead of coercing.
+              let json =
+                  """{"object":"list","data":[{"id":42,"object":"model"}]}"""
+
+              Expect.equal
+                  (tryParseModelId json)
+                  None
+                  "Non-string id (number 42) should produce None (schema defense)" ]
+
+let tests =
+    testList
+        "QwenHttpClient probes"
+        [ maxModelLenTests
+          modelIdTests ]
