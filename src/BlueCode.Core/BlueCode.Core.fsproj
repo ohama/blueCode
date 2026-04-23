@@ -17,6 +17,7 @@
     <Compile Include="ContextBuffer.fs" />
     <Compile Include="ToolRegistry.fs" />
     <Compile Include="Ports.fs" />
+    <Compile Include="AgentLoop.fs" />
   </ItemGroup>
 
   <ItemGroup>
