@@ -98,6 +98,8 @@ let rootTests = testList "all" [
     BlueCode.Tests.AgentLoopTests.agentLoopTests
     BlueCode.Tests.JsonlSinkTests.tests
     BlueCode.Tests.RenderingTests.tests
+    BlueCode.Tests.CompositionRootTests.tests
+    BlueCode.Tests.AgentLoopSmokeTests.tests
 ]
 
 [<EntryPoint>]
