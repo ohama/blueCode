@@ -2,6 +2,10 @@ module BlueCode.Core.Router
 
 open BlueCode.Core.Domain
 
+// NOTE (v1.1 / REF-01): model-id resolution moved to QwenHttpClient adapter. The
+// vLLM model-id string is resolved at runtime via GET /v1/models per port.
+// Core does not own the wire value; the adapter layer does.
+
 /// Classifies free-text user input into an Intent by scanning for
 /// characteristic keywords. Pure: no IO, no mutation, deterministic.
 ///
@@ -49,15 +53,6 @@ let endpointToUrl: Endpoint -> string =
     function
     | Port8000 -> "http://127.0.0.1:8000/v1/chat/completions"
     | Port8001 -> "http://127.0.0.1:8001/v1/chat/completions"
-
-/// Maps a Model to the exact model-name string used in the vLLM
-/// OpenAI `"model"` request field. These strings MUST match whatever
-/// vLLM reports via GET /v1/models on the local host (Phase 5 OBS-03
-/// will query this at runtime; Phase 2 hardcodes the served names).
-let modelToName: Model -> string =
-    function
-    | Qwen32B -> "/Users/ohama/llm-system/models/qwen32b"
-    | Qwen72B -> "/Users/ohama/llm-system/models/qwen72b"
 
 /// Per-model sampling temperature (LLM-05). Hardcoded; MUST NOT be
 /// exposed to users via CLI flags. 32B uses 0.2 (precise code edits);

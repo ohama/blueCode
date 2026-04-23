@@ -13,6 +13,16 @@ open BlueCode.Core.Router
 open BlueCode.Cli.Adapters.Json
 open BlueCode.Cli.Adapters.LlmWire
 
+// ── /v1/models probe result (Phase 6 REF-01 + REF-02) ─────────────────────
+
+/// Bundles both fields extracted from GET /v1/models data[0].
+/// ModelId becomes the value sent in the POST chat/completions "model" field.
+/// MaxModelLen is retained for future per-port warning accuracy; v1.1 does not
+/// surface it to AppComponents (stays at 8192 floor).
+type ModelInfo =
+    { ModelId: string
+      MaxModelLen: int }
+
 // ── HttpClient singleton (from Plan 02-01) ──────────────────────────────────
 
 /// Single HttpClient instance for the CLI process. Created once;
@@ -39,8 +49,12 @@ let private roleString: MessageRole -> string =
 /// pipeline (Plan 02-02) as the primary defense; json_object mode is
 /// a Phase 5 optimization (02-RESEARCH.md Finding 2).
 ///
+/// modelId is now injected by the caller from the lazy ModelInfo probe in
+/// `create()` (REF-01); the `model` field value is resolved at runtime via
+/// GET /v1/models (no longer a Core hardcode — see 06-RESEARCH.md Q1 Option B).
+///
 /// PRIVATE: internal helper of QwenHttpClient. Only `create` and `toLlmOutput` are public.
-let private buildRequestBody (messages: Message list) (model: Model) : string =
+let private buildRequestBody (messages: Message list) (model: Model) (modelId: string) : string =
     let msgArr =
         messages
         |> List.map (fun m ->
@@ -49,7 +63,7 @@ let private buildRequestBody (messages: Message list) (model: Model) : string =
         |> List.toArray
 
     let req =
-        {| model = modelToName model
+        {| model = modelId
            messages = msgArr
            temperature = modelToTemperature model
            max_tokens = 1024
@@ -216,6 +230,30 @@ let private withSpinner<'a> (label: string) (work: unit -> Task<'a>) : Task<'a> 
 
 // ── /v1/models probe (OBS-03) ──────────────────────────────────────────────
 
+/// Parse data[0].id from a GET /v1/models response body.
+/// Returns Some non-empty string on success; None on any structural
+/// mismatch (missing data array, empty array, missing/null id, non-string id,
+/// empty string id, JSON parse error).
+///
+/// PUBLIC for ModelsProbeTests unit testing (pure, no IO).
+let tryParseModelId (json: string) : string option =
+    try
+        use doc = JsonDocument.Parse(json)
+        let root = doc.RootElement
+
+        match root.TryGetProperty("data") with
+        | true, data when data.ValueKind = JsonValueKind.Array && data.GetArrayLength() > 0 ->
+            let model0 = data.[0]
+
+            match model0.TryGetProperty("id") with
+            | true, el when el.ValueKind = JsonValueKind.String ->
+                let s = el.GetString()
+                if System.String.IsNullOrEmpty(s) then None else Some s
+            | _ -> None
+        | _ -> None
+    with _ ->
+        None
+
 /// Parse max_model_len from the /v1/models JSON response body.
 /// Returns Some int on success, None on any structural mismatch
 /// (missing data array, missing/null field, non-positive value, parse error).
@@ -281,12 +319,63 @@ let getMaxModelLenAsync (ct: CancellationToken) : Task<int> =
             return fallback
     }
 
+/// Probe http://<host>/v1/models once and extract both ModelId and MaxModelLen
+/// from data[0]. Returns a ModelInfo record.
+///
+/// Fallback semantics (v1.0 parity for MaxModelLen; v1.1 new for ModelId):
+///   - HTTP failure / non-2xx / JSON parse failure / missing fields -> MaxModelLen = 8192 fallback
+///   - ModelId has NO graceful fallback: on parse miss we return ModelId = ""
+///     which will cause vLLM to return HTTP 4xx on the subsequent POST, surfacing
+///     as AgentError.LlmUnreachable. This is intentional — we do not want to
+///     silently send an empty model id and pretend it works.
+///
+/// baseUrl MUST be the scheme+host+port prefix, e.g. "http://127.0.0.1:8000".
+/// This function appends "/v1/models".
+///
+/// CancellationToken: pass CancellationToken.None from the Lazy-captured closure
+/// so the probe is not user-cancellable (it is shared across all callers to the
+/// same port and must not be cancelled by one caller's Ctrl+C — see 06-RESEARCH.md
+/// § Pitfall 6).
+let probeModelInfoAsync (baseUrl: string) (ct: CancellationToken) : Task<ModelInfo> =
+    task {
+        let fallback = { ModelId = ""; MaxModelLen = 8192 }
+
+        try
+            use! resp = httpClient.GetAsync(baseUrl + "/v1/models", ct)
+
+            if not resp.IsSuccessStatusCode then
+                Serilog.Log.Warning(
+                    "GET {Url}/v1/models returned {Status}; using fallback ModelId='' MaxModelLen={MaxLen}",
+                    baseUrl,
+                    int resp.StatusCode,
+                    fallback.MaxModelLen
+                )
+
+                return fallback
+            else
+                let! json = resp.Content.ReadAsStringAsync(ct)
+                let id = tryParseModelId json |> Option.defaultValue ""
+                let maxLen = tryParseMaxModelLen json |> Option.defaultValue 8192
+
+                if id = "" then
+                    Serilog.Log.Warning(
+                        "GET {Url}/v1/models returned parseable JSON but data[0].id missing/empty; POST will likely 4xx",
+                        baseUrl
+                    )
+
+                return { ModelId = id; MaxModelLen = maxLen }
+        with ex ->
+            Serilog.Log.Warning(ex, "GET {Url}/v1/models failed; using fallback", baseUrl)
+            return fallback
+    }
+
 // ── Public factory: ILlmClient implementation ───────────────────────────────
 
 /// Build a QwenHttpClient that implements ILlmClient. Replace the Plan 02-01
 /// stub (which returned SchemaViolation after POST) with the fully-wired
 /// pipeline:
-///    withSpinner(HTTP POST)
+///    probe (lazy, first call only per port) -> GET /v1/models -> ModelInfo
+///    withSpinner(HTTP POST body using info.ModelId)
 ///      -> extractContent (OpenAI envelope)
 ///      -> parseLlmResponse (extraction + schema validation from Plan 02-02)
 ///      -> toLlmOutput (LlmStep -> LlmOutput DU)
@@ -296,11 +385,27 @@ let getMaxModelLenAsync (ct: CancellationToken) : Task<int> =
 /// PUBLIC: the primary factory. Alongside `toLlmOutput` (also public for
 /// unit testing), these are the only public exports of this module.
 let create () : ILlmClient =
+    // Per-port lazy probe. Each Lazy fires its probeModelInfoAsync Task ONCE on
+    // first .Value access; subsequent calls receive the same cached Task.
+    // Default LazyThreadSafetyMode.ExecutionAndPublication guarantees single-probe
+    // semantics under parallel CompleteAsync calls (future-proof; v1.0 REPL is
+    // single-turn today). CancellationToken.None: probe is shared and MUST NOT be
+    // cancelled by one caller's ct. See 06-RESEARCH.md § Pitfall 6.
+    let probe8000: Lazy<Task<ModelInfo>> =
+        Lazy<Task<ModelInfo>>(fun () -> probeModelInfoAsync "http://127.0.0.1:8000" CancellationToken.None)
+
+    let probe8001: Lazy<Task<ModelInfo>> =
+        Lazy<Task<ModelInfo>>(fun () -> probeModelInfoAsync "http://127.0.0.1:8001" CancellationToken.None)
+
     { new ILlmClient with
         member _.CompleteAsync messages model ct =
             task {
                 let url = model |> modelToEndpoint |> endpointToUrl
-                let body = buildRequestBody messages model
+                let probe = if model = Qwen32B then probe8000 else probe8001
+                // First call to each port triggers GET /v1/models; subsequent calls
+                // on the same port reuse the cached Task result.
+                let! info = probe.Value
+                let body = buildRequestBody messages model info.ModelId
 
                 // --trace: log exact POST body before it leaves the adapter.
                 // Gated by levelSwitch (default Information suppresses). Stays on
