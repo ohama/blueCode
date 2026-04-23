@@ -36,7 +36,11 @@ Integer phases 6-7 continue directly from v1.0 (Phases 1-5). No decimal phases w
 4. A unit test (or `RouterTests.fs` entry) covers `modelToName` when given a dynamically injected id string, and that test is wired into `rootTests`.
 5. `CompositionRoot.bootstrapAsync` returns `AppComponents` with no HTTP calls recorded — confirmed by a mock or by observing that `--trace` emits no POST/GET until the first prompt is submitted.
 
-**Plans:** _(to be filled by plan-phase)_
+**Plans:** 2 plans in 2 waves
+
+Plans:
+- [ ] 06-01-PLAN.md — Delete Router.modelToName; add ModelInfo + tryParseModelId + probeModelInfoAsync + per-port Lazy<Task<ModelInfo>> cache in QwenHttpClient; extend ModelsProbeTests with id-parser coverage (REF-01, SC-1/3/4)
+- [ ] 06-02-PLAN.md — Delete bootstrapAsync + getMaxModelLenAsync; Program.fs calls sync bootstrap; retarget closed-port test to probeModelInfoAsync (REF-02, SC-2/5)
 
 ---
 
@@ -63,7 +67,7 @@ Integer phases 6-7 continue directly from v1.0 (Phases 1-5). No decimal phases w
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 6 — Dynamic Bootstrap | Runtime model-id resolution + lazy probe | REF-01, REF-02 | Not started |
+| 6 — Dynamic Bootstrap | Runtime model-id resolution + lazy probe | REF-01, REF-02 | Planned (2 plans) |
 | 7 — Thought Capture | Real LLM thought in Step.Thought | OBS-05 | Not started |
 
 **Requirement coverage:** 3/3 (100%) — REF-01 → Phase 6, REF-02 → Phase 6, OBS-05 → Phase 7.
@@ -71,4 +75,5 @@ Integer phases 6-7 continue directly from v1.0 (Phases 1-5). No decimal phases w
 ---
 
 *Roadmap created: 2026-04-23*
+*Phase 6 planned: 2026-04-23 (2 plans, sequential)*
 *v1.0 archive: `.planning/milestones/v1.0-ROADMAP.md`*
