@@ -69,8 +69,8 @@ let private maxModelLenTests =
           <| fun _ ->
               // Port 64321 is highly unlikely to be listening; the connection will be refused,
               // triggering the catch path in probeModelInfoAsync which returns the fallback
-              // record. This exercises the same WARN-and-fallback semantics that v1.0's
-              // getMaxModelLenAsync had, now applied to the combined ModelInfo probe.
+              // record. This exercises the same WARN-and-fallback semantics as the v1.0
+              // eager probe, now applied to the combined ModelInfo probe.
               let result =
                   probeModelInfoAsync "http://127.0.0.1:64321" System.Threading.CancellationToken.None
                   |> fun t -> t.GetAwaiter().GetResult()
