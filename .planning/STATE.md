@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-23 for v1.1 milestone start)
 ## Current Position
 
 Milestone: v1.1 Refinement (started 2026-04-23)
-Phase: Phase 6 — Dynamic Bootstrap (not yet started; roadmap ready)
-Plan: —
-Status: ROADMAP.md created. Phase 6 and Phase 7 defined. Ready to plan Phase 6.
-Last activity: 2026-04-23 — ROADMAP.md written (Phases 6-7, 3 REQs, 100% coverage)
+Phase: Phase 6 — Dynamic Bootstrap (in progress)
+Plan: 1 of 2 complete
+Status: Plan 06-01 complete. Router.modelToName deleted, QwenHttpClient lazy probe in place. Ready for plan 06-02.
+Last activity: 2026-04-23 — Completed 06-01-PLAN.md (Router.modelToName delete + QwenHttpClient lazy probe)
 
-Progress: v1.1 [░░░░░░░░░░░░░░░░░░░░] 0% (0 of 3 REQs, 0 of 2 phases)
+Progress: v1.1 [██░░░░░░░░░░░░░░░░░░] ~10% (REF-01 structural done, REF-02 + OBS-05 pending)
 
 ## Performance Metrics (v1.0 — final, frozen)
 
@@ -44,8 +44,19 @@ Detailed per-plan history archived in `.planning/milestones/v1.0-phases/`.
 
 Notable items marked `⚠ Revisit` for v1.1 scoping:
 - Expecto `[<Tests>]` auto-discovery disabled — 4 executors hit the rootTests registration pitfall
-- `Router.modelToName` absolute-path hardcode (UAT hotfix) — replace with dynamic `/v1/models` query
+- `Router.modelToName` absolute-path hardcode (UAT hotfix) — **RESOLVED in 06-01**: deleted from Core; adapter now resolves via Lazy<Task<ModelInfo>> probe
 - `Step.Thought = "[not captured in v1]"` placeholder — reconsider for `--verbose` quality
+
+**v1.1 decisions (Phase 6):**
+
+| Decision | Plan | Rationale |
+|----------|------|-----------|
+| Option B: delete modelToName from Core; adapter owns wire value | 06-01 | Core purity preserved; buildRequestBody gets modelId: string injected from lazy probe |
+| Two explicit Lazy<Task<ModelInfo>> (not Map) | 06-01 | Simpler for two Model cases; named bindings probe8000/probe8001 are clearer |
+| CancellationToken.None in Lazy factory | 06-01 | Shared task must not be cancelled by one caller's Ctrl+C (06-RESEARCH Pitfall 6) |
+| Empty ModelId -> POST 4xx (no silent failure) | 06-01 | Surfaces probe miss as LlmUnreachable at user-visible call site |
+| AppComponents.MaxModelLen stays 8192 floor | 06-01 | Known regression for 72B warning accuracy; v1.2 candidate |
+| getMaxModelLenAsync left in place | 06-01 | CompositionRoot.bootstrapAsync still needs it; plan 06-02 decides fate |
 
 ### Pending Todos (v1.1 seed)
 
@@ -61,6 +72,6 @@ All three items converted to requirements REF-01, REF-02, OBS-05. See `.planning
 
 ## Session Continuity
 
-Last session: 2026-04-23
-Stopped at: ROADMAP.md created. Phase 6 (Dynamic Bootstrap) and Phase 7 (Thought Capture) defined. 3/3 requirements mapped. Ready to plan.
-Resume file: None — next action is `/gsd:plan-phase 6`.
+Last session: 2026-04-23T09:02:41Z
+Stopped at: Completed 06-01-PLAN.md. Router.modelToName deleted; QwenHttpClient has lazy probe + ModelInfo + tryParseModelId. 216 tests pass.
+Resume file: None — next action is execute 06-02-PLAN.md (bootstrapAsync removal + Program.fs sync wiring).
