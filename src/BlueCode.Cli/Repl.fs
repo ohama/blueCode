@@ -20,11 +20,13 @@ open BlueCode.Cli.CompositionRoot
 ///   4. On Error: write renderError to stdout. Exit 1 for most errors, 130 for UserCancelled.
 ///   5. Defensive catch: any OperationCanceledException escaping runSession -> treat as UserCancelled.
 ///
+/// renderMode: Compact (default) or Verbose (--verbose flag via CLI-03).
+///
 /// Exit code convention:
 ///   0   - successful turn
 ///   1   - agent error (MaxLoopsExceeded, LoopGuardTripped, Llm*, Tool*, etc.)
 ///   130 - user-cancelled (SIGINT, Ctrl+C - POSIX 128+2)
-let runSingleTurn (prompt: string) (components: AppComponents) : Task<int> =
+let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: RenderMode) : Task<int> =
     task {
         use cts = new CancellationTokenSource()
         let cancelHandler = System.ConsoleCancelEventHandler(fun _ args ->
@@ -39,9 +41,21 @@ let runSingleTurn (prompt: string) (components: AppComponents) : Task<int> =
             // before runSession proceeds to the next iteration).
             let onStep (step: Step) =
                 components.JsonlSink.WriteStep step
-                printfn "%s" (renderStep Compact step)
-                Log.Debug("Step {Number}: action={Action} duration={DurationMs}ms",
-                          step.StepNumber, step.Action, step.DurationMs)
+                printfn "%s" (renderStep renderMode step)
+                // Always emit this Debug event — only visible when --trace flips
+                // levelSwitch to Debug (CLI-07). sprintf "%A" produces untruncated
+                // F# record display for the "full untruncated input/output" requirement.
+                // This is log data on stderr; user asked for it via --trace so no
+                // sensitive-data truncation applies.
+                let actionRepr = sprintf "%A" step.Action
+                let resultRepr = sprintf "%A" step.ToolResult
+                Log.Debug(
+                    "Step {Number}: action={Action} elapsed_ms={DurationMs} input={Input} output={Output}",
+                    step.StepNumber,
+                    step.Action,
+                    step.DurationMs,
+                    actionRepr,
+                    resultRepr)
 
             let! result =
                 try
@@ -82,7 +96,9 @@ let runSingleTurn (prompt: string) (components: AppComponents) : Task<int> =
 /// Per-turn Ctrl+C (SIGINT) cancels the current turn via the existing
 /// CancelKeyPress handler in runSingleTurn — after a 130 exit, the loop
 /// continues. No cross-turn message history (explicit POST-V1 scope).
-let runMultiTurn (components: AppComponents) : Task<int> =
+///
+/// renderMode: threaded from Program.fs CLI flag (Compact or Verbose).
+let runMultiTurn (components: AppComponents) (renderMode: RenderMode) : Task<int> =
     task {
         printfn "blueCode — multi-turn mode. Type /exit or press Ctrl+D to quit."
         let mutable lastCode = 0
@@ -95,7 +111,7 @@ let runMultiTurn (components: AppComponents) : Task<int> =
             | "/exit" -> running <- false
             | s when s.Trim() = "" -> ()
             | prompt ->
-                let! code = runSingleTurn prompt components
+                let! code = runSingleTurn prompt components renderMode
                 // SIGINT cancels the current turn but keeps the REPL alive.
                 // Translate 130 back to 0 for the running tally so the
                 // final process exit uses the last "real" completion code.

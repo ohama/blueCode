@@ -8,6 +8,7 @@ open Expecto
 open BlueCode.Core.Domain
 open BlueCode.Core.Ports
 open BlueCode.Core.AgentLoop
+open BlueCode.Cli.Rendering
 open BlueCode.Cli.CompositionRoot
 
 // ── Stub helpers ─────────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ let tests =
             Console.SetOut(sw)
             try
                 let exitCode =
-                    BlueCode.Cli.Repl.runSingleTurn "stub prompt" components
+                    BlueCode.Cli.Repl.runSingleTurn "stub prompt" components Compact
                     |> fun t -> t.GetAwaiter().GetResult()
                 Console.Out.Flush()
                 let captured = sw.ToString()
@@ -114,7 +115,7 @@ let tests =
             try
                 // Act: run synchronously to avoid Console.Out interleaving
                 let exitCode =
-                    BlueCode.Cli.Repl.runMultiTurn components
+                    BlueCode.Cli.Repl.runMultiTurn components Compact
                     |> fun t -> t.GetAwaiter().GetResult()
                 Console.Out.Flush()
                 let captured = stdoutWriter.ToString()

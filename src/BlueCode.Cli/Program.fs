@@ -7,6 +7,7 @@ open Serilog
 open BlueCode.Cli.Adapters.Logging
 open BlueCode.Cli
 open BlueCode.Cli.CliArgs
+open BlueCode.Cli.Rendering
 open BlueCode.Cli.CompositionRoot
 
 /// Process entry point (Phase 5). Wires Argu parser for CLI-06 then dispatches
@@ -25,10 +26,10 @@ let main (argv: string array) : int =
     let parser = ArgumentParser.Create<CliArgs>(programName = "blueCode")
     try
         let results = parser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
-        let promptWords = results.TryGetResult Prompt |> Option.defaultValue []
-        let isVerbose   = results.Contains Verbose
-        let isTrace     = results.Contains Trace
-        let forcedStr   = results.TryGetResult Model
+        let promptWords = results.TryGetResult CliArgs.Prompt |> Option.defaultValue []
+        let isVerbose   = results.Contains CliArgs.Verbose
+        let isTrace     = results.Contains CliArgs.Trace
+        let forcedStr   = results.TryGetResult CliArgs.Model
         // parseForcedModel raises on invalid model string; wrap as usage error (exit 2).
         let forcedModel =
             try parseForcedModel forcedStr
@@ -36,6 +37,17 @@ let main (argv: string array) : int =
                 eprintfn "ERROR: %s" ex.Message
                 Log.CloseAndFlush()
                 exit 2
+
+        // Step 2: flip LoggingLevelSwitch AFTER parse, BEFORE bootstrap.
+        // This gates all subsequent Log.Debug calls on the --trace flag (CLI-07).
+        // Default is Information (suppresses Debug); --trace flips to Debug.
+        if isTrace then
+            levelSwitch.MinimumLevel <- Serilog.Events.LogEventLevel.Debug
+
+        // Step 3: derive RenderMode from --verbose flag (CLI-03/CLI-04).
+        let renderMode : RenderMode =
+            if isVerbose then Verbose else Compact
+
         let opts = {
             ForcedModel = forcedModel
             Verbose     = isVerbose
@@ -49,10 +61,10 @@ let main (argv: string array) : int =
         let exitCode =
             match promptWords with
             | [] ->
-                (Repl.runMultiTurn components).GetAwaiter().GetResult()
+                (Repl.runMultiTurn components renderMode).GetAwaiter().GetResult()
             | words ->
                 let prompt = String.concat " " words
-                (Repl.runSingleTurn prompt components).GetAwaiter().GetResult()
+                (Repl.runSingleTurn prompt components renderMode).GetAwaiter().GetResult()
         Log.CloseAndFlush()
         exitCode
     with
