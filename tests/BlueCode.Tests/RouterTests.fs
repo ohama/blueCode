@@ -95,6 +95,7 @@ let rootTests = testList "all" [
     BlueCode.Tests.FileToolsTests.fileToolsTests
     BlueCode.Tests.BashSecurityTests.bashSecurityTests
     BlueCode.Tests.RunShellTests.runShellTests
+    BlueCode.Tests.AgentLoopTests.agentLoopTests
 ]
 
 [<EntryPoint>]

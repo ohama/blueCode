@@ -12,6 +12,7 @@
     <Compile Include="FileToolsTests.fs" />
     <Compile Include="BashSecurityTests.fs" />
     <Compile Include="RunShellTests.fs" />
+    <Compile Include="AgentLoopTests.fs" />
     <Compile Include="RouterTests.fs" />
   </ItemGroup>
 
