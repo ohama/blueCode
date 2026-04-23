@@ -302,6 +302,11 @@ let create () : ILlmClient =
                 let url = model |> modelToEndpoint |> endpointToUrl
                 let body = buildRequestBody messages model
 
+                // --trace: log exact POST body before it leaves the adapter.
+                // Gated by levelSwitch (default Information suppresses). Stays on
+                // stderr (Serilog config), so no stdout contamination.
+                Serilog.Log.Debug("POST {Url} body: {Body}", url, body)
+
                 let modelLabel =
                     match model with
                     | Qwen32B -> "32B"
@@ -317,6 +322,8 @@ let create () : ILlmClient =
                 match postResult with
                 | Error e -> return Error e
                 | Ok responseJson ->
+                    Serilog.Log.Debug("Response {Url}: {Body}", url, responseJson)
+
                     match extractContent url responseJson with
                     | Error e -> return Error e
                     | Ok content ->
