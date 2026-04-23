@@ -56,10 +56,14 @@ Plans:
 1. `ILlmClient.CompleteAsync` signature in `Ports.fs` returns a type that includes a `Thought` string alongside `LlmOutput` — e.g., `Task<Result<LlmStep, AgentError>>` or `Task<Result<Thought * LlmOutput, AgentError>>` — and the old `Task<Result<LlmOutput, AgentError>>` signature is gone.
 2. `AgentLoop.fs` constructs each `Step` with `Thought = <value from CompleteAsync>` — the literal string `"[not captured in v1]"` does not appear in the production code path (confirmed by `grep -r "not captured" src/`).
 3. `blueCode --verbose "<prompt>"` produces step output where the `Thought:` line contains non-empty LLM-generated text (not the placeholder) for at least one step — observable in terminal output.
-4. All existing tests still pass (208 baseline); any test that previously constructed a mock `ILlmClient` is updated to satisfy the new signature without reducing coverage.
+4. All existing tests still pass (216 baseline post-Phase 6); any test that previously constructed a mock `ILlmClient` is updated to satisfy the new signature without reducing coverage.
 5. `QwenHttpClient.toLlmOutput` (or its successor) correctly extracts the `thought` field already present in the JSON schema response and passes it through `CompleteAsync` to the loop — no schema changes required, only pipeline wiring.
 
-**Plans:** _(to be filled by plan-phase)_
+**Plans:** 2 plans in 2 waves
+
+Plans:
+- [ ] 07-01-PLAN.md — Introduce Core LlmResponse record; change ILlmClient.CompleteAsync return type; cascade through callLlmWithRetry + both Step construction sites; update toLlmOutput to return LlmResponse; remove stale "Known v1 limitation" comment (OBS-05, SC-1/2/5 structural)
+- [ ] 07-02-PLAN.md — Update AgentLoopTests mockLlm + ReplTests stubLlm + ToLlmOutputTests patterns to LlmResponse; introduce makeMockResponse helper; restore 216-test baseline; run live --verbose smoke to observe real thought content (SC-3 observational, SC-4 coverage)
 
 ---
 
@@ -68,7 +72,7 @@ Plans:
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | 6 — Dynamic Bootstrap | Runtime model-id resolution + lazy probe | REF-01, REF-02 | Planned (2 plans) |
-| 7 — Thought Capture | Real LLM thought in Step.Thought | OBS-05 | Not started |
+| 7 — Thought Capture | Real LLM thought in Step.Thought | OBS-05 | Planned (2 plans) |
 
 **Requirement coverage:** 3/3 (100%) — REF-01 → Phase 6, REF-02 → Phase 6, OBS-05 → Phase 7.
 
@@ -76,4 +80,5 @@ Plans:
 
 *Roadmap created: 2026-04-23*
 *Phase 6 planned: 2026-04-23 (2 plans, sequential)*
+*Phase 7 planned: 2026-04-23 (2 plans, sequential — 07-01 production wiring then 07-02 tests + live verification)*
 *v1.0 archive: `.planning/milestones/v1.0-ROADMAP.md`*
