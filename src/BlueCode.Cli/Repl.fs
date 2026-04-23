@@ -39,6 +39,7 @@ let runSingleTurn (prompt: string) (components: AppComponents) : Task<int> =
             // before runSession proceeds to the next iteration).
             let onStep (step: Step) =
                 components.JsonlSink.WriteStep step
+                printfn "%s" (renderStep Compact step)
                 Log.Debug("Step {Number}: action={Action} duration={DurationMs}ms",
                           step.StepNumber, step.Action, step.DurationMs)
 
