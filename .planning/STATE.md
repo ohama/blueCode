@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 5 of 5 (CLI Polish)
-Plan: 2 of 4 in Phase 5 — complete (05-02 done)
-Status: 05-02 complete — LoggingLevelSwitch; RenderMode threading; --trace/--verbose; spinner elapsed; 192 tests pass (1 ignored smoke)
-Last activity: 2026-04-23 — Completed 05-02-PLAN.md (LoggingLevelSwitch + RenderMode threading + --trace/--verbose + spinner elapsed)
+Plan: 3 of 4 in Phase 5 — complete (05-03 done)
+Status: 05-03 complete — /v1/models probe + bootstrapAsync + 80% context warning + Fantomas 7.0.5; 208 tests pass (1 ignored smoke)
+Last activity: 2026-04-23 — Completed 05-03-PLAN.md (/v1/models probe + bootstrapAsync + AppComponents.MaxModelLen + 80% context warning + Fantomas)
 
-Progress: [███████████████████░] 94% (15/16 plans)
+Progress: [████████████████████] 100% autonomous plans (15 of 16 plans; 05-04 is human checkpoint)
 
 ## Performance Metrics
 
@@ -113,6 +113,13 @@ Recent decisions affecting current work:
 - 05-02: Log.Debug always called in onStep regardless of levelSwitch — Serilog suppresses before formatting (zero-cost gate); visible only when --trace flips to Debug
 - 05-02: Step.Thought remains '[not captured in v1]' placeholder — verbose mode displays it; thought capture deferred to Phase 6+ (Open Question 1 resolution)
 - 05-02: withSpinner extended with CTS + background Task.Delay(500) ticker for live elapsed-second spinner label (CLI-05); fire-and-forget pattern; finally-block cancels
+- 05-03: tryParseMaxModelLen extracted as PUBLIC pure helper in QwenHttpClient.fs for unit-testability (ModelsProbeTests can test JSON edge cases without HTTP mocking)
+- 05-03: sync bootstrap retained alongside bootstrapAsync per Open Question 2 — CompositionRootTests stay fast and network-free; MaxModelLen defaults to 8192
+- 05-03: printfn (Console.Out) used for 80% WARNING over AnsiConsole.MarkupLine — AnsiConsole bypasses Console.SetOut in test environments; printfn respects redirection (testability fix)
+- 05-03: MaxModelLen=10 used in integration test (threshold=32 chars) — any ToolCall step repr exceeds 32 chars reliably; MaxModelLen=100 was too close to boundary
+- 05-03: Integer-only 80% check: totalChars*5 >= maxModelLen*16 avoids float; derived from totalChars >= maxModelLen*4*0.8
+- 05-03: Fantomas 7.0.5 installed as local dotnet tool (.config/dotnet-tools.json); 35 files reformatted; format committed as isolated style(05-03) commit
+- 05-03: Cross-turn context accumulation is POST-V1 — totalChars/warnedThisTurn are mutable locals inside runSingleTurn; reset per turn naturally (Open Question 3)
 
 ### Pending Todos
 
@@ -126,6 +133,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23
-Stopped at: Completed 05-02-PLAN.md — LoggingLevelSwitch + RenderMode threading + --trace/--verbose + spinner elapsed. 192 total tests pass (1 ignored). Phase 5 plan 2 of 4 complete.
+Last session: 2026-04-23T05:48Z
+Stopped at: Completed 05-03-PLAN.md — /v1/models probe + bootstrapAsync + 80% context warning + Fantomas 7.0.5. 208 total tests pass (1 ignored smoke). Phase 5 plan 3 of 4 complete. Next: 05-04 (human checkpoint for Python retirement).
 Resume file: None
