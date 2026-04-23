@@ -33,6 +33,7 @@ let private testConfig : AgentConfig = {
     MaxLoops        = 5
     ContextCapacity = 3
     SystemPrompt    = "test-system-prompt"
+    ForcedModel     = None
 }
 
 /// No-op step callback.

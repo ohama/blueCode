@@ -51,7 +51,7 @@ let tests =
                 LlmClient    = llm
                 ToolExecutor = stubToolsOk
                 JsonlSink    = sink
-                Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt" }
+                Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
                 ProjectRoot  = tempRoot
                 LogPath      = sinkPath
             }

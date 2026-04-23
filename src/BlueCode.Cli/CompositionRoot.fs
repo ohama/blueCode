@@ -53,6 +53,7 @@ let bootstrap (projectRoot: string) : AppComponents =
             MaxLoops        = 5
             ContextCapacity = 3
             SystemPrompt    = defaultSystemPrompt
+            ForcedModel     = None
         }
         ProjectRoot  = projectRoot
         LogPath      = logPath

@@ -28,6 +28,7 @@ type AgentConfig = {
     MaxLoops         : int              // LOOP-01: default 5
     ContextCapacity  : int              // LOOP-06: default 3
     SystemPrompt     : string
+    ForcedModel      : BlueCode.Core.Domain.Model option   // ROU-04: None = use Router
 }
 
 /// Loop guard state: (actionName, inputHash) -> occurrence count.
@@ -299,7 +300,9 @@ let runSession
     (ct        : CancellationToken)
     : Task<Result<AgentResult, AgentError>>
     =
-    let model = userInput |> classifyIntent |> intentToModel
+    let model =
+        config.ForcedModel
+        |> Option.defaultWith (fun () -> userInput |> classifyIntent |> intentToModel)
     let ctx   = ContextBuffer.create config.ContextCapacity
     let guard = Map.empty : LoopGuardState
     runLoop config model client tools userInput ctx guard 0 [] onStep ct
