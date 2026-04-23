@@ -65,23 +65,18 @@ let private maxModelLenTests =
                   (Some 128000)
                   "128K context model should parse correctly to Some 128000"
 
-          testCase "getMaxModelLenAsync against closed port -> fallback 8192"
+          testCase "probeModelInfoAsync against closed port -> ModelId='' MaxModelLen=8192 fallback"
           <| fun _ ->
-              // Verify the HTTP-failure fallback path live.
-              // Port 64321 is highly unlikely to be listening; the connection will be
-              // refused immediately, triggering the catch -> fallback path.
-              // We cannot easily override the hardcoded URL in getMaxModelLenAsync,
-              // but we CAN verify the function returns 8192 when port 8000 is closed
-              // (in CI / test environment, no vLLM is running).
-              //
-              // Skip this test if port 8000 happens to be serving (would return real value).
-              // In normal test runs (no vLLM), this exercises the fallback path.
+              // Port 64321 is highly unlikely to be listening; the connection will be refused,
+              // triggering the catch path in probeModelInfoAsync which returns the fallback
+              // record. This exercises the same WARN-and-fallback semantics that v1.0's
+              // getMaxModelLenAsync had, now applied to the combined ModelInfo probe.
               let result =
-                  getMaxModelLenAsync System.Threading.CancellationToken.None
+                  probeModelInfoAsync "http://127.0.0.1:64321" System.Threading.CancellationToken.None
                   |> fun t -> t.GetAwaiter().GetResult()
-              // Either returns 8192 (fallback) or a real parsed value (if vLLM is running).
-              // Either way the function must return a positive int.
-              Expect.isGreaterThan result 0 (sprintf "getMaxModelLenAsync must return a positive int (got %d)" result) ]
+
+              Expect.equal result.ModelId "" "closed-port fallback ModelId must be empty string"
+              Expect.equal result.MaxModelLen 8192 "closed-port fallback MaxModelLen must be 8192 floor" ]
 
 /// Tests for tryParseModelId — the pure JSON parse helper for data[0].id.
 /// These tests exercise all fallback paths without any HTTP network calls.
