@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 4 of 5 (Agent Loop) — In progress
-Plan: 3 of 3 in Phase 4 — COMPLETE (04-01, 04-03 done; 04-02 remaining)
-Status: 04-03 complete — Serilog NuGets + Logging.fs + JsonlSink.fs + Rendering.fs + 11 tests; 170 tests pass (1 ignored smoke)
-Last activity: 2026-04-23 — Completed 04-03-PLAN.md (Adapters/Logging.fs OBS-02 stderr; Adapters/JsonlSink.fs OBS-01+SC-6 AutoFlush JSONL; Rendering.fs OBS-04+SC-5+SC-7 Compact/Verbose; 6 JsonlSink tests + 5 Rendering tests)
+Phase: 4 of 5 (Agent Loop) — COMPLETE
+Plan: 3 of 3 in Phase 4 — all done (04-01, 04-03, 04-02)
+Status: 04-02 complete — CompositionRoot.fs + Repl.fs + Program.fs real entry + CompositionRootTests (2) + AgentLoopSmokeTests (env-gated); 173 tests pass (1 ignored smoke)
+Last activity: 2026-04-23 — Completed 04-02-PLAN.md (CompositionRoot.bootstrap wires adapters; Repl.runSingleTurn Ctrl+C exit 130, onStep->JsonlSink.WriteStep SC-6; Program.fs configure() first + use _jsonlSink)
 
-Progress: [███████████████░] 73% (11/15 plans)
+Progress: [████████████████░] 80% (12/15 plans)
 
 ## Performance Metrics
 
@@ -94,10 +94,18 @@ Recent decisions affecting current work:
 - 04-03: standardErrorFromLevel = Nullable LogEventLevel.Verbose routes ALL Serilog events to stderr (OBS-02 separation from Spectre.Console on stdout)
 - 04-03: renderError exhaustively matches all AgentError cases with user-readable one-liners (no %A, no stack traces) — SC-5 + SC-2
 - 04-03: RenderMode Compact | Verbose — Phase 5 CLI-07 --trace adds a separate Serilog sink, NOT a third RenderMode
+- 04-02: CompositionRoot uses function injection — no DI container (research Pattern 8)
+- 04-02: Default system prompt is `let private` constant in CompositionRoot.fs (not a file) — answers research Open Question 4
+- 04-02: Repl.runSingleTurn defensive OCE catch present even though adapters already map OCE -> UserCancelled (belt-and-suspenders, research Pitfall 2)
+- 04-02: Program.fs `use _jsonlSink = components.JsonlSink` pattern — JsonlSink disposed at entry-point scope exit guaranteeing final flush
+- 04-02: Exit codes: 0 success, 1 agent error, 2 usage error, 130 SIGINT
+- 04-02: No Argu yet — positional prompt only; CLI-06 deferred to Phase 5
+- 04-02: RouterTests.fs rootTests assembles all test lists explicitly — new test modules must be added to rootTests list (Expecto [<Tests>] auto-discovery not used in this project)
 
 ### Pending Todos
 
 - SC-01 manual verification: run `BLUECODE_SMOKE_TEST=1 dotnet test BlueCode.slnx --filter "Smoke"` with vLLM 32B serving on localhost:8000
+- SC-01 manual verification (04-02): run `BLUECODE_AGENT_SMOKE=1 dotnet test BlueCode.slnx --filter "FullyQualifiedName~AgentLoop.Smoke"` with vLLM 32B/72B serving on localhost:8000/8001
 
 ### Blockers/Concerns
 
@@ -106,6 +114,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T00:42:16Z
-Stopped at: Completed 04-03-PLAN.md — Logging.fs (OBS-02), JsonlSink.fs (OBS-01+SC-6), Rendering.fs (OBS-04+SC-5+SC-7). 11 new tests. 170 total tests pass.
+Last session: 2026-04-23
+Stopped at: Completed 04-02-PLAN.md — CompositionRoot.fs + Repl.fs + Program.fs + CompositionRootTests + AgentLoopSmokeTests. 3 new tests. 173 total tests pass. Phase 4 complete.
 Resume file: None
