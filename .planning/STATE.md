@@ -128,9 +128,12 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- v1.1: re-download 32B Instruct model (`Qwen2.5-Coder-32B-Instruct` MLX variant) so default intent routing (without `--model 72b`) produces chat-correct responses
 - v1.1: OBS-03 dynamic model id — extend QwenHttpClient.getMaxModelLenAsync with getModelIdAsync so Router.modelToName queries server at startup (removes hardcoded path)
 - v1.1: decouple 32B bootstrap probe from Program.fs startup — 32B cold-start causes `/v1/models` timeout WARN even when user targets 72B
+
+### Resolved post-milestone (v1.0 → v1.1 transition)
+
+- 2026-04-23: **32B Instruct re-downloaded** — replaced Base Coder with Instruct variant at `~/llm-system/models/qwen32b/`. Verified: `special_tokens_map.json` + `added_tokens.json` present, chat smoke returns `finish: stop, content: 'OK'`, `dotnet run -- --model 32b "List files in src"` completes in 2 steps (3.5s + 3.3s) with correct answer. Process guide written to `documentations/qwen32b-base-to-instruct.md`.
 
 ### Blockers/Concerns
 
