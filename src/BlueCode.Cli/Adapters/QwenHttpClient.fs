@@ -19,14 +19,15 @@ open BlueCode.Cli.Adapters.LlmWire
 /// reused across all requests. Phase 4 CompositionRoot.fs will own
 /// this; Phase 2 keeps it module-scope private for the smoke test.
 /// 180s timeout covers 72B worst case (~60s) + generous margin.
-let private httpClient : HttpClient =
+let private httpClient: HttpClient =
     let c = new HttpClient()
     c.Timeout <- TimeSpan.FromSeconds(180.0)
     c
 
-let private roleString : MessageRole -> string = function
-    | System    -> "system"
-    | User      -> "user"
+let private roleString: MessageRole -> string =
+    function
+    | System -> "system"
+    | User -> "user"
     | Assistant -> "assistant"
 
 // ── Request build (from Plan 02-01, unchanged — stays `let private`) ────────
@@ -42,15 +43,19 @@ let private roleString : MessageRole -> string = function
 let private buildRequestBody (messages: Message list) (model: Model) : string =
     let msgArr =
         messages
-        |> List.map (fun m -> {| role = roleString m.Role; content = m.Content |})
+        |> List.map (fun m ->
+            {| role = roleString m.Role
+               content = m.Content |})
         |> List.toArray
+
     let req =
-        {| model            = modelToName model
-           messages         = msgArr
-           temperature      = modelToTemperature model
-           max_tokens       = 1024
+        {| model = modelToName model
+           messages = msgArr
+           temperature = modelToTemperature model
+           max_tokens = 1024
            presence_penalty = 1.5
-           stream           = false |}
+           stream = false |}
+
     JsonSerializer.Serialize(req, jsonOptions)
 
 // ── Full error mapping on POST ──────────────────────────────────────────────
@@ -66,30 +71,30 @@ let private buildRequestBody (messages: Message list) (model: Model) : string =
 ///   HTTP 4xx/5xx                              -> LlmUnreachable url "HTTP {code}: {body-snippet}"
 ///
 /// PRIVATE: internal helper called only from CompleteAsync via withSpinner.
-let private postAsync
-    (url: string)
-    (body: string)
-    (ct: CancellationToken)
-    : Task<Result<string, AgentError>>
-    =
+let private postAsync (url: string) (body: string) (ct: CancellationToken) : Task<Result<string, AgentError>> =
     task {
         use req = new HttpRequestMessage(HttpMethod.Post, url)
         req.Content <- new StringContent(body, Encoding.UTF8, "application/json")
+
         try
             use! resp = httpClient.SendAsync(req, ct)
+
             if not resp.IsSuccessStatusCode then
                 let! errorBody = resp.Content.ReadAsStringAsync(ct)
+
                 let snippet =
-                    if errorBody.Length > 200 then errorBody.Substring(0, 200)
-                    else errorBody
+                    if errorBody.Length > 200 then
+                        errorBody.Substring(0, 200)
+                    else
+                        errorBody
+
                 let detail = sprintf "HTTP %d: %s" (int resp.StatusCode) snippet
-                return Error (LlmUnreachable (url, detail))
+                return Error(LlmUnreachable(url, detail))
             else
                 let! responseJson = resp.Content.ReadAsStringAsync(ct)
                 return Ok responseJson
         with
-        | :? HttpRequestException as ex ->
-            return Error (LlmUnreachable (url, ex.Message))
+        | :? HttpRequestException as ex -> return Error(LlmUnreachable(url, ex.Message))
         | :? TaskCanceledException as ex when ex.CancellationToken = ct ->
             // User pressed Ctrl+C; the cancellation token we received
             // is the one that fired.
@@ -99,7 +104,7 @@ let private postAsync
             // DIFFERENT (internal) token. Map to LlmUnreachable with
             // a timeout detail so the caller can distinguish "I cancelled"
             // from "network/model was too slow".
-            return Error (LlmUnreachable (url, "request timed out after 180s"))
+            return Error(LlmUnreachable(url, "request timed out after 180s"))
     }
 
 // ── OpenAI envelope extraction ──────────────────────────────────────────────
@@ -115,15 +120,13 @@ let private postAsync
 let private extractContent (url: string) (responseJson: string) : Result<string, AgentError> =
     try
         use doc = JsonDocument.Parse(responseJson)
+
         let content =
-            doc.RootElement
-                .GetProperty("choices").[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString()
+            doc.RootElement.GetProperty("choices").[0].GetProperty("message").GetProperty("content").GetString()
+
         Ok content
     with ex ->
-        Error (LlmUnreachable (url, sprintf "malformed response: %s" ex.Message))
+        Error(LlmUnreachable(url, sprintf "malformed response: %s" ex.Message))
 
 // ── LlmStep -> LlmOutput mapping ────────────────────────────────────────────
 
@@ -155,18 +158,17 @@ let toLlmOutput (step: LlmStep) : Result<LlmOutput, AgentError> =
     match step.action with
     | "final" ->
         match step.input.TryGetProperty("answer") with
-        | true, v when v.ValueKind = JsonValueKind.String ->
-            Ok (FinalAnswer (v.GetString()))
+        | true, v when v.ValueKind = JsonValueKind.String -> Ok(FinalAnswer(v.GetString()))
         | _ ->
             // SchemaViolation (not InvalidJsonOutput): the JSON schema
             // cannot validate action-specific input shapes (action→input
             // schema is open in v1). Missing-answer is a schema gap,
             // not a parse failure. See docblock above for full rationale.
-            Error (SchemaViolation "final action input missing string 'answer' field")
+            Error(SchemaViolation "final action input missing string 'answer' field")
     | toolName ->
         let raw = step.input.GetRawText()
-        let ti = ToolInput (Map.ofList [ ("_raw", raw) ])
-        Ok (ToolCall (ToolName toolName, ti))
+        let ti = ToolInput(Map.ofList [ ("_raw", raw) ])
+        Ok(ToolCall(ToolName toolName, ti))
 
 // ── Spectre.Console spinner ─────────────────────────────────────────────────
 
@@ -181,33 +183,36 @@ let toLlmOutput (step: LlmStep) : Result<LlmOutput, AgentError> =
 /// so it exits cleanly when the HTTP call completes.
 ///
 /// PRIVATE: internal helper called only from CompleteAsync.
-let private withSpinner<'a>
-    (label: string)
-    (work: unit -> Task<'a>)
-    : Task<'a>
-    =
-    AnsiConsole.Status()
+let private withSpinner<'a> (label: string) (work: unit -> Task<'a>) : Task<'a> =
+    AnsiConsole
+        .Status()
         .Spinner(Spinner.Known.Dots)
         .SpinnerStyle(Style.Parse("cyan"))
-        .StartAsync(label, fun ctx ->
-            task {
-                // Background ticker: update the spinner label with elapsed seconds.
-                // CLI-05: "spinner + elapsed time" requirement.
-                use cts = new System.Threading.CancellationTokenSource()
-                let sw = System.Diagnostics.Stopwatch.StartNew()
-                let _ticker =
-                    task {
-                        try
-                            while not cts.Token.IsCancellationRequested do
-                                do! Task.Delay(500, cts.Token)
-                                ctx.Status <- sprintf "%s %ds" label (int sw.Elapsed.TotalSeconds)
-                        with :? System.OperationCanceledException -> ()
-                    }
-                try
-                    return! work ()
-                finally
-                    cts.Cancel()
-            })
+        .StartAsync(
+            label,
+            fun ctx ->
+                task {
+                    // Background ticker: update the spinner label with elapsed seconds.
+                    // CLI-05: "spinner + elapsed time" requirement.
+                    use cts = new System.Threading.CancellationTokenSource()
+                    let sw = System.Diagnostics.Stopwatch.StartNew()
+
+                    let _ticker =
+                        task {
+                            try
+                                while not cts.Token.IsCancellationRequested do
+                                    do! Task.Delay(500, cts.Token)
+                                    ctx.Status <- sprintf "%s %ds" label (int sw.Elapsed.TotalSeconds)
+                            with :? System.OperationCanceledException ->
+                                ()
+                        }
+
+                    try
+                        return! work ()
+                    finally
+                        cts.Cancel()
+                }
+        )
 
 // ── /v1/models probe (OBS-03) ──────────────────────────────────────────────
 
@@ -220,16 +225,19 @@ let tryParseMaxModelLen (json: string) : int option =
     try
         use doc = JsonDocument.Parse(json)
         let root = doc.RootElement
+
         match root.TryGetProperty("data") with
         | true, data when data.ValueKind = JsonValueKind.Array && data.GetArrayLength() > 0 ->
             let model0 = data.[0]
+
             match model0.TryGetProperty("max_model_len") with
             | true, el when el.ValueKind = JsonValueKind.Number ->
                 let ok, v = el.TryGetInt64()
                 if ok && v > 0L then Some(int v) else None
             | _ -> None
         | _ -> None
-    with _ -> None
+    with _ ->
+        None
 
 /// GET http://127.0.0.1:8000/v1/models and extract data[0].max_model_len.
 /// Returns the integer value on success; falls back to 8192 (conservative
@@ -244,22 +252,29 @@ let tryParseMaxModelLen (json: string) : int option =
 let getMaxModelLenAsync (ct: CancellationToken) : Task<int> =
     task {
         let fallback = 8192
+
         try
             use! resp = httpClient.GetAsync("http://127.0.0.1:8000/v1/models", ct)
+
             if not resp.IsSuccessStatusCode then
                 Serilog.Log.Warning(
                     "GET /v1/models returned {Status}; using fallback {Fallback}",
                     int resp.StatusCode,
-                    fallback)
+                    fallback
+                )
+
                 return fallback
             else
                 let! json = resp.Content.ReadAsStringAsync(ct)
+
                 match tryParseMaxModelLen json with
                 | Some v -> return v
                 | None ->
                     Serilog.Log.Warning(
                         "max_model_len missing/invalid in /v1/models response; using fallback {Fallback}",
-                        fallback)
+                        fallback
+                    )
+
                     return fallback
         with ex ->
             Serilog.Log.Warning(ex, "GET /v1/models failed; using fallback {Fallback}", fallback)
@@ -284,17 +299,18 @@ let create () : ILlmClient =
     { new ILlmClient with
         member _.CompleteAsync messages model ct =
             task {
-                let url  = model |> modelToEndpoint |> endpointToUrl
+                let url = model |> modelToEndpoint |> endpointToUrl
                 let body = buildRequestBody messages model
+
                 let modelLabel =
                     match model with
                     | Qwen32B -> "32B"
                     | Qwen72B -> "72B"
+
                 let label = sprintf "Thinking... [%s]" modelLabel
 
                 // Spinner wraps HTTP ONLY. Parse + validate run after.
-                let! postResult =
-                    withSpinner label (fun () -> postAsync url body ct)
+                let! postResult = withSpinner label (fun () -> postAsync url body ct)
 
                 match postResult with
                 | Error e -> return Error e
@@ -305,5 +321,4 @@ let create () : ILlmClient =
                         match parseLlmResponse content with
                         | Error e -> return Error e
                         | Ok step -> return toLlmOutput step
-            }
-    }
+            } }

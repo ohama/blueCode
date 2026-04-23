@@ -10,4 +10,4 @@ open BlueCode.Core.Domain
 type ToolRegistry = private ToolRegistry of Map<ToolName, Tool>
 
 /// An empty registry. Phase 3 replaces this with a populated one.
-let empty : ToolRegistry = ToolRegistry Map.empty
+let empty: ToolRegistry = ToolRegistry Map.empty

@@ -32,12 +32,12 @@ type Endpoint =
 type FilePath = FilePath of string
 
 /// Shell command string. Security validation is Phase 3 (TOOL-05).
-type Command  = Command  of string
+type Command = Command of string
 
 /// Timeout in MILLISECONDS. Choice of ms (not seconds) matches .NET Process
 /// and CancellationTokenSource APIs directly. Phase 3 can expose a
 /// seconds-based helper for human inputs.
-type Timeout  = Timeout  of int
+type Timeout = Timeout of int
 
 // ── Tools ────────────────────────────────────────────────────────────────────
 
@@ -53,10 +53,10 @@ type Timeout  = Timeout  of int
 /// change for any existing callers. Phase 2 code did not construct these cases,
 /// so there is no call-site impact.
 type Tool =
-    | ReadFile  of FilePath * lineRange: (int * int) option
+    | ReadFile of FilePath * lineRange: (int * int) option
     | WriteFile of FilePath * content: string
-    | ListDir   of FilePath * depth: int option
-    | RunShell  of Command * Timeout
+    | ListDir of FilePath * depth: int option
+    | RunShell of Command * Timeout
 
 /// Raw text produced by a successful tool execution.
 type ToolOutput = ToolOutput of string
@@ -68,22 +68,22 @@ type ToolOutput = ToolOutput of string
 /// is finalized in Phase 3 as TOOL-07. Exhaustive match is required here;
 /// any consumer missing a case is a compile error (Success Criterion 2).
 type ToolResult =
-    | Success           of output: string
-    | Failure           of exitCode: int * stderr: string
-    | SecurityDenied    of reason: string
+    | Success of output: string
+    | Failure of exitCode: int * stderr: string
+    | SecurityDenied of reason: string
     | PathEscapeBlocked of attempted: string
-    | Timeout           of seconds: int
+    | Timeout of seconds: int
 
 // ── LLM output ───────────────────────────────────────────────────────────────
 
-type Thought   = Thought  of string
-type ToolName  = ToolName of string
+type Thought = Thought of string
+type ToolName = ToolName of string
 type ToolInput = ToolInput of Map<string, string>
 
 /// Parsed LLM action (the "action" field of the JSON schema). Phase 2
 /// maps the raw string to this DU after JSON parsing + schema validation.
 type LlmOutput =
-    | ToolCall    of ToolName * ToolInput
+    | ToolCall of ToolName * ToolInput
     | FinalAnswer of string
 
 // ── Error domain ─────────────────────────────────────────────────────────────
@@ -91,20 +91,20 @@ type LlmOutput =
 /// Agent-loop errors. Every case must be a first-class value — no throwing
 /// exceptions out of adapters (LLM-06, PITFALLS.md D-2, D-4).
 type AgentError =
-    | LlmUnreachable     of endpoint: string * detail: string
-    | InvalidJsonOutput  of raw: string
-    | SchemaViolation    of detail: string
-    | UnknownTool        of ToolName
-    | ToolFailure        of Tool * exn
+    | LlmUnreachable of endpoint: string * detail: string
+    | InvalidJsonOutput of raw: string
+    | SchemaViolation of detail: string
+    | UnknownTool of ToolName
+    | ToolFailure of Tool * exn
     | MaxLoopsExceeded
-    | LoopGuardTripped   of action: string
+    | LoopGuardTripped of action: string
     | UserCancelled
 
 // ── Step record ──────────────────────────────────────────────────────────────
 
 type StepStatus =
     | StepSuccess
-    | StepFailed  of string
+    | StepFailed of string
     | StepAborted
 
 /// One completed iteration of the agent loop.
@@ -112,17 +112,16 @@ type StepStatus =
 /// OBS-04 (Phase 4): StartedAt captured immediately before ILlmClient.CompleteAsync,
 /// EndedAt captured immediately after IToolExecutor.ExecuteAsync returns (or LLM
 /// returns for a FinalAnswer step). DurationMs = (EndedAt - StartedAt).TotalMilliseconds.
-type Step = {
-    StepNumber : int
-    Thought    : Thought
-    Action     : LlmOutput
-    ToolResult : ToolResult option
-    Status     : StepStatus
-    ModelUsed  : Model
-    StartedAt  : DateTimeOffset
-    EndedAt    : DateTimeOffset
-    DurationMs : int64
-}
+type Step =
+    { StepNumber: int
+      Thought: Thought
+      Action: LlmOutput
+      ToolResult: ToolResult option
+      Status: StepStatus
+      ModelUsed: Model
+      StartedAt: DateTimeOffset
+      EndedAt: DateTimeOffset
+      DurationMs: int64 }
 
 // ── Agent state machine ───────────────────────────────────────────────────────
 
@@ -130,23 +129,22 @@ type Step = {
 /// Phase 3+ tool-approval gate; it is a valid state, not a TODO.
 type AgentState =
     | AwaitingUserInput
-    | PromptingLlm      of loopCount: int
-    | AwaitingApproval  of Tool
-    | ExecutingTool     of Tool * loopCount: int
-    | Observing         of Step * loopCount: int
-    | Complete          of finalAnswer: string
+    | PromptingLlm of loopCount: int
+    | AwaitingApproval of Tool
+    | ExecutingTool of Tool * loopCount: int
+    | Observing of Step * loopCount: int
+    | Complete of finalAnswer: string
     | MaxLoopsHit
-    | Failed            of AgentError
+    | Failed of AgentError
 
 // ── Session result ────────────────────────────────────────────────────────────
 
 /// Return value of a full agent session (runSession in Phase 4).
-type AgentResult = {
-    FinalAnswer : string
-    Steps       : Step list
-    LoopCount   : int
-    Model       : Model
-}
+type AgentResult =
+    { FinalAnswer: string
+      Steps: Step list
+      LoopCount: int
+      Model: Model }
 
 // ── LLM wire message (chat history primitive) ────────────────────────────────
 
@@ -163,7 +161,4 @@ type MessageRole =
 /// by QwenHttpClient to assemble the OpenAI `{role, content}` array.
 /// Phase 2 adds this as an additive Core type so the port signature
 /// can replace `string list` with `Message list` (LLM-01 type safety).
-type Message = {
-    Role    : MessageRole
-    Content : string
-}
+type Message = { Role: MessageRole; Content: string }

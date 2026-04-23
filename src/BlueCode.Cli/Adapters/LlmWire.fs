@@ -19,8 +19,7 @@ open System.Text.Json
 ///   - input: JsonElement — raw JSON passthrough; shape varies per tool
 ///     (e.g. {"path":"..."}, {"answer":"..."}). Schema validates input is an
 ///     object; Phase 3 tool dispatch re-parses it per action.
-type LlmStep = {
-    thought : string
-    action  : string
-    input   : JsonElement
-}
+type LlmStep =
+    { thought: string
+      action: string
+      input: JsonElement }

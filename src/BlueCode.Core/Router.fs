@@ -14,27 +14,39 @@ open BlueCode.Core.Domain
 let classifyIntent (userInput: string) : Intent =
     let s = userInput.ToLowerInvariant()
     let anyMatch (needles: string list) = needles |> List.exists s.Contains
-    if   anyMatch ["error"; "bug"; "fix"; "debug"; "traceback"; "exception"; "null"] then Debug
-    elif anyMatch ["design"; "architecture"; "system"; "구조"; "설계"]               then Design
-    elif anyMatch ["analyze"; "analyse"; "compare"; "tradeoff"; "difference"; "분석"] then Analysis
-    elif anyMatch ["write"; "implement"; "code"; "example"]                           then Implementation
-    else General
+
+    if anyMatch [ "error"; "bug"; "fix"; "debug"; "traceback"; "exception"; "null" ] then
+        Debug
+    elif anyMatch [ "design"; "architecture"; "system"; "구조"; "설계" ] then
+        Design
+    elif anyMatch [ "analyze"; "analyse"; "compare"; "tradeoff"; "difference"; "분석" ] then
+        Analysis
+    elif anyMatch [ "write"; "implement"; "code"; "example" ] then
+        Implementation
+    else
+        General
 
 /// Maps an Intent to the Qwen model that should handle it (ROU-02).
 /// Exhaustive match — adding a new Intent case without updating this
 /// function is a compile error (FS0025). NEVER add `| _ ->` here.
-let intentToModel : Intent -> Model = function
-    | Debug | Design | Analysis -> Qwen72B
-    | Implementation | General  -> Qwen32B
+let intentToModel: Intent -> Model =
+    function
+    | Debug
+    | Design
+    | Analysis -> Qwen72B
+    | Implementation
+    | General -> Qwen32B
 
 /// Maps a Model to its serving endpoint (ROU-03).
 /// Port 8000 hosts 32B; Port 8001 hosts 72B (PROJECT.md Context).
-let modelToEndpoint : Model -> Endpoint = function
+let modelToEndpoint: Model -> Endpoint =
+    function
     | Qwen32B -> Port8000
     | Qwen72B -> Port8001
 
 /// Resolves an Endpoint to a concrete HTTP URL. Phase 2 consumes this.
-let endpointToUrl : Endpoint -> string = function
+let endpointToUrl: Endpoint -> string =
+    function
     | Port8000 -> "http://127.0.0.1:8000/v1/chat/completions"
     | Port8001 -> "http://127.0.0.1:8001/v1/chat/completions"
 
@@ -42,13 +54,15 @@ let endpointToUrl : Endpoint -> string = function
 /// OpenAI `"model"` request field. These strings MUST match whatever
 /// vLLM reports via GET /v1/models on the local host (Phase 5 OBS-03
 /// will query this at runtime; Phase 2 hardcodes the served names).
-let modelToName : Model -> string = function
+let modelToName: Model -> string =
+    function
     | Qwen32B -> "qwen2.5-coder-32b-instruct"
     | Qwen72B -> "qwen2.5-coder-72b-instruct"
 
 /// Per-model sampling temperature (LLM-05). Hardcoded; MUST NOT be
 /// exposed to users via CLI flags. 32B uses 0.2 (precise code edits);
 /// 72B uses 0.4 (more exploratory reasoning for Debug/Design/Analysis).
-let modelToTemperature : Model -> float = function
+let modelToTemperature: Model -> float =
+    function
     | Qwen32B -> 0.2
     | Qwen72B -> 0.4

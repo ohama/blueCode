@@ -29,7 +29,7 @@ open BlueCode.Cli.Adapters.LlmWire
 ///
 /// PUBLIC: used by QwenHttpClient (Plan 02-03) for buildRequestBody
 /// serialization and reused for DU round-trip guarantees (LLM-04).
-let jsonOptions : JsonSerializerOptions =
+let jsonOptions: JsonSerializerOptions =
     let opts = JsonSerializerOptions()
     opts.Converters.Add(JsonFSharpConverter(JsonFSharpOptions.Default().WithUnionUnwrapFieldlessTags(true)))
     opts
@@ -50,7 +50,8 @@ let jsonOptions : JsonSerializerOptions =
 let private tryBareParse (content: string) : LlmStep option =
     try
         JsonSerializer.Deserialize<LlmStep>(content, jsonOptions) |> Some
-    with _ -> None
+    with _ ->
+        None
 
 /// Check if the string is a valid JSON object (type = Object, any shape).
 /// Used by the extraction stages to determine if we found a JSON object worth
@@ -62,9 +63,13 @@ let private tryBareParse (content: string) : LlmStep option =
 let private tryParseJsonObject (s: string) : string option =
     try
         use doc = JsonDocument.Parse(s)
-        if doc.RootElement.ValueKind = JsonValueKind.Object then Some s
-        else None
-    with _ -> None
+
+        if doc.RootElement.ValueKind = JsonValueKind.Object then
+            Some s
+        else
+            None
+    with _ ->
+        None
 
 // ── Stage 2: stack-based O(N) first-object extraction ────────────────────────
 
@@ -79,31 +84,40 @@ let private tryParseJsonObject (s: string) : string option =
 ///
 /// PRIVATE: internal helper — composed into extractLlmStep.
 let private extractFirstJsonObject (s: string) : string option =
-    let mutable depth  = 0
-    let mutable start  = -1
-    let mutable found  : string option = None
+    let mutable depth = 0
+    let mutable start = -1
+    let mutable found: string option = None
     let mutable inString = false
-    let mutable escape   = false
+    let mutable escape = false
     let mutable i = 0
+
     while i < s.Length && found.IsNone do
         let c = s.[i]
+
         if escape then
             escape <- false
         elif inString then
-            if   c = '\\' then escape <- true
-            elif c = '"'  then inString <- false
+            if c = '\\' then
+                escape <- true
+            elif c = '"' then
+                inString <- false
         else
             match c with
             | '"' -> inString <- true
             | '{' ->
-                if depth = 0 then start <- i
+                if depth = 0 then
+                    start <- i
+
                 depth <- depth + 1
             | '}' ->
                 depth <- depth - 1
+
                 if depth = 0 && start >= 0 then
-                    found <- Some (s.Substring(start, i - start + 1))
+                    found <- Some(s.Substring(start, i - start + 1))
             | _ -> ()
+
         i <- i + 1
+
     found
 
 // ── Stage 3: markdown fence strip ────────────────────────────────────────────
@@ -151,20 +165,20 @@ let private extractLlmStep (content: string) : Result<string, AgentError> =
     match tryParseJsonObject content with
     | Some json -> Ok json
     | None ->
-    // Stage 2: brace-scan extract + JSON object check
-    match extractFirstJsonObject content |> Option.bind tryParseJsonObject with
-    | Some json -> Ok json
-    | None ->
-    // Stage 3: fence strip + JSON object check (fence content may itself be prose-wrapped)
-    match tryFenceExtract content with
-    | Some fenced ->
-        match tryParseJsonObject fenced with
+        // Stage 2: brace-scan extract + JSON object check
+        match extractFirstJsonObject content |> Option.bind tryParseJsonObject with
         | Some json -> Ok json
         | None ->
-            match extractFirstJsonObject fenced |> Option.bind tryParseJsonObject with
-            | Some json -> Ok json
-            | None -> Error (InvalidJsonOutput content)
-    | None -> Error (InvalidJsonOutput content)
+            // Stage 3: fence strip + JSON object check (fence content may itself be prose-wrapped)
+            match tryFenceExtract content with
+            | Some fenced ->
+                match tryParseJsonObject fenced with
+                | Some json -> Ok json
+                | None ->
+                    match extractFirstJsonObject fenced |> Option.bind tryParseJsonObject with
+                    | Some json -> Ok json
+                    | None -> Error(InvalidJsonOutput content)
+            | None -> Error(InvalidJsonOutput content)
 
 // ── Schema validation (JsonSchema.Net 9.2.0) ─────────────────────────────────
 
@@ -176,8 +190,9 @@ let private extractLlmStep (content: string) : Result<string, AgentError> =
 ///   - additionalProperties: false (prevents Qwen confidence/reasoning fields)
 ///
 /// PUBLIC: module-scope constant. No invariants to protect (immutable data).
-let llmStepSchema : JsonSchema =
-    JsonSchema.FromText("""
+let llmStepSchema: JsonSchema =
+    JsonSchema.FromText(
+        """
     {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -192,7 +207,8 @@ let llmStepSchema : JsonSchema =
       },
       "additionalProperties": false
     }
-    """)
+    """
+    )
 
 /// Validate a JSON string against llmStepSchema and deserialize to LlmStep.
 /// Uses OutputFormat.List to populate Details so error messages carry
@@ -209,25 +225,26 @@ let private validateAndDeserialize (json: string) : Result<LlmStep, AgentError> 
     let opts = EvaluationOptions(OutputFormat = OutputFormat.List)
     use doc = JsonDocument.Parse(json)
     let results = llmStepSchema.Evaluate(doc.RootElement, opts)
+
     if results.IsValid then
         try
-            Ok (JsonSerializer.Deserialize<LlmStep>(json, jsonOptions))
+            Ok(JsonSerializer.Deserialize<LlmStep>(json, jsonOptions))
         with ex ->
-            Error (SchemaViolation $"deserialization failed after schema pass: {ex.Message}")
+            Error(SchemaViolation $"deserialization failed after schema pass: {ex.Message}")
     else
         let errors =
             results.Details
             |> Seq.filter (fun d -> not d.IsValid && d.Errors <> null)
-            |> Seq.collect (fun d ->
-                d.Errors
-                |> Seq.map (fun kvp ->
-                    $"{d.InstanceLocation}: {kvp.Value}"))
+            |> Seq.collect (fun d -> d.Errors |> Seq.map (fun kvp -> $"{d.InstanceLocation}: {kvp.Value}"))
             |> String.concat "; "
+
         let detail =
-            if System.String.IsNullOrWhiteSpace(errors)
-            then "schema validation failed (no detail)"
-            else errors
-        Error (SchemaViolation detail)
+            if System.String.IsNullOrWhiteSpace(errors) then
+                "schema validation failed (no detail)"
+            else
+                errors
+
+        Error(SchemaViolation detail)
 
 // ── Public entry: extract then validate ──────────────────────────────────────
 

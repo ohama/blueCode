@@ -5,7 +5,7 @@ open System.IO
 open System.Text
 open System.Text.Json
 open BlueCode.Core.Domain
-open BlueCode.Cli.Adapters.Json  // jsonOptions singleton (Phase 2)
+open BlueCode.Cli.Adapters.Json // jsonOptions singleton (Phase 2)
 
 /// Compute the session JSONL path:
 ///   ~/.bluecode/session_<yyyy-MM-ddTHH-mm-ssZ>.jsonl
@@ -14,9 +14,9 @@ open BlueCode.Cli.Adapters.Json  // jsonOptions singleton (Phase 2)
 /// Creates the ~/.bluecode directory if it does not exist.
 let buildSessionLogPath () : string =
     let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-    let dir  = Path.Combine(home, ".bluecode")
+    let dir = Path.Combine(home, ".bluecode")
     Directory.CreateDirectory(dir) |> ignore
-    let ts   = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH-mm-ssZ")
+    let ts = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH-mm-ssZ")
     Path.Combine(dir, sprintf "session_%s.jsonl" ts)
 
 /// Append-only JSONL writer. One line per completed Step. StreamWriter held open
@@ -36,12 +36,12 @@ type JsonlSink(path: string) =
     do writer.AutoFlush <- true
 
     /// Path this sink is writing to. Exposed for logging/debugging.
-    member _.Path : string = path
+    member _.Path: string = path
 
     /// Serialize `step` with the Phase 2 `jsonOptions` (FSharp.SystemTextJson
     /// converter registered — records, DUs, and DateTimeOffset fields serialize
     /// cleanly). Append one line.
-    member _.WriteStep (step: Step) : unit =
+    member _.WriteStep(step: Step) : unit =
         let line = JsonSerializer.Serialize(step, jsonOptions)
         writer.WriteLine(line)
 

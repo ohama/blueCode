@@ -13,10 +13,11 @@ type CliArgs =
     | Verbose
     | Trace
     | [<AltCommandLine("-m")>] Model of model: string
+
     interface IArgParserTemplate with
         member s.Usage =
             match s with
             | Prompt _ -> "Prompt to send (omit for interactive REPL mode)."
-            | Verbose  -> "Print thought/action/input/output/status per step (default: compact one-liner)."
-            | Trace    -> "Emit Serilog Debug JSON per step to stderr (independent of --verbose)."
-            | Model _  -> "Force model: 32b or 72b (bypasses intent classification)."
+            | Verbose -> "Print thought/action/input/output/status per step (default: compact one-liner)."
+            | Trace -> "Emit Serilog Debug JSON per step to stderr (independent of --verbose)."
+            | Model _ -> "Force model: 32b or 72b (bypasses intent classification)."

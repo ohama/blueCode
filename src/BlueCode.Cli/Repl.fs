@@ -49,9 +49,12 @@ let shouldWarnContextWindow (totalChars: int) (maxModelLen: int) (alreadyWarned:
 let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: RenderMode) : Task<int> =
     task {
         use cts = new CancellationTokenSource()
-        let cancelHandler = System.ConsoleCancelEventHandler(fun _ args ->
-            args.Cancel <- true           // REQUIRED: prevents immediate process kill
-            cts.Cancel())
+
+        let cancelHandler =
+            System.ConsoleCancelEventHandler(fun _ args ->
+                args.Cancel <- true // REQUIRED: prevents immediate process kill
+                cts.Cancel())
+
         Console.CancelKeyPress.AddHandler(cancelHandler)
 
         try
@@ -88,6 +91,7 @@ let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: Rend
                         totalChars
                         components.MaxModelLen
                         (components.MaxModelLen * 4)
+
                     warnedThisTurn <- true
 
                 // Always emit this Debug event — only visible when --trace flips
@@ -101,19 +105,13 @@ let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: Rend
                     step.Action,
                     step.DurationMs,
                     actionRepr,
-                    resultRepr)
+                    resultRepr
+                )
 
             let! result =
                 try
-                    runSession
-                        components.Config
-                        components.LlmClient
-                        components.ToolExecutor
-                        onStep
-                        prompt
-                        cts.Token
-                with
-                | :? OperationCanceledException ->
+                    runSession components.Config components.LlmClient components.ToolExecutor onStep prompt cts.Token
+                with :? OperationCanceledException ->
                     // Defensive fallback. QwenHttpClient and FsToolExecutor already
                     // map cancellation to Error UserCancelled; this `with` is a
                     // belt-and-suspenders safety net (research § Pattern 7, Pitfall 2).
@@ -122,8 +120,14 @@ let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: Rend
             match result with
             | Ok agentResult ->
                 printfn "%s" (renderResult agentResult)
-                Log.Information("Session ok: {Steps} steps, model={Model}, log={LogPath}",
-                                agentResult.Steps.Length, agentResult.Model, components.LogPath)
+
+                Log.Information(
+                    "Session ok: {Steps} steps, model={Model}, log={LogPath}",
+                    agentResult.Steps.Length,
+                    agentResult.Model,
+                    components.LogPath
+                )
+
                 return 0
             | Error UserCancelled ->
                 printfn "%s" (renderError UserCancelled)
@@ -148,10 +152,12 @@ let runMultiTurn (components: AppComponents) (renderMode: RenderMode) : Task<int
     task {
         printfn "blueCode — multi-turn mode. Type /exit or press Ctrl+D to quit."
         let mutable lastCode = 0
-        let mutable running  = true
+        let mutable running = true
+
         while running do
             printf "\nblueCode> "
-            let line = Console.ReadLine()    // null on Ctrl+D / EOF
+            let line = Console.ReadLine() // null on Ctrl+D / EOF
+
             match line with
             | null -> running <- false
             | "/exit" -> running <- false
@@ -162,5 +168,6 @@ let runMultiTurn (components: AppComponents) (renderMode: RenderMode) : Task<int
                 // Translate 130 back to 0 for the running tally so the
                 // final process exit uses the last "real" completion code.
                 lastCode <- if code = 130 then 0 else code
+
         return lastCode
     }

@@ -8,32 +8,29 @@ open BlueCode.Cli.Adapters.JsonlSink
 /// Wired application components for a single session. The caller owns the
 /// JsonlSink lifetime via `use` (IDisposable). No DI container — explicit
 /// function-injection wiring per ports-and-adapters pattern (research § Pattern 8).
-type AppComponents = {
-    LlmClient    : BlueCode.Core.Ports.ILlmClient
-    ToolExecutor : BlueCode.Core.Ports.IToolExecutor
-    JsonlSink    : JsonlSink
-    Config       : AgentConfig
-    ProjectRoot  : string
-    LogPath      : string
-    MaxModelLen  : int     // OBS-03: resolved at startup via /v1/models probe (default 8192)
-}
+type AppComponents =
+    { LlmClient: BlueCode.Core.Ports.ILlmClient
+      ToolExecutor: BlueCode.Core.Ports.IToolExecutor
+      JsonlSink: JsonlSink
+      Config: AgentConfig
+      ProjectRoot: string
+      LogPath: string
+      MaxModelLen: int } // OBS-03: resolved at startup via /v1/models probe (default 8192)
 
 /// Parsed CLI arguments, consumed by CompositionRoot.bootstrap and threaded
 /// into AgentConfig.ForcedModel and (in Plan 05-02) into Repl.runSingleTurn's
 /// RenderMode parameter. TraceMode is recorded here but not acted upon until
 /// Plan 05-02 flips the Serilog LoggingLevelSwitch.
-type CliOptions = {
-    ForcedModel : BlueCode.Core.Domain.Model option
-    Verbose     : bool
-    Trace       : bool
-}
+type CliOptions =
+    { ForcedModel: BlueCode.Core.Domain.Model option
+      Verbose: bool
+      Trace: bool }
 
 /// Default options — equivalent to old single-turn invocation with no flags.
-let defaultCliOptions : CliOptions = {
-    ForcedModel = None
-    Verbose     = false
-    Trace       = false
-}
+let defaultCliOptions: CliOptions =
+    { ForcedModel = None
+      Verbose = false
+      Trace = false }
 
 /// Convert the CLI string ("32b"|"72b") to a Model. Raises on invalid input
 /// so Argu-level catch in Program.fs can surface it as a usage error (exit 2).
@@ -42,8 +39,7 @@ let parseForcedModel (s: string option) : BlueCode.Core.Domain.Model option =
     | None -> None
     | Some "32b" -> Some BlueCode.Core.Domain.Qwen32B
     | Some "72b" -> Some BlueCode.Core.Domain.Qwen72B
-    | Some other ->
-        failwithf "Unknown model: %s (valid values: 32b, 72b)" other
+    | Some other -> failwithf "Unknown model: %s (valid values: 32b, 72b)" other
 
 /// Default system prompt for Phase 4. Tells Qwen to respond with strict JSON
 /// matching the LLM step schema. Phase 5 may extend this (include CLAUDE.md
@@ -51,7 +47,7 @@ let parseForcedModel (s: string option) : BlueCode.Core.Domain.Model option =
 ///
 /// Matches the 5-action enum in Plan 02-02's llmStepSchema: "read_file",
 /// "write_file", "list_dir", "run_shell", "final".
-let private defaultSystemPrompt : string =
+let private defaultSystemPrompt: string =
     """You are blueCode, a coding agent driven by an F# recursive loop.
 
 Every response MUST be strict JSON of this shape:
@@ -74,20 +70,19 @@ Rules:
 /// Sync version retained for tests that don't need the /v1/models HTTP probe —
 /// MaxModelLen defaults to 8192 (conservative fallback). See Open Question 2 decision.
 let bootstrap (projectRoot: string) (opts: CliOptions) : AppComponents =
-    let logPath = buildSessionLogPath()
-    {
-        LlmClient    = Adapters.QwenHttpClient.create()
-        ToolExecutor = Adapters.FsToolExecutor.create projectRoot
-        JsonlSink    = new JsonlSink(logPath)
-        Config       = {
-            MaxLoops        = 5
-            ContextCapacity = 3
-            SystemPrompt    = defaultSystemPrompt
-            ForcedModel     = opts.ForcedModel
-        }
-        ProjectRoot  = projectRoot
-        LogPath      = logPath
-        MaxModelLen  = 8192  // default; bootstrapAsync probes the real value
+    let logPath = buildSessionLogPath ()
+
+    { LlmClient = Adapters.QwenHttpClient.create ()
+      ToolExecutor = Adapters.FsToolExecutor.create projectRoot
+      JsonlSink = new JsonlSink(logPath)
+      Config =
+        { MaxLoops = 5
+          ContextCapacity = 3
+          SystemPrompt = defaultSystemPrompt
+          ForcedModel = opts.ForcedModel }
+      ProjectRoot = projectRoot
+      LogPath = logPath
+      MaxModelLen = 8192 // default; bootstrapAsync probes the real value
     }
 
 /// Async bootstrap that probes /v1/models before returning enriched AppComponents.
@@ -95,21 +90,19 @@ let bootstrap (projectRoot: string) (opts: CliOptions) : AppComponents =
 /// Sync `bootstrap` remains for tests that don't need the HTTP probe (fast + no-network).
 let bootstrapAsync (projectRoot: string) (opts: CliOptions) : System.Threading.Tasks.Task<AppComponents> =
     task {
-        let! maxLen =
-            Adapters.QwenHttpClient.getMaxModelLenAsync System.Threading.CancellationToken.None
-        let logPath = buildSessionLogPath()
-        return {
-            LlmClient    = Adapters.QwenHttpClient.create()
-            ToolExecutor = Adapters.FsToolExecutor.create projectRoot
-            JsonlSink    = new JsonlSink(logPath)
-            Config       = {
-                MaxLoops        = 5
-                ContextCapacity = 3
-                SystemPrompt    = defaultSystemPrompt
-                ForcedModel     = opts.ForcedModel
-            }
-            ProjectRoot  = projectRoot
-            LogPath      = logPath
-            MaxModelLen  = maxLen
-        }
+        let! maxLen = Adapters.QwenHttpClient.getMaxModelLenAsync System.Threading.CancellationToken.None
+        let logPath = buildSessionLogPath ()
+
+        return
+            { LlmClient = Adapters.QwenHttpClient.create ()
+              ToolExecutor = Adapters.FsToolExecutor.create projectRoot
+              JsonlSink = new JsonlSink(logPath)
+              Config =
+                { MaxLoops = 5
+                  ContextCapacity = 3
+                  SystemPrompt = defaultSystemPrompt
+                  ForcedModel = opts.ForcedModel }
+              ProjectRoot = projectRoot
+              LogPath = logPath
+              MaxModelLen = maxLen }
     }

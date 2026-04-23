@@ -39,8 +39,8 @@ let private SHELL_TIMEOUT_SECONDS = 30
 /// approximation that is conservative for ASCII and slightly under-caps
 /// for multi-byte UTF-8. Acceptable for a 100KB cap.)
 let private capOutput (raw: string) (maxChars: int) : string =
-    if isNull raw then "" else
-    if raw.Length <= maxChars then raw
+    if isNull raw then ""
+    else if raw.Length <= maxChars then raw
     else raw.Substring(0, maxChars)
 
 /// Default list_dir depth when Tool.ListDir carries None for depth.
@@ -51,13 +51,13 @@ let private DEFAULT_LIST_DEPTH = 1
 /// Apply the 2000-char message-history cap with a human-readable marker.
 /// Applied to EVERY Success/Failure output string before wrapping in ToolResult.
 let private truncateOutput (raw: string) : string =
-    if isNull raw then "" else
-    if raw.Length <= MESSAGE_HISTORY_CAP then raw
+    if isNull raw then
+        ""
+    else if raw.Length <= MESSAGE_HISTORY_CAP then
+        raw
     else
         let portion = raw.Substring(0, MESSAGE_HISTORY_CAP)
-        sprintf
-            "%s\n\n[truncated: showing first %d of %d chars]"
-            portion MESSAGE_HISTORY_CAP raw.Length
+        sprintf "%s\n\n[truncated: showing first %d of %d chars]" portion MESSAGE_HISTORY_CAP raw.Length
 
 // ── Path validation (TOOL-02) ─────────────────────────────────────────────────
 
@@ -72,9 +72,9 @@ let private truncateOutput (raw: string) : string =
 /// and Path.GetFullPath normalizes ".." traversal.
 let private validatePath (projectRoot: string) (inputPath: string) : Result<string, ToolResult> =
     if String.IsNullOrWhiteSpace(inputPath) then
-        Error (PathEscapeBlocked (inputPath |> Option.ofObj |> Option.defaultValue ""))
+        Error(PathEscapeBlocked(inputPath |> Option.ofObj |> Option.defaultValue ""))
     elif inputPath.StartsWith("~") then
-        Error (PathEscapeBlocked inputPath)
+        Error(PathEscapeBlocked inputPath)
     else
         try
             let combined = Path.Combine(projectRoot, inputPath)
@@ -83,18 +83,21 @@ let private validatePath (projectRoot: string) (inputPath: string) : Result<stri
             // start-with `/a/project`. This is the prefix-attack defence
             // documented in 03-RESEARCH.md Pattern 2.
             let rootWithSep =
-                if projectRoot.EndsWith(string Path.DirectorySeparatorChar)
-                then projectRoot
-                else projectRoot + string Path.DirectorySeparatorChar
-            if resolved = projectRoot
-               || resolved.StartsWith(rootWithSep, StringComparison.Ordinal) then
+                if projectRoot.EndsWith(string Path.DirectorySeparatorChar) then
+                    projectRoot
+                else
+                    projectRoot + string Path.DirectorySeparatorChar
+
+            if
+                resolved = projectRoot
+                || resolved.StartsWith(rootWithSep, StringComparison.Ordinal)
+            then
                 Ok resolved
             else
-                Error (PathEscapeBlocked inputPath)
-        with
-        | _ ->
+                Error(PathEscapeBlocked inputPath)
+        with _ ->
             // Malformed path (e.g., invalid chars) -> treat as escape attempt.
-            Error (PathEscapeBlocked inputPath)
+            Error(PathEscapeBlocked inputPath)
 
 // ── read_file (TOOL-01) ───────────────────────────────────────────────────────
 
@@ -106,39 +109,37 @@ let private readFileImpl
     (path: string)
     (lineRange: (int * int) option)
     (ct: CancellationToken)
-    : Task<Result<ToolResult, AgentError>>
-    =
+    : Task<Result<ToolResult, AgentError>> =
     task {
         ct.ThrowIfCancellationRequested()
+
         match validatePath projectRoot path with
         | Error tr -> return Ok tr
         | Ok resolved ->
             try
                 let content =
                     match lineRange with
-                    | None ->
-                        File.ReadAllText(resolved)
-                    | Some (startLine, endLine) when startLine >= 1 && endLine >= startLine ->
+                    | None -> File.ReadAllText(resolved)
+                    | Some(startLine, endLine) when startLine >= 1 && endLine >= startLine ->
                         let lines = File.ReadLines(resolved)
+
                         let selected =
                             lines
                             |> Seq.skip (startLine - 1)
                             |> Seq.truncate (endLine - startLine + 1)
                             |> Seq.toArray
+
                         String.Join("\n", selected)
-                    | Some (s, e) ->
+                    | Some(s, e) ->
                         // Invalid range: report as Failure so the LLM can correct.
                         sprintf "[invalid line range: (%d, %d)]" s e
-                return Ok (Success (truncateOutput content))
+
+                return Ok(Success(truncateOutput content))
             with
-            | :? FileNotFoundException as ex ->
-                return Ok (Failure (1, ex.Message))
-            | :? DirectoryNotFoundException as ex ->
-                return Ok (Failure (1, ex.Message))
-            | :? UnauthorizedAccessException as ex ->
-                return Ok (Failure (1, ex.Message))
-            | :? IOException as ex ->
-                return Ok (Failure (1, ex.Message))
+            | :? FileNotFoundException as ex -> return Ok(Failure(1, ex.Message))
+            | :? DirectoryNotFoundException as ex -> return Ok(Failure(1, ex.Message))
+            | :? UnauthorizedAccessException as ex -> return Ok(Failure(1, ex.Message))
+            | :? IOException as ex -> return Ok(Failure(1, ex.Message))
     }
 
 // ── write_file (TOOL-02) ──────────────────────────────────────────────────────
@@ -151,26 +152,26 @@ let private writeFileImpl
     (path: string)
     (content: string)
     (ct: CancellationToken)
-    : Task<Result<ToolResult, AgentError>>
-    =
+    : Task<Result<ToolResult, AgentError>> =
     task {
         ct.ThrowIfCancellationRequested()
+
         match validatePath projectRoot path with
         | Error tr -> return Ok tr
         | Ok resolved ->
             try
                 // Ensure parent directory exists; create if missing.
                 let parent = Path.GetDirectoryName(resolved)
+
                 if not (String.IsNullOrEmpty parent) && not (Directory.Exists parent) then
                     Directory.CreateDirectory(parent) |> ignore
+
                 do! File.WriteAllTextAsync(resolved, content, ct)
                 // TOOL-06 still applies to Success output even when empty.
-                return Ok (Success (truncateOutput ""))
+                return Ok(Success(truncateOutput ""))
             with
-            | :? UnauthorizedAccessException as ex ->
-                return Ok (Failure (1, ex.Message))
-            | :? IOException as ex ->
-                return Ok (Failure (1, ex.Message))
+            | :? UnauthorizedAccessException as ex -> return Ok(Failure(1, ex.Message))
+            | :? IOException as ex -> return Ok(Failure(1, ex.Message))
     }
 
 // ── list_dir (TOOL-03) ────────────────────────────────────────────────────────
@@ -180,22 +181,28 @@ let private writeFileImpl
 /// are returned as relative paths joined by newlines.
 let rec private enumDir (basePath: string) (current: string) (depth: int) (maxDepth: int) : string seq =
     seq {
-        if depth > maxDepth then () else
-        let entries =
-            try
-                Directory.EnumerateFileSystemEntries(current)
-                |> Seq.sort
-            with _ -> Seq.empty
-        for entry in entries do
-            let name = Path.GetFileName(entry)
-            if not (name.StartsWith(".")) then
-                let rel = Path.GetRelativePath(basePath, entry).Replace('\\', '/')
-                if Directory.Exists(entry) then
-                    yield rel + "/"
-                    if depth < maxDepth then
-                        yield! enumDir basePath entry (depth + 1) maxDepth
-                else
-                    yield rel
+        if depth > maxDepth then
+            ()
+        else
+            let entries =
+                try
+                    Directory.EnumerateFileSystemEntries(current) |> Seq.sort
+                with _ ->
+                    Seq.empty
+
+            for entry in entries do
+                let name = Path.GetFileName(entry)
+
+                if not (name.StartsWith(".")) then
+                    let rel = Path.GetRelativePath(basePath, entry).Replace('\\', '/')
+
+                    if Directory.Exists(entry) then
+                        yield rel + "/"
+
+                        if depth < maxDepth then
+                            yield! enumDir basePath entry (depth + 1) maxDepth
+                    else
+                        yield rel
     }
 
 let private listDirImpl
@@ -203,27 +210,25 @@ let private listDirImpl
     (path: string)
     (depth: int option)
     (ct: CancellationToken)
-    : Task<Result<ToolResult, AgentError>>
-    =
+    : Task<Result<ToolResult, AgentError>> =
     task {
         ct.ThrowIfCancellationRequested()
+
         match validatePath projectRoot path with
         | Error tr -> return Ok tr
         | Ok resolved ->
             try
                 if not (Directory.Exists resolved) then
-                    return Ok (Failure (1, sprintf "Directory not found: %s" path))
+                    return Ok(Failure(1, sprintf "Directory not found: %s" path))
                 else
                     let requested = depth |> Option.defaultValue DEFAULT_LIST_DEPTH
                     let capped = min (max 1 requested) DEFAULT_LIST_DEPTH_MAX
                     let lines = enumDir resolved resolved 1 capped |> Seq.toArray
                     let body = String.Join("\n", lines)
-                    return Ok (Success (truncateOutput body))
+                    return Ok(Success(truncateOutput body))
             with
-            | :? UnauthorizedAccessException as ex ->
-                return Ok (Failure (1, ex.Message))
-            | :? IOException as ex ->
-                return Ok (Failure (1, ex.Message))
+            | :? UnauthorizedAccessException as ex -> return Ok(Failure(1, ex.Message))
+            | :? IOException as ex -> return Ok(Failure(1, ex.Message))
     }
 
 // ── run_shell (TOOL-04, TOOL-05 integration) ─────────────────────────────────
@@ -262,24 +267,22 @@ let private runShellImpl
     (projectRoot: string)
     (cmd: string)
     (ct: CancellationToken)
-    : Task<Result<ToolResult, AgentError>>
-    =
+    : Task<Result<ToolResult, AgentError>> =
     task {
         // Step 1: security gate — ALWAYS runs first; process is NEVER spawned
         //         if validateCommand returns Error.
         match validateCommand cmd with
-        | Error reason ->
-            return Ok (SecurityDenied reason)
-        | Ok () ->
+        | Error reason -> return Ok(SecurityDenied reason)
+        | Ok() ->
             // Step 2: process setup
             let psi = ProcessStartInfo("/bin/bash")
             psi.ArgumentList.Add("-c")
             psi.ArgumentList.Add(cmd)
             psi.RedirectStandardOutput <- true
-            psi.RedirectStandardError  <- true
-            psi.UseShellExecute        <- false
-            psi.CreateNoWindow         <- true
-            psi.WorkingDirectory       <- projectRoot
+            psi.RedirectStandardError <- true
+            psi.UseShellExecute <- false
+            psi.CreateNoWindow <- true
+            psi.WorkingDirectory <- projectRoot
 
             // Step 3: linked CTS for 30s timeout + caller cancellation
             use cts = CancellationTokenSource.CreateLinkedTokenSource(ct)
@@ -288,7 +291,7 @@ let private runShellImpl
             // Attempt to start the process. Return early if Process.Start throws.
             let startResult =
                 try
-                    Ok (Process.Start(psi))
+                    Ok(Process.Start(psi))
                 with ex ->
                     Error ex
 
@@ -297,9 +300,16 @@ let private runShellImpl
                 // 30s hardcoded — _timeoutMs reserved for Phase 5 --timeout flag (see plan objective).
                 // The Timeout field on Tool.RunShell is carried for error-reporting fidelity
                 // only; runtime always uses SHELL_TIMEOUT_SECONDS in this phase.
-                return Error (ToolFailure (RunShell (Command cmd, BlueCode.Core.Domain.Timeout (SHELL_TIMEOUT_SECONDS * 1000)), ex))
+                return
+                    Error(
+                        ToolFailure(
+                            RunShell(Command cmd, BlueCode.Core.Domain.Timeout(SHELL_TIMEOUT_SECONDS * 1000)),
+                            ex
+                        )
+                    )
             | Ok proc ->
-                use _ = proc   // Dispose proc when this scope exits.
+                use _ = proc // Dispose proc when this scope exits.
+
                 try
                     // Step 4: CONCURRENT read (deadlock avoidance — dotnet/runtime #98347)
                     let! stdout = proc.StandardOutput.ReadToEndAsync(cts.Token)
@@ -313,24 +323,41 @@ let private runShellImpl
                     let stderrCapped = stderr |> fun s -> capOutput s SHELL_STDERR_CAP |> truncateOutput
 
                     if proc.ExitCode = 0 then
-                        return Ok (Success stdoutCapped)
+                        return Ok(Success stdoutCapped)
                     else
-                        return Ok (Failure (proc.ExitCode, stderrCapped))
+                        return Ok(Failure(proc.ExitCode, stderrCapped))
                 with
                 | :? OperationCanceledException ->
                     // Step 6: disambiguate caller cancel vs 30s timeout
                     if ct.IsCancellationRequested then
                         // Caller cancelled — kill tree, propagate as UserCancelled.
-                        try proc.Kill(entireProcessTree = true) with _ -> ()
+                        try
+                            proc.Kill(entireProcessTree = true)
+                        with _ ->
+                            ()
+
                         return Error UserCancelled
                     else
                         // Timeout fired — kill tree, return ToolResult.Timeout.
-                        try proc.Kill(entireProcessTree = true) with _ -> ()
-                        return Ok (ToolResult.Timeout SHELL_TIMEOUT_SECONDS)
+                        try
+                            proc.Kill(entireProcessTree = true)
+                        with _ ->
+                            ()
+
+                        return Ok(ToolResult.Timeout SHELL_TIMEOUT_SECONDS)
                 | ex ->
-                    try proc.Kill(entireProcessTree = true) with _ -> ()
+                    try
+                        proc.Kill(entireProcessTree = true)
+                    with _ ->
+                        ()
                     // 30s hardcoded — _timeoutMs reserved for Phase 5 --timeout flag (see plan objective).
-                    return Error (ToolFailure (RunShell (Command cmd, BlueCode.Core.Domain.Timeout (SHELL_TIMEOUT_SECONDS * 1000)), ex))
+                    return
+                        Error(
+                            ToolFailure(
+                                RunShell(Command cmd, BlueCode.Core.Domain.Timeout(SHELL_TIMEOUT_SECONDS * 1000)),
+                                ex
+                            )
+                        )
     }
 
 // ── Public factory ────────────────────────────────────────────────────────────
@@ -343,11 +370,11 @@ let private runShellImpl
 /// is a compile error here (Success Criterion 6 proof).
 let create (projectRoot: string) : IToolExecutor =
     let rootNormalized = Path.GetFullPath(projectRoot)
+
     { new IToolExecutor with
         member _.ExecuteAsync (tool: Tool) (ct: CancellationToken) : Task<Result<ToolResult, AgentError>> =
             match tool with
-            | ReadFile  (FilePath path, lineRange)        -> readFileImpl  rootNormalized path lineRange ct
-            | WriteFile (FilePath path, content)          -> writeFileImpl rootNormalized path content   ct
-            | ListDir   (FilePath path, depth)            -> listDirImpl   rootNormalized path depth     ct
-            | RunShell  (Command cmd, BlueCode.Core.Domain.Timeout _timeoutMs) -> runShellImpl rootNormalized cmd ct
-    }
+            | ReadFile(FilePath path, lineRange) -> readFileImpl rootNormalized path lineRange ct
+            | WriteFile(FilePath path, content) -> writeFileImpl rootNormalized path content ct
+            | ListDir(FilePath path, depth) -> listDirImpl rootNormalized path depth ct
+            | RunShell(Command cmd, BlueCode.Core.Domain.Timeout _timeoutMs) -> runShellImpl rootNormalized cmd ct }

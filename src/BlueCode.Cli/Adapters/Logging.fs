@@ -11,7 +11,7 @@ open Serilog.Events
 /// Research § Pattern 4 + Pitfall 7: must be a module-level binding so the
 /// call to configure() below can reference it; mutating after startup is
 /// the whole point of LoggingLevelSwitch.
-let levelSwitch : LoggingLevelSwitch = LoggingLevelSwitch(LogEventLevel.Information)
+let levelSwitch: LoggingLevelSwitch = LoggingLevelSwitch(LogEventLevel.Information)
 
 /// Initialize the static Serilog Log.Logger. Must run ONCE at process start
 /// BEFORE any Log.* call — Serilog's default logger is a silent no-op.
@@ -28,10 +28,10 @@ let configure () : unit =
             .MinimumLevel.ControlledBy(levelSwitch)
             .WriteTo.Console(
                 standardErrorFromLevel = System.Nullable<LogEventLevel>(LogEventLevel.Verbose),
-                outputTemplate = "[{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                outputTemplate = "[{Level:u3}] {Message:lj}{NewLine}{Exception}"
+            )
             .CreateLogger()
 
 /// Flush and dispose the global logger. Call in Program.fs before exit to
 /// ensure all pending events are written.
-let shutdown () : unit =
-    Log.CloseAndFlush()
+let shutdown () : unit = Log.CloseAndFlush()
