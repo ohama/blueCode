@@ -21,6 +21,7 @@
     <Compile Include="CliArgsTests.fs" />
     <Compile Include="LoggingTests.fs" />
     <Compile Include="ModelsProbeTests.fs" />
+    <Compile Include="ContextWarningTests.fs" />
     <Compile Include="RouterTests.fs" />
   </ItemGroup>
 

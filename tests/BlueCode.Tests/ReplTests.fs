@@ -221,4 +221,52 @@ let tests =
             finally
                 Console.SetOut(originalOut)
 
+        testCase "runSingleTurn: 80% context warning fires exactly once per turn when threshold crossed" <| fun () ->
+            // Setup: MaxModelLen = 10 -> 80% threshold = 10 * 4 * 0.80 = 32 chars.
+            // Even a single ToolCall step's action+result repr (~100 chars) crosses it.
+            // After step 1 the accumulator exceeds 32 chars and the warning fires.
+            // Third step is FinalAnswer to end the turn. Warning must fire only ONCE.
+            let llm = stubLlm [
+                Ok (toolCall "list_dir" "{\"path\":\".\"}")
+                Ok (toolCall "read_file" "{\"path\":\"README.md\"}")
+                Ok (FinalAnswer "context warning test done")
+            ]
+            let tempRoot = Path.Combine(Path.GetTempPath(), sprintf "bluecode-replw-%s" (Guid.NewGuid().ToString("N")))
+            Directory.CreateDirectory(tempRoot) |> ignore
+            let sinkPath = Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+            use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+            let components : BlueCode.Cli.CompositionRoot.AppComponents = {
+                LlmClient    = llm
+                ToolExecutor = stubToolsOk
+                JsonlSink    = sink
+                Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
+                ProjectRoot  = tempRoot
+                LogPath      = sinkPath
+                MaxModelLen  = 10    // tiny — threshold = 32 chars, crossed by first step's repr
+            }
+            let originalOut = Console.Out
+            use sw = new StringWriter()
+            Console.SetOut(sw)
+            try
+                let exitCode =
+                    BlueCode.Cli.Repl.runSingleTurn "stub prompt" components Compact
+                    |> fun t -> t.GetAwaiter().GetResult()
+                Console.Out.Flush()
+                let captured = sw.ToString()
+
+                Expect.equal exitCode 0 "runSingleTurn exit code on Ok result with warning"
+
+                // The WARNING line must appear in stdout
+                Expect.stringContains captured "WARNING: context at 80%"
+                    (sprintf "Expected 80%% warning in stdout; captured:\n%s" captured)
+
+                // The WARNING must appear EXACTLY ONCE (gate prevents repeated firing)
+                let warningLines =
+                    captured.Split([| '\n' |])
+                    |> Array.filter (fun l -> l.Contains("WARNING: context at 80%"))
+                Expect.equal warningLines.Length 1
+                    (sprintf "WARNING should appear exactly once per turn; captured:\n%s" captured)
+            finally
+                Console.SetOut(originalOut)
+
     ]  // end testSequenced
