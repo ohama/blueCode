@@ -86,6 +86,18 @@ type LlmOutput =
     | ToolCall of ToolName * ToolInput
     | FinalAnswer of string
 
+// ── LLM response bundle (Phase 7 OBS-05) ─────────────────────────────────────
+
+/// Bundles LLM reasoning text with the structured action. Replaces bare
+/// LlmOutput as the success type of ILlmClient.CompleteAsync so Step.Thought
+/// receives real content instead of the v1 "[not captured]" placeholder.
+/// Named-field record (not tuple) for readability in callLlmWithRetry and
+/// runLoop pattern matches. Extensible (FinishReason, TokensUsed, ...) later
+/// without breaking existing consumers.
+type LlmResponse =
+    { Thought: Thought
+      Output: LlmOutput }
+
 // ── Error domain ─────────────────────────────────────────────────────────────
 
 /// Agent-loop errors. Every case must be a first-class value — no throwing

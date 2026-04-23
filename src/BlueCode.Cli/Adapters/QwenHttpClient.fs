@@ -142,7 +142,7 @@ let private extractContent (url: string) (responseJson: string) : Result<string,
     with ex ->
         Error(LlmUnreachable(url, sprintf "malformed response: %s" ex.Message))
 
-// ── LlmStep -> LlmOutput mapping ────────────────────────────────────────────
+// ── LlmStep -> LlmResponse mapping ──────────────────────────────────────────
 
 /// Map the schema-validated wire record to the Core domain DU.
 /// The schema already verified action is one of the 5 enum values.
@@ -168,21 +168,24 @@ let private extractContent (url: string) (responseJson: string) : Result<string,
 /// LlmStep values (see tests/BlueCode.Tests/ToLlmOutputTests.fs).
 /// All other helpers (buildRequestBody, postAsync, extractContent,
 /// withSpinner, roleString) stay `let private`.
-let toLlmOutput (step: LlmStep) : Result<LlmOutput, AgentError> =
-    match step.action with
-    | "final" ->
-        match step.input.TryGetProperty("answer") with
-        | true, v when v.ValueKind = JsonValueKind.String -> Ok(FinalAnswer(v.GetString()))
-        | _ ->
-            // SchemaViolation (not InvalidJsonOutput): the JSON schema
-            // cannot validate action-specific input shapes (action→input
-            // schema is open in v1). Missing-answer is a schema gap,
-            // not a parse failure. See docblock above for full rationale.
-            Error(SchemaViolation "final action input missing string 'answer' field")
-    | toolName ->
-        let raw = step.input.GetRawText()
-        let ti = ToolInput(Map.ofList [ ("_raw", raw) ])
-        Ok(ToolCall(ToolName toolName, ti))
+let toLlmOutput (step: LlmStep) : Result<LlmResponse, AgentError> =
+    let outputResult =
+        match step.action with
+        | "final" ->
+            match step.input.TryGetProperty("answer") with
+            | true, v when v.ValueKind = JsonValueKind.String -> Ok(FinalAnswer(v.GetString()))
+            | _ ->
+                // SchemaViolation (not InvalidJsonOutput): the JSON schema
+                // cannot validate action-specific input shapes (action→input
+                // schema is open in v1). Missing-answer is a schema gap,
+                // not a parse failure. See docblock above for full rationale.
+                Error(SchemaViolation "final action input missing string 'answer' field")
+        | toolName ->
+            let raw = step.input.GetRawText()
+            let ti = ToolInput(Map.ofList [ ("_raw", raw) ])
+            Ok(ToolCall(ToolName toolName, ti))
+
+    outputResult |> Result.map (fun output -> { Thought = Thought step.thought; Output = output })
 
 // ── Spectre.Console spinner ─────────────────────────────────────────────────
 
@@ -336,7 +339,7 @@ let probeModelInfoAsync (baseUrl: string) (ct: CancellationToken) : Task<ModelIn
 ///    withSpinner(HTTP POST body using info.ModelId)
 ///      -> extractContent (OpenAI envelope)
 ///      -> parseLlmResponse (extraction + schema validation from Plan 02-02)
-///      -> toLlmOutput (LlmStep -> LlmOutput DU)
+///      -> toLlmOutput (LlmStep -> LlmResponse)
 ///
 /// Only the spinner wraps the HTTP call; parse+validate happen after.
 ///

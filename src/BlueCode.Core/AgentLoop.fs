@@ -3,11 +3,6 @@
 /// Entry point: runSession. No Serilog, Spectre, or Cli-layer references.
 /// Depends only on Domain, Router, ContextBuffer, Ports, FsToolkit.ErrorHandling,
 /// and System.Text.Json (inbox on net10.0).
-///
-/// Known v1 limitation: Step.Thought is populated with Thought "[not captured in v1]".
-/// Capturing the real thought would require amending ILlmClient.CompleteAsync to return
-/// (Thought * LlmOutput) or a LlmStep type. Deferred to Phase 5+ per research
-/// § Open Question 2 Option (d).
 module BlueCode.Core.AgentLoop
 
 open System
@@ -138,12 +133,12 @@ let private callLlmWithRetry
     (messages: Message list)
     (model: Model)
     (ct: CancellationToken)
-    : Task<Result<LlmOutput, AgentError>> =
+    : Task<Result<LlmResponse, AgentError>> =
     task {
         let! attempt1 = client.CompleteAsync messages model ct
 
         match attempt1 with
-        | Ok output -> return Ok output
+        | Ok response -> return Ok response
         | Error(InvalidJsonOutput raw) ->
             let snippet =
                 if raw.Length > 300 then
@@ -162,7 +157,7 @@ let private callLlmWithRetry
             let! attempt2 = client.CompleteAsync messages2 model ct
 
             match attempt2 with
-            | Ok output -> return Ok output
+            | Ok response -> return Ok response
             | Error(InvalidJsonOutput _) -> return Error(InvalidJsonOutput raw)
             | Error other -> return Error other
         | Error other -> return Error other
@@ -240,13 +235,13 @@ let rec private runLoop
 
             match llmResult with
             | Error e -> return Error e
-            | Ok(FinalAnswer answer) ->
+            | Ok { Thought = thought; Output = FinalAnswer answer } ->
                 let endedAt = DateTimeOffset.UtcNow
                 let durationMs = int64 (endedAt - startedAt).TotalMilliseconds
 
                 let finalStep =
                     { StepNumber = loopN + 1
-                      Thought = Thought "[not captured in v1]"
+                      Thought = thought
                       Action = FinalAnswer answer
                       ToolResult = None
                       Status = StepSuccess
@@ -264,7 +259,7 @@ let rec private runLoop
                           Steps = allSteps
                           LoopCount = loopN + 1
                           Model = model }
-            | Ok(ToolCall(ToolName actionName, toolInput)) ->
+            | Ok { Thought = thought; Output = ToolCall(ToolName actionName, toolInput) } ->
                 let inputHash = computeInputHash toolInput
 
                 match checkLoopGuard guard actionName inputHash with
@@ -290,7 +285,7 @@ let rec private runLoop
 
                             let step =
                                 { StepNumber = loopN + 1
-                                  Thought = Thought "[not captured in v1]"
+                                  Thought = thought
                                   Action = ToolCall(ToolName actionName, toolInput)
                                   ToolResult = Some tr
                                   Status = status

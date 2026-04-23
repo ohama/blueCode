@@ -10,7 +10,7 @@ open BlueCode.Core.Domain
 /// Uses task {} semantics; async CE is banned in Core — see scripts/check-no-async.sh.
 type ILlmClient =
     abstract member CompleteAsync:
-        messages: Message list -> model: Model -> ct: CancellationToken -> Task<Result<LlmOutput, AgentError>>
+        messages: Message list -> model: Model -> ct: CancellationToken -> Task<Result<LlmResponse, AgentError>>
 
 /// Contract Phase 3's FsToolExecutor implements.
 /// Returns ToolResult (structured outcome) wrapped in Result so loop-level
