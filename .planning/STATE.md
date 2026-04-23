@@ -9,13 +9,13 @@ See: .planning/PROJECT.md (updated 2026-04-23 for v1.1 milestone start)
 
 ## Current Position
 
-Milestone: v1.1 Refinement (started 2026-04-23)
-Phase: Phase 7 — Thought Capture (in progress)
-Plan: 1 of 2 complete
-Status: Phase 7 plan 1/2 done. LlmResponse wired through ILlmClient + AgentLoop. Production compiles clean. Tests broken pending 07-02.
-Last activity: 2026-04-23 — Completed 07-01-PLAN.md (LlmResponse record, ILlmClient signature, AgentLoop Step construction, toLlmOutput return type)
+Milestone: v1.1 Refinement (COMPLETE — 2026-04-23)
+Phase: Phase 7 — Thought Capture (COMPLETE)
+Plan: 2 of 2 complete
+Status: Phase 7 complete. All 3 v1.1 requirements done (REF-01, REF-02, OBS-05). 216 tests passing. SC-3 live smoke deferred (GPU busy at time of 07-02 execution; resume command documented in 07-02-SUMMARY.md).
+Last activity: 2026-04-23 — Completed 07-02-PLAN.md (test migration + live smoke attempt)
 
-Progress: v1.1 [████████████████░░░░] ~75% (REF-01 done, REF-02 done, OBS-05 infrastructure done — test migration + smoke pending)
+Progress: v1.1 [████████████████████] 100% (REF-01 done, REF-02 done, OBS-05 done)
 
 ## Performance Metrics (v1.0 — final, frozen)
 
@@ -71,6 +71,9 @@ Notable items marked `⚠ Revisit` for v1.1 scoping:
 | Retry semantics preserved: 2 CompleteAsync calls unchanged | 07-01 | LOOP-05 invariant; Ok response passes through both attempts without modification |
 | Schema unchanged: llmStepSchema thought minLength:1 already enforces non-empty | 07-01 | SC-5 confirmed; no new validation needed in toLlmOutput |
 | Stale "Known v1 limitation" comment removed from AgentLoop.fs header | 07-01 | Comment became false once LlmResponse wired; misleading to leave |
+| makeMockResponse duplicated (not shared) in AgentLoopTests + ReplTests | 07-02 | No shared helper module; Phase 7 scope discipline; pre-decided in 07-RESEARCH.md Q5 |
+| SmokeTests.fs fix included in 07-02 scope | 07-02 | 07-01 SUMMARY flagged it; single Ok { Output = output } destructuring fix; 0 new behavior |
+| SC-3 live smoke deferred | 07-02 | GPU busy at execution time; chat completions timeout 180s; structural SCs 1/2/4/5 fully satisfied |
 
 ### Pending Todos (v1.1 seed)
 
@@ -86,6 +89,6 @@ All three items converted to requirements REF-01, REF-02, OBS-05. See `.planning
 
 ## Session Continuity
 
-Last session: 2026-04-23T09:36:23Z
-Stopped at: Completed 07-01-PLAN.md. LlmResponse wired through ILlmClient + AgentLoop. Production compiles clean. Tests broken (pending 07-02).
-Resume file: None — next action is execute Phase 7 Plan 2 (07-02: test migration + --verbose smoke).
+Last session: 2026-04-23T18:42:00Z
+Stopped at: Completed 07-02-PLAN.md. Test migration complete. 216 tests passing. v1.1 milestone complete.
+Resume file: None — v1.1 complete. Next milestone is v1.2 (scope TBD). SC-3 can be re-verified once GPU is free: `dotnet run --project src/BlueCode.Cli -- --verbose "List the files in src" 2>&1 | grep "thought:"`
