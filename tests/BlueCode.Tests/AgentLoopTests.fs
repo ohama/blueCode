@@ -10,9 +10,15 @@ open BlueCode.Core.AgentLoop
 
 // ── Mock helpers ──────────────────────────────────────────────────────────────
 
+/// Phase 7: wraps an LlmOutput with a non-empty Thought into the new LlmResponse
+/// success-payload expected by ILlmClient.CompleteAsync. Use for every mock reply
+/// that previously wrote `Ok(FinalAnswer ...)` or `Ok(ToolCall(...))`.
+let private makeMockResponse (thought: string) (output: LlmOutput) : Result<LlmResponse, AgentError> =
+    Ok { Thought = Thought thought; Output = output }
+
 /// Build a fake ILlmClient that returns scripted responses per call.
 /// Responses are dequeued FIFO; exhausted queue throws (test bug).
-let private mockLlm (responses: Result<LlmOutput, AgentError> list) : ILlmClient =
+let private mockLlm (responses: Result<LlmResponse, AgentError> list) : ILlmClient =
     let queue = System.Collections.Generic.Queue<_>(responses)
 
     { new ILlmClient with
@@ -57,7 +63,7 @@ let agentLoopTests =
 
           testCaseAsync "happy path: LLM returns FinalAnswer immediately"
           <| async {
-              let llm = mockLlm [ Ok(FinalAnswer "done") ]
+              let llm = mockLlm [ makeMockResponse "finalizing" (FinalAnswer "done") ]
 
               let! result =
                   runSession testConfig llm mockToolsOk discardStep "hello" CancellationToken.None
@@ -79,7 +85,7 @@ let agentLoopTests =
           <| async {
               let calls =
                   [ "a.txt"; "b.txt"; "c.txt"; "d.txt"; "e.txt" ]
-                  |> List.map (fun f -> Ok(toolCall "read_file" (sprintf "{\"path\":\"%s\"}" f)))
+                  |> List.map (fun f -> makeMockResponse "reading file" (toolCall "read_file" (sprintf "{\"path\":\"%s\"}" f)))
 
               let llm = mockLlm calls
 
@@ -93,7 +99,7 @@ let agentLoopTests =
           testCaseAsync "loop guard: 3x same (action, input) trips LoopGuardTripped"
           <| async {
               // 3 identical ToolCalls with same action + same input — guard should trip on 3rd
-              let calls = List.replicate 3 (Ok(toolCall "read_file" "{\"path\":\"same.txt\"}"))
+              let calls = List.replicate 3 (makeMockResponse "reading same file" (toolCall "read_file" "{\"path\":\"same.txt\"}"))
               let llm = mockLlm calls
 
               let! result =
@@ -109,7 +115,7 @@ let agentLoopTests =
           <| async {
               // First call returns InvalidJsonOutput; second returns Ok FinalAnswer
               let llm =
-                  mockLlm [ Error(InvalidJsonOutput "garbage"); Ok(FinalAnswer "recovered") ]
+                  mockLlm [ Error(InvalidJsonOutput "garbage"); makeMockResponse "correcting format" (FinalAnswer "recovered") ]
 
               let! result =
                   runSession testConfig llm mockToolsOk discardStep "hello" CancellationToken.None
@@ -139,7 +145,7 @@ let agentLoopTests =
 
           testCaseAsync "step timing: all emitted Steps have populated StartedAt/EndedAt/DurationMs"
           <| async {
-              let llm = mockLlm [ Ok(FinalAnswer "done") ]
+              let llm = mockLlm [ makeMockResponse "computing result" (FinalAnswer "done") ]
               let sink, captured = captureSteps ()
 
               let! result =

@@ -25,7 +25,7 @@ let toLlmOutputTests =
                     input = jsonElement """{"answer":"the result"}""" }
 
               match toLlmOutput step with
-              | Ok(FinalAnswer s) -> Expect.equal s "the result" "FinalAnswer payload should be the answer string"
+              | Ok { Output = FinalAnswer s } -> Expect.equal s "the result" "FinalAnswer payload should be the answer string"
               | other -> failtestf "Expected Ok (FinalAnswer ...) but got: %A" other
 
           testCase "final action with missing 'answer' -> SchemaViolation"
@@ -72,7 +72,7 @@ let toLlmOutputTests =
                     input = jsonElement """{"path":"src/main.fs"}""" }
 
               match toLlmOutput step with
-              | Ok(ToolCall(ToolName name, ToolInput map)) ->
+              | Ok { Output = ToolCall(ToolName name, ToolInput map) } ->
                   Expect.equal name "read_file" "tool name should round-trip"
 
                   Expect.isTrue

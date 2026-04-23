@@ -13,8 +13,14 @@ open BlueCode.Cli.CompositionRoot
 
 // ── Stub helpers ─────────────────────────────────────────────────────────────
 
+/// Phase 7: wraps an LlmOutput with a non-empty Thought into the new LlmResponse
+/// success-payload expected by ILlmClient.CompleteAsync. Duplicated from AgentLoopTests
+/// per research decision (no shared helper module in Phase 7 scope).
+let private makeMockResponse (thought: string) (output: LlmOutput) : Result<LlmResponse, AgentError> =
+    Ok { Thought = Thought thought; Output = output }
+
 /// Build a fake ILlmClient that returns scripted responses per call (FIFO queue).
-let private stubLlm (responses: Result<LlmOutput, AgentError> list) : ILlmClient =
+let private stubLlm (responses: Result<LlmResponse, AgentError> list) : ILlmClient =
     let q = System.Collections.Generic.Queue<_>(responses)
 
     { new ILlmClient with
@@ -53,7 +59,7 @@ let tests =
           <| fun () ->
               // Arrange: script LLM to return one ToolCall then a FinalAnswer = 2 Steps
               let llm =
-                  stubLlm [ Ok(toolCall "list_dir" "{\"path\":\".\"}"); Ok(FinalAnswer "done") ]
+                  stubLlm [ makeMockResponse "listing files" (toolCall "list_dir" "{\"path\":\".\"}"); makeMockResponse "finalizing" (FinalAnswer "done") ]
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-replt-%s" (Guid.NewGuid().ToString("N")))
@@ -174,7 +180,7 @@ let tests =
               "runSingleTurn Verbose mode: onStep prints multi-line verbose output with [Step, thought:, action:, result: labels"
           <| fun () ->
               // Arrange: script LLM to return one FinalAnswer = 1 Step
-              let llm = stubLlm [ Ok(FinalAnswer "verbose done") ]
+              let llm = stubLlm [ makeMockResponse "finalizing verbose" (FinalAnswer "verbose done") ]
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-replv-%s" (Guid.NewGuid().ToString("N")))
@@ -234,7 +240,7 @@ let tests =
           testCase "runSingleTurn Compact mode: onStep does NOT print thought: label"
           <| fun () ->
               // Arrange: script LLM to return one FinalAnswer = 1 Step
-              let llm = stubLlm [ Ok(FinalAnswer "compact done") ]
+              let llm = stubLlm [ makeMockResponse "finalizing compact" (FinalAnswer "compact done") ]
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-replc-%s" (Guid.NewGuid().ToString("N")))
@@ -299,9 +305,9 @@ let tests =
               // Third step is FinalAnswer to end the turn. Warning must fire only ONCE.
               let llm =
                   stubLlm
-                      [ Ok(toolCall "list_dir" "{\"path\":\".\"}")
-                        Ok(toolCall "read_file" "{\"path\":\"README.md\"}")
-                        Ok(FinalAnswer "context warning test done") ]
+                      [ makeMockResponse "listing directory" (toolCall "list_dir" "{\"path\":\".\"}")
+                        makeMockResponse "reading readme" (toolCall "read_file" "{\"path\":\"README.md\"}")
+                        makeMockResponse "summarizing" (FinalAnswer "context warning test done") ]
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-replw-%s" (Guid.NewGuid().ToString("N")))

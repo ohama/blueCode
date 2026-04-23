@@ -35,7 +35,7 @@ let smokeTests =
                       (client.CompleteAsync messages Qwen32B cts.Token).GetAwaiter().GetResult()
 
                   match result with
-                  | Ok output ->
+                  | Ok { Output = output } ->
                       // Any Ok LlmOutput is acceptable — ToolCall or FinalAnswer.
                       // We only assert the adapter completed end-to-end without an
                       // AgentError. Structural assertions on output are Phase 3 concern.
