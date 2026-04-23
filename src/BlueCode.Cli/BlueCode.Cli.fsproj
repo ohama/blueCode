@@ -12,6 +12,8 @@
     <Compile Include="Adapters/BashSecurity.fs" />
     <Compile Include="Adapters/FsToolExecutor.fs" />
     <Compile Include="Adapters/Logging.fs" />
+    <Compile Include="Adapters/JsonlSink.fs" />
+    <Compile Include="Rendering.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
