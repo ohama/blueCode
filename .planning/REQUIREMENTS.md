@@ -42,13 +42,13 @@ v1 Minimal scope. 본인 `localLLM/` 설계 노트 + 연구 SUMMARY.md의 Phase 
 
 ### Agent Loop
 
-- [ ] **LOOP-01**: 단일 turn에서 prompt → LLM → tool → observe 사이클 최대 5회 반복 후 종료
-- [ ] **LOOP-02**: `MaxLoopsExceeded`는 `AgentError`의 한 케이스로 표현 (예외 아님), 호출자가 컴파일 시점에 처리 강제
-- [ ] **LOOP-03**: 한 step당 정확히 하나의 툴만 실행 (chaining 금지) — JSON 스키마가 단일 `action` 필드만 허용
-- [ ] **LOOP-04**: 동일 `(action, input_hash)` 튜플이 한 turn에 3회 이상 나오면 루프 가드가 차단
-- [ ] **LOOP-05**: JSON 파싱 실패 시 최대 2회 재시도 후 `AgentError.InvalidJsonOutput`으로 종료
-- [ ] **LOOP-06**: 메시지 히스토리는 불변 ring buffer로 최근 N개(기본 3) step 유지
-- [ ] **LOOP-07**: Ctrl+C(취소) 시 stack trace 없이 step 요약으로 graceful 종료
+- [x] **LOOP-01**: 단일 turn에서 prompt → LLM → tool → observe 사이클 최대 5회 반복 후 종료
+- [x] **LOOP-02**: `MaxLoopsExceeded`는 `AgentError`의 한 케이스로 표현 (예외 아님), 호출자가 컴파일 시점에 처리 강제
+- [x] **LOOP-03**: 한 step당 정확히 하나의 툴만 실행 (chaining 금지) — JSON 스키마가 단일 `action` 필드만 허용
+- [x] **LOOP-04**: 동일 `(action, input_hash)` 튜플이 한 turn에 3회 이상 나오면 루프 가드가 차단
+- [x] **LOOP-05**: JSON 파싱 실패 시 최대 2회 재시도 후 `AgentError.InvalidJsonOutput`으로 종료
+- [x] **LOOP-06**: 메시지 히스토리는 불변 ring buffer로 최근 N개(기본 3) step 유지
+- [x] **LOOP-07**: Ctrl+C(취소) 시 stack trace 없이 step 요약으로 graceful 종료
 
 ### CLI
 
@@ -62,10 +62,10 @@ v1 Minimal scope. 본인 `localLLM/` 설계 노트 + 연구 SUMMARY.md의 Phase 
 
 ### Observability
 
-- [ ] **OBS-01**: 모든 step이 JSONL 형식으로 `~/.bluecode/session_<timestamp>.jsonl`에 기록 (crash post-mortem용; 세션 resume 아님)
-- [ ] **OBS-02**: Serilog로 구조화 로그를 stderr에 출력 (Spectre UI는 stdout, 로그는 stderr 분리)
+- [x] **OBS-01**: 모든 step이 JSONL 형식으로 `~/.bluecode/session_<timestamp>.jsonl`에 기록 (crash post-mortem용; 세션 resume 아님)
+- [x] **OBS-02**: Serilog로 구조화 로그를 stderr에 출력 (Spectre UI는 stdout, 로그는 stderr 분리)
 - [ ] **OBS-03**: 시작 시 `/v1/models`로 실제 `max_model_len` 조회, 누적 컨텍스트가 80% 도달 시 사용자에게 경고
-- [ ] **OBS-04**: 각 step의 타이밍 기록 — `Step` 레코드에 `startedAt: DateTimeOffset`, `endedAt: DateTimeOffset`, `durationMs: int64` 필드 추가. agent loop가 step 시작/종료에서 측정. 값은 OBS-01의 JSONL 출력과 CLI-03의 `--verbose` 렌더링에 모두 포함 (성능 튜닝 및 72B latency 디버깅 필수)
+- [x] **OBS-04**: 각 step의 타이밍 기록 — `Step` 레코드에 `startedAt: DateTimeOffset`, `endedAt: DateTimeOffset`, `durationMs: int64` 필드 추가. agent loop가 step 시작/종료에서 측정. 값은 OBS-01의 JSONL 출력과 CLI-03의 `--verbose` 렌더링에 모두 포함 (성능 튜닝 및 72B latency 디버깅 필수)
 
 ## v2 Requirements
 
@@ -152,16 +152,16 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 | TOOL-06 | Phase 3 | ✓ Complete |
 | TOOL-07 (DU shape) | Phase 1 | ✓ Complete (shipped as part of FND-02 so Tool DU is exhaustively matchable; see FND-02 note) |
 | TOOL-07 (semantic contract) | Phase 3 | ✓ Complete (case-by-case generation rules, security denier chain, timeout semantics) |
-| LOOP-01 | Phase 4 | Pending |
-| LOOP-02 | Phase 4 | Pending |
-| LOOP-03 | Phase 4 | Pending |
-| LOOP-04 | Phase 4 | Pending |
-| LOOP-05 | Phase 4 | Pending |
-| LOOP-06 | Phase 4 | Pending |
-| LOOP-07 | Phase 4 | Pending |
-| OBS-01 | Phase 4 | Pending |
-| OBS-02 | Phase 4 | Pending |
-| OBS-04 | Phase 4 | Pending |
+| LOOP-01 | Phase 4 | ✓ Complete |
+| LOOP-02 | Phase 4 | ✓ Complete |
+| LOOP-03 | Phase 4 | ✓ Complete |
+| LOOP-04 | Phase 4 | ✓ Complete |
+| LOOP-05 | Phase 4 | ✓ Complete |
+| LOOP-06 | Phase 4 | ✓ Complete |
+| LOOP-07 | Phase 4 | ✓ Complete |
+| OBS-01 | Phase 4 | ✓ Complete |
+| OBS-02 | Phase 4 | ✓ Complete |
+| OBS-04 | Phase 4 | ✓ Complete |
 | CLI-01 | Phase 5 | Pending |
 | CLI-02 | Phase 5 | Pending |
 | CLI-03 | Phase 5 | Pending |

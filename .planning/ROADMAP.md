@@ -13,7 +13,7 @@ blueCode is a strong-typed F# agent loop that drives locally-served Qwen 32B/72B
 - [x] **Phase 1: Foundation** - DU spine, routing pure functions, and project skeleton ✓ 2026-04-22
 - [x] **Phase 2: LLM Client** - HTTP client, JSON extraction pipeline, schema validation ✓ 2026-04-22
 - [x] **Phase 3: Tool Executor** - 4 tools with security layer and output truncation ✓ 2026-04-23
-- [ ] **Phase 4: Agent Loop** - End-to-end loop, guards, JSONL step log, Ctrl+C
+- [x] **Phase 4: Agent Loop** - End-to-end loop, guards, JSONL step log, Ctrl+C ✓ 2026-04-23
 - [ ] **Phase 5: CLI Polish** - Multi-turn REPL, verbose/compact toggle, daily-driver switch
 
 ## Phase Details
@@ -88,12 +88,13 @@ Plans:
   5. Pressing Ctrl+C during LLM inference prints a one-line step summary and exits cleanly — no `OperationCanceledException` stack trace.
   6. Every step is written as a JSONL line to `~/.bluecode/session_<timestamp>.jsonl` and readable after the process exits.
   7. Every JSONL step record includes `startedAt`, `endedAt`, and `durationMs` fields (additive extension of the Step record from Phase 1); `--verbose` output also shows per-step elapsed time (OBS-04).
-**Plans**: 3 plans
+**Plans**: 4 plans (3 original + 1 gap closure)
 
 Plans:
-- [ ] 04-01: AgentLoop.fs — recursive task {} loop, loopN parameter, MaxLoopsExceeded, loop guard, 2-attempt JSON retry
-- [ ] 04-02: CompositionRoot.fs + single-turn Repl.fs — wire real adapters, run first real end-to-end task
-- [ ] 04-03: Rendering.fs verbose step log + Serilog stderr + JSONL step logger + Ctrl+C handler
+- [x] 04-01: AgentLoop.fs — recursive task {} loop, loopN parameter, MaxLoopsExceeded, loop guard, 2-attempt JSON retry
+- [x] 04-02: CompositionRoot.fs + single-turn Repl.fs — wire real adapters, run first real end-to-end task
+- [x] 04-03: Rendering.fs verbose step log + Serilog stderr + JSONL step logger + Ctrl+C handler
+- [x] 04-04: SC-7 gap closure — wire renderStep Compact into Repl.fs onStep for per-step stdout progress
 
 ---
 
@@ -126,5 +127,5 @@ Plans:
 | 1. Foundation | 3/3 | ✓ Complete | 2026-04-22 |
 | 2. LLM Client | 3/3 | ✓ Complete | 2026-04-22 |
 | 3. Tool Executor | 3/3 | ✓ Complete | 2026-04-23 |
-| 4. Agent Loop | 0/3 | Not started | - |
+| 4. Agent Loop | 4/4 | ✓ Complete | 2026-04-23 |
 | 5. CLI Polish | 0/3 | Not started | - |
