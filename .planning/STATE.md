@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-23 for v1.1 milestone start)
 ## Current Position
 
 Milestone: v1.1 Refinement (started 2026-04-23)
-Phase: Phase 6 — Dynamic Bootstrap (complete)
-Plan: 2 of 2 complete
-Status: Phase 6 complete. bootstrapAsync deleted, Program.fs sync, 216 tests pass. Ready for Phase 7.
-Last activity: 2026-04-23 — Completed 06-02-PLAN.md (bootstrapAsync deletion + Program.fs sync bootstrap)
+Phase: Phase 7 — Thought Capture (in progress)
+Plan: 1 of 2 complete
+Status: Phase 7 plan 1/2 done. LlmResponse wired through ILlmClient + AgentLoop. Production compiles clean. Tests broken pending 07-02.
+Last activity: 2026-04-23 — Completed 07-01-PLAN.md (LlmResponse record, ILlmClient signature, AgentLoop Step construction, toLlmOutput return type)
 
-Progress: v1.1 [████░░░░░░░░░░░░░░░░] ~50% (REF-01 done, REF-02 done, OBS-05 pending in Phase 7)
+Progress: v1.1 [████████████████░░░░] ~75% (REF-01 done, REF-02 done, OBS-05 infrastructure done — test migration + smoke pending)
 
 ## Performance Metrics (v1.0 — final, frozen)
 
@@ -62,6 +62,16 @@ Notable items marked `⚠ Revisit` for v1.1 scoping:
 | getMaxModelLenAsync fully removed | 06-02 | No caller after bootstrapAsync deletion; probeModelInfoAsync supersedes it |
 | Test port 64321 instead of 8000 for closed-port test | 06-02 | 8000 may be live (flaky); 64321 is deterministically closed on any standard machine |
 
+**v1.1 decisions (Phase 7):**
+
+| Decision | Plan | Rationale |
+|----------|------|-----------|
+| Option C: LlmResponse record (not tuple) for ILlmClient.CompleteAsync | 07-01 | Named fields prevent ordering drift; callLlmWithRetry return type reads as first-class; extensible |
+| Big-bang single commit: no transitional API | 07-01 | F# compiler enforces completeness; 2 callsites only; cleaner history |
+| Retry semantics preserved: 2 CompleteAsync calls unchanged | 07-01 | LOOP-05 invariant; Ok response passes through both attempts without modification |
+| Schema unchanged: llmStepSchema thought minLength:1 already enforces non-empty | 07-01 | SC-5 confirmed; no new validation needed in toLlmOutput |
+| Stale "Known v1 limitation" comment removed from AgentLoop.fs header | 07-01 | Comment became false once LlmResponse wired; misleading to leave |
+
 ### Pending Todos (v1.1 seed)
 
 All three items converted to requirements REF-01, REF-02, OBS-05. See `.planning/REQUIREMENTS.md`.
@@ -76,6 +86,6 @@ All three items converted to requirements REF-01, REF-02, OBS-05. See `.planning
 
 ## Session Continuity
 
-Last session: 2026-04-23T09:08:47Z
-Stopped at: Completed 06-02-PLAN.md. bootstrapAsync deleted; Program.fs sync; 216 tests pass. Phase 6 structurally complete.
-Resume file: None — next action is execute Phase 7 (Thought Capture, OBS-05).
+Last session: 2026-04-23T09:36:23Z
+Stopped at: Completed 07-01-PLAN.md. LlmResponse wired through ILlmClient + AgentLoop. Production compiles clean. Tests broken (pending 07-02).
+Resume file: None — next action is execute Phase 7 Plan 2 (07-02: test migration + --verbose smoke).
