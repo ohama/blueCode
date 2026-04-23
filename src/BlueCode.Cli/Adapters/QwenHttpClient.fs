@@ -307,7 +307,9 @@ let create () : ILlmClient =
                     | Qwen32B -> "32B"
                     | Qwen72B -> "72B"
 
-                let label = sprintf "Thinking... [%s]" modelLabel
+                // Escape brackets so Spectre does not parse "[32B]" as a markup
+                // color tag. Spectre markup uses [[ / ]] as literal bracket escapes.
+                let label = sprintf "Thinking... [[%s]]" modelLabel
 
                 // Spinner wraps HTTP ONLY. Parse + validate run after.
                 let! postResult = withSpinner label (fun () -> postAsync url body ct)
