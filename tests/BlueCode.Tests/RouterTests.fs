@@ -101,6 +101,7 @@ let rootTests = testList "all" [
     BlueCode.Tests.CompositionRootTests.tests
     BlueCode.Tests.AgentLoopSmokeTests.tests
     BlueCode.Tests.ReplTests.tests
+    BlueCode.Tests.CliArgsTests.tests
 ]
 
 [<EntryPoint>]

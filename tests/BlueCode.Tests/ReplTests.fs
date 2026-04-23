@@ -8,6 +8,7 @@ open Expecto
 open BlueCode.Core.Domain
 open BlueCode.Core.Ports
 open BlueCode.Core.AgentLoop
+open BlueCode.Cli.CompositionRoot
 
 // ── Stub helpers ─────────────────────────────────────────────────────────────
 
@@ -35,9 +36,12 @@ let private toolCall (action: string) (rawJson: string) : LlmOutput =
 // is NOT used. Test registration is done in RouterTests.fs rootTests list.
 
 let tests =
-    testList "Repl.runSingleTurn" [
+    testSequenced <| testList "Repl" [
 
-        testCaseAsync "onStep prints per-step Compact line to stdout with 'ms]' DurationMs marker" <| async {
+        // Use testCase (synchronous) to avoid Console.SetOut interleaving between
+        // adjacent tests. Both tests redirect Console.Out; running them as fully
+        // synchronous testCases ensures no concurrent stdout capture.
+        testCase "runSingleTurn: onStep prints per-step Compact line to stdout with 'ms]' DurationMs marker" <| fun () ->
             // Arrange: script LLM to return one ToolCall then a FinalAnswer = 2 Steps
             let llm = stubLlm [
                 Ok (toolCall "list_dir" "{\"path\":\".\"}")
@@ -61,9 +65,9 @@ let tests =
             use sw = new StringWriter()
             Console.SetOut(sw)
             try
-                let! exitCode =
+                let exitCode =
                     BlueCode.Cli.Repl.runSingleTurn "stub prompt" components
-                    |> Async.AwaitTask
+                    |> fun t -> t.GetAwaiter().GetResult()
                 Console.Out.Flush()
                 let captured = sw.ToString()
 
@@ -86,6 +90,43 @@ let tests =
                     (sprintf "expected at least 2 Compact format lines '> ... [..., Nms]'; captured:\n%s" captured)
             finally
                 Console.SetOut(originalOut)
-        }
 
-    ]
+        testCase "runMultiTurn: stdin '/exit' exits cleanly with code 0 and prints banner" <| fun () ->
+            // Arrange: redirect stdin to simulate user typing "/exit" immediately
+            let originalIn  = Console.In
+            let originalOut = Console.Out
+            use stdinReader  = new StringReader("/exit\n")
+            use stdoutWriter = new StringWriter()
+            Console.SetIn(stdinReader)
+            Console.SetOut(stdoutWriter)
+            let tempRoot = Path.Combine(Path.GetTempPath(), sprintf "bluecode-replmt-%s" (Guid.NewGuid().ToString("N")))
+            Directory.CreateDirectory(tempRoot) |> ignore
+            let sinkPath = Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+            use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+            let components : BlueCode.Cli.CompositionRoot.AppComponents = {
+                LlmClient    = stubLlm []    // no LLM calls expected — /exit before any prompt
+                ToolExecutor = stubToolsOk
+                JsonlSink    = sink
+                Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
+                ProjectRoot  = tempRoot
+                LogPath      = sinkPath
+            }
+            try
+                // Act: run synchronously to avoid Console.Out interleaving
+                let exitCode =
+                    BlueCode.Cli.Repl.runMultiTurn components
+                    |> fun t -> t.GetAwaiter().GetResult()
+                Console.Out.Flush()
+                let captured = stdoutWriter.ToString()
+
+                // Assert: exits cleanly with 0
+                Expect.equal exitCode 0 "runMultiTurn exit code when /exit is first input"
+
+                // Assert: prints the banner
+                Expect.stringContains captured "blueCode — multi-turn mode"
+                    "banner 'blueCode — multi-turn mode' should appear in stdout"
+            finally
+                Console.SetIn(originalIn)
+                Console.SetOut(originalOut)
+
+    ]  // end testSequenced

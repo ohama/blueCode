@@ -18,6 +18,7 @@
     <Compile Include="CompositionRootTests.fs" />
     <Compile Include="AgentLoopSmokeTests.fs" />
     <Compile Include="ReplTests.fs" />
+    <Compile Include="CliArgsTests.fs" />
     <Compile Include="RouterTests.fs" />
   </ItemGroup>
 
