@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** Phase 4 — Agent Loop
+**Current focus:** Phase 5 — CLI Polish
 
 ## Current Position
 
-Phase: 4 of 5 (Agent Loop) — COMPLETE (SC-7 gap closed)
-Plan: 4 of 4 in Phase 4 — all done (04-01, 04-03, 04-02, 04-04)
-Status: 04-04 complete — renderStep Compact wired into Repl.fs onStep; ReplTests.fs stdout-capture test; 174 tests pass (1 ignored smoke)
-Last activity: 2026-04-23 — Completed 04-04-PLAN.md (SC-7 gap closure: printfn renderStep Compact in onStep; ReplTests captures stdout, asserts ms] marker per step)
+Phase: 5 of 5 (CLI Polish)
+Plan: 1 of 4 in Phase 5 — complete (05-01 done)
+Status: 05-01 complete — Argu 6.2.5 wired; CliArgs DU; multi-turn REPL; AgentConfig.ForcedModel; 188 tests pass (1 ignored smoke)
+Last activity: 2026-04-23 — Completed 05-01-PLAN.md (Argu + multi-turn REPL + --model override + AgentConfig.ForcedModel)
 
-Progress: [█████████████████░] 87% (13/15 plans)
+Progress: [██████████████████░] 93% (14/16 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 7 min
-- Total execution time: 0.83 hours
+- Total execution time: ~1.0 hours
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [█████████████████░] 87% (13/15 pl
 | 01-foundation | 3/3 | 32 min | 11 min |
 | 02-llm-client | 3/3 | 13 min | 4 min |
 | 03-tool-executor | 3/3 | 27 min | 9 min |
+| 05-cli-polish | 1/4 | 13 min | 13 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (3 min), 03-01 (5 min), 03-03 (15 min), 03-02 (7 min)
-- Trend: stable ~4-10 min/plan (03-03 longer due to 1261-line Python port)
+- Last 5 plans: 03-01 (5 min), 03-03 (15 min), 03-02 (7 min), 04-xx (various), 05-01 (13 min)
+- Trend: stable ~7-13 min/plan
 
 *Updated after each plan completion*
 
@@ -101,6 +102,12 @@ Recent decisions affecting current work:
 - 04-02: Exit codes: 0 success, 1 agent error, 2 usage error, 130 SIGINT
 - 04-02: No Argu yet — positional prompt only; CLI-06 deferred to Phase 5
 - 04-02: RouterTests.fs rootTests assembles all test lists explicitly — new test modules must be added to rootTests list (Expecto [<Tests>] auto-discovery not used in this project)
+- 05-01: CliArgs DU extracted to src/BlueCode.Cli/CliArgs.fs (not inline in Program.fs) — F# EntryPoint modules can't be opened by test projects; enables Argu parse testing
+- 05-01: parseForcedModel raises generic exception; Program.fs catches with explicit exit 2 call (not ArguParseException; Argu doesn't know the model domain strings)
+- 05-01: runMultiTurn must be defined AFTER runSingleTurn in Repl.fs (F# compile-order: called before defined is a compile error)
+- 05-01: testSequenced wraps ReplTests testList — Expecto runs testList in parallel by default; Console.SetOut is global state so parallel execution causes test interference
+- 05-01: Multi-turn REPL: 130 exit code (SIGINT per-turn cancel) translated to 0 for lastCode tally; REPL continues; process exits 130 only in single-turn mode
+- 05-01: AgentConfig.ForcedModel is the only Core change in Phase 5 — no other src/BlueCode.Core/ file modified beyond AgentLoop.fs
 
 ### Pending Todos
 
@@ -115,5 +122,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-04-23
-Stopped at: Completed 04-04-PLAN.md — SC-7 gap closure. renderStep Compact wired into Repl.fs onStep. ReplTests.fs created with stdout-capture test. 174 total tests pass (1 ignored). Phase 4 all gaps closed.
+Stopped at: Completed 05-01-PLAN.md — Argu 6.2.5 + multi-turn REPL + AgentConfig.ForcedModel. 188 total tests pass (1 ignored). Phase 5 plan 1 of 4 complete.
 Resume file: None
