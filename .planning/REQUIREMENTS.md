@@ -57,7 +57,7 @@ v1.0 OOS 유지. v1.1 에서 추가 제외는 없음.
 
 ## Traceability
 
-Roadmap 생성 후 채워짐.
+Roadmap created 2026-04-23. Phase mappings confirmed.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -72,4 +72,4 @@ Roadmap 생성 후 채워짐.
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after v1.1 scope confirmation*
+*Last updated: 2026-04-23 — ROADMAP.md created, traceability confirmed*

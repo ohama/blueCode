@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-04-23 for v1.1 milestone start)
 ## Current Position
 
 Milestone: v1.1 Refinement (started 2026-04-23)
-Phase: Not started (defining requirements → roadmap)
+Phase: Phase 6 — Dynamic Bootstrap (not yet started; roadmap ready)
 Plan: —
-Status: PROJECT.md updated with v1.1 Current Milestone section. REQUIREMENTS.md + ROADMAP.md to be created next.
-Last activity: 2026-04-23 — v1.1 milestone started (scope confirmed: 3 REQs, research skipped, 2 phases)
+Status: ROADMAP.md created. Phase 6 and Phase 7 defined. Ready to plan Phase 6.
+Last activity: 2026-04-23 — ROADMAP.md written (Phases 6-7, 3 REQs, 100% coverage)
 
 Progress: v1.1 [░░░░░░░░░░░░░░░░░░░░] 0% (0 of 3 REQs, 0 of 2 phases)
 
@@ -49,11 +49,7 @@ Notable items marked `⚠ Revisit` for v1.1 scoping:
 
 ### Pending Todos (v1.1 seed)
 
-Carried forward from v1.0 into v1.1 planning — these are not full requirements yet, but known gaps / deferred work the next milestone should scope:
-
-1. **OBS-03 dynamic model id** — extend `QwenHttpClient.getMaxModelLenAsync` with `getModelIdAsync`; `Router.modelToName` queries server at startup instead of hardcoding path (removes portability break introduced by UAT hotfix `5ab5a95`)
-2. **Decouple 32B cold-start probe** — `bootstrapAsync` currently blocks on localhost:8000 even when user targets 72B; lazy-probe on first actual LLM call instead
-3. **Capture real LLM thought (optional)** — change `ILlmClient.CompleteAsync` signature to return `Thought * LlmOutput` or `LlmStep` so `--verbose` displays actual reasoning instead of `"[not captured in v1]"` placeholder
+All three items converted to requirements REF-01, REF-02, OBS-05. See `.planning/REQUIREMENTS.md`.
 
 ### Resolved post-milestone (v1.0 → v1.1 transition)
 
@@ -61,10 +57,10 @@ Carried forward from v1.0 into v1.1 planning — these are not full requirements
 
 ### Blockers/Concerns
 
-(None at milestone transition — v1.1 planning will surface new concerns as they arise.)
+(None — roadmap created, planning can begin.)
 
 ## Session Continuity
 
 Last session: 2026-04-23
-Stopped at: v1.1 milestone started. Scope confirmed (REF-01 / REF-02 / OBS-05). PROJECT.md + STATE.md updated. REQUIREMENTS.md + ROADMAP.md pending creation.
-Resume file: None — next action is `/gsd:discuss-phase 6` or `/gsd:plan-phase 6` after ROADMAP.md lands.
+Stopped at: ROADMAP.md created. Phase 6 (Dynamic Bootstrap) and Phase 7 (Thought Capture) defined. 3/3 requirements mapped. Ready to plan.
+Resume file: None — next action is `/gsd:plan-phase 6`.
