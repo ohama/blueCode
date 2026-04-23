@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 4 of 5 (Agent Loop) — In progress
-Plan: 1 of 3 in Phase 4 — COMPLETE
-Status: 04-01 complete — AgentLoop.fs + Step timing + 6 tests; 159 tests pass (1 ignored smoke)
-Last activity: 2026-04-23 — Completed 04-01-PLAN.md (Domain.fs Step OBS-04 timing fields; AgentLoop.fs: runSession, runLoop, dispatchTool, callLlmWithRetry, loop guard, buildMessages, AgentConfig; 6 Expecto tests; LOOP-01..07+OBS-04 closed in Core)
+Plan: 3 of 3 in Phase 4 — COMPLETE (04-01, 04-03 done; 04-02 remaining)
+Status: 04-03 complete — Serilog NuGets + Logging.fs + JsonlSink.fs + Rendering.fs + 11 tests; 170 tests pass (1 ignored smoke)
+Last activity: 2026-04-23 — Completed 04-03-PLAN.md (Adapters/Logging.fs OBS-02 stderr; Adapters/JsonlSink.fs OBS-01+SC-6 AutoFlush JSONL; Rendering.fs OBS-04+SC-5+SC-7 Compact/Verbose; 6 JsonlSink tests + 5 Rendering tests)
 
-Progress: [█████████████░░] 67% (10/15 plans)
+Progress: [███████████████░] 73% (11/15 plans)
 
 ## Performance Metrics
 
@@ -90,6 +90,10 @@ Recent decisions affecting current work:
 - 04-01: onStep callback threaded through runSession/runLoop — enables 04-02 to wire JsonlSink for crash-safe per-step JSONL
 - 04-01: Step.Thought = Thought "[not captured in v1]" — capturing real thought deferred to Phase 5+ (requires ILlmClient returning Thought * LlmOutput)
 - 04-01: BlueCode.Core.Domain.Timeout qualifier needed in dispatchTool — Domain.Timeout (constructor) vs ToolResult.Timeout (case) name collision
+- 04-03: JSONL uses stdlib StreamWriter with AutoFlush=true (not Serilog.Sinks.File) — deterministic flush semantics for SC-6 crash-safety
+- 04-03: standardErrorFromLevel = Nullable LogEventLevel.Verbose routes ALL Serilog events to stderr (OBS-02 separation from Spectre.Console on stdout)
+- 04-03: renderError exhaustively matches all AgentError cases with user-readable one-liners (no %A, no stack traces) — SC-5 + SC-2
+- 04-03: RenderMode Compact | Verbose — Phase 5 CLI-07 --trace adds a separate Serilog sink, NOT a third RenderMode
 
 ### Pending Todos
 
@@ -102,6 +106,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23T09:40:00Z
-Stopped at: Completed 04-01-PLAN.md — AgentLoop.fs created (pure recursive loop, LOOP-01..07+OBS-04). Step record amended with StartedAt/EndedAt/DurationMs. 6 AgentLoopTests pass. 159 total tests pass.
+Last session: 2026-04-23T00:42:16Z
+Stopped at: Completed 04-03-PLAN.md — Logging.fs (OBS-02), JsonlSink.fs (OBS-01+SC-6), Rendering.fs (OBS-04+SC-5+SC-7). 11 new tests. 170 total tests pass.
 Resume file: None
