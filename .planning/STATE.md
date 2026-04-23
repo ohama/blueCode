@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-23 for v1.1 milestone start)
 ## Current Position
 
 Milestone: v1.1 Refinement (started 2026-04-23)
-Phase: Phase 6 — Dynamic Bootstrap (in progress)
-Plan: 1 of 2 complete
-Status: Plan 06-01 complete. Router.modelToName deleted, QwenHttpClient lazy probe in place. Ready for plan 06-02.
-Last activity: 2026-04-23 — Completed 06-01-PLAN.md (Router.modelToName delete + QwenHttpClient lazy probe)
+Phase: Phase 6 — Dynamic Bootstrap (complete)
+Plan: 2 of 2 complete
+Status: Phase 6 complete. bootstrapAsync deleted, Program.fs sync, 216 tests pass. Ready for Phase 7.
+Last activity: 2026-04-23 — Completed 06-02-PLAN.md (bootstrapAsync deletion + Program.fs sync bootstrap)
 
-Progress: v1.1 [██░░░░░░░░░░░░░░░░░░] ~10% (REF-01 structural done, REF-02 + OBS-05 pending)
+Progress: v1.1 [████░░░░░░░░░░░░░░░░] ~50% (REF-01 done, REF-02 done, OBS-05 pending in Phase 7)
 
 ## Performance Metrics (v1.0 — final, frozen)
 
@@ -57,6 +57,10 @@ Notable items marked `⚠ Revisit` for v1.1 scoping:
 | Empty ModelId -> POST 4xx (no silent failure) | 06-01 | Surfaces probe miss as LlmUnreachable at user-visible call site |
 | AppComponents.MaxModelLen stays 8192 floor | 06-01 | Known regression for 72B warning accuracy; v1.2 candidate |
 | getMaxModelLenAsync left in place | 06-01 | CompositionRoot.bootstrapAsync still needs it; plan 06-02 decides fate |
+| bootstrapAsync deleted; bootstrap is sole factory | 06-02 | REF-02 satisfied: zero HTTP calls at startup; lazy probe fires on first LLM call per port |
+| Log.Information reworded 'resolved' -> 'floor' | 06-02 | MaxModelLen is static 8192 default; 'resolved' was misleading (implied live probe result) |
+| getMaxModelLenAsync fully removed | 06-02 | No caller after bootstrapAsync deletion; probeModelInfoAsync supersedes it |
+| Test port 64321 instead of 8000 for closed-port test | 06-02 | 8000 may be live (flaky); 64321 is deterministically closed on any standard machine |
 
 ### Pending Todos (v1.1 seed)
 
@@ -72,6 +76,6 @@ All three items converted to requirements REF-01, REF-02, OBS-05. See `.planning
 
 ## Session Continuity
 
-Last session: 2026-04-23T09:02:41Z
-Stopped at: Completed 06-01-PLAN.md. Router.modelToName deleted; QwenHttpClient has lazy probe + ModelInfo + tryParseModelId. 216 tests pass.
-Resume file: None — next action is execute 06-02-PLAN.md (bootstrapAsync removal + Program.fs sync wiring).
+Last session: 2026-04-23T09:08:47Z
+Stopped at: Completed 06-02-PLAN.md. bootstrapAsync deleted; Program.fs sync; 216 tests pass. Phase 6 structurally complete.
+Resume file: None — next action is execute Phase 7 (Thought Capture, OBS-05).
