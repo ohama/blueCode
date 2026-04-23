@@ -109,12 +109,13 @@ Plans:
   4. At startup, `/v1/models` is queried and the actual `max_model_len` is used; when accumulated context reaches 80% of that limit, a visible warning is printed before the next LLM call.
   5. `~/projs/claw-code-agent/` has been moved to `~/projs/claw-code-agent-retired/` and at least one real coding task has been completed using blueCode as the sole agent.
   6. `blueCode --trace "<prompt>"` emits Serilog Debug-level structured JSON (stderr) with each step's full untruncated input, output, and `elapsed_ms`; `--trace` is independent of `--verbose` and default OFF (CLI-07).
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 05-01: Multi-turn REPL (Repl.fs extended) + `/exit` + Ctrl+D + `--model` override flag (ROU-04)
-- [ ] 05-02: Compact/verbose rendering + Spectre.Console step panels + elapsed-time spinner
-- [ ] 05-03: `/v1/models` startup query, 80% context warning, Fantomas pass, retire Python agent
+- [ ] 05-01-PLAN.md — Argu + AgentConfig.ForcedModel + multi-turn REPL + `--model` override (CLI-01, CLI-02, CLI-06, ROU-04)
+- [ ] 05-02-PLAN.md — RenderMode threading + LoggingLevelSwitch + `--verbose`/`--trace` wiring + spinner elapsed (CLI-03, CLI-04, CLI-05, CLI-07)
+- [ ] 05-03-PLAN.md — `/v1/models` probe + 80% intra-turn context warning + Fantomas local tool format pass (OBS-03)
+- [ ] 05-04-PLAN.md — Human checkpoint: retire `~/projs/claw-code-agent/` and complete one real UAT task (Phase 5 SC-5)
 
 ---
 
