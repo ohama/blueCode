@@ -28,7 +28,7 @@ v1 Minimal scope. 본인 `localLLM/` 설계 노트 + 연구 SUMMARY.md의 Phase 
 - [ ] **ROU-01**: `classifyIntent: string -> Intent` 순함수로 사용자 입력에서 Intent 분류 (`Debug | Design | Analysis | Implementation | General`)
 - [ ] **ROU-02**: `intentToModel: Intent -> Model` 순함수로 Intent를 모델 선택으로 변환 (Debug/Design/Analysis → 72B, 나머지 → 32B)
 - [ ] **ROU-03**: `Model`을 엔드포인트로 변환해 LLM 클라이언트 호출 (32B → 8000, 72B → 8001)
-- [ ] **ROU-04**: 사용자가 `--model 72b` / `--model 32b` 플래그로 라우팅을 강제 오버라이드 가능
+- [x] **ROU-04**: 사용자가 `--model 72b` / `--model 32b` 플래그로 라우팅을 강제 오버라이드 가능
 
 ### Tools
 
@@ -52,19 +52,19 @@ v1 Minimal scope. 본인 `localLLM/` 설계 노트 + 연구 SUMMARY.md의 Phase 
 
 ### CLI
 
-- [ ] **CLI-01**: 단일 호출 모드 — `blueCode "<prompt>"` 형태로 실행, 최종 응답 stdout 출력
-- [ ] **CLI-02**: 다중 turn REPL 모드 — 인자 없이 실행 시 대화형 루프, `/exit` 또는 Ctrl+D로 종료
-- [ ] **CLI-03**: `--verbose` 플래그로 각 step의 thought/action/input/output/status 전체 출력 (기본은 compact)
-- [ ] **CLI-04**: Compact 모드는 step당 한 줄 요약 출력 (`> reading file...`, `> editing code...`)
-- [ ] **CLI-05**: LLM 추론 대기 중 Spectre.Console spinner + 경과 시간 표시
-- [ ] **CLI-06**: Argu 기반 인자 파싱, `--help` 자동 생성
-- [ ] **CLI-07**: `--trace` 플래그 — 활성화 시 Serilog Debug 레벨로 각 step의 전체 input/output (truncation 없이)과 elapsed_ms를 stderr로 구조화 JSON 로그 출력. 기본 OFF (민감 데이터 — shell output, 파일 내용, LLM 응답 — 로그 누출 방지). `--verbose`(display toggle)와 독립 플래그 — `--verbose --trace` 동시 사용 가능
+- [x] **CLI-01**: 단일 호출 모드 — `blueCode "<prompt>"` 형태로 실행, 최종 응답 stdout 출력
+- [x] **CLI-02**: 다중 turn REPL 모드 — 인자 없이 실행 시 대화형 루프, `/exit` 또는 Ctrl+D로 종료
+- [x] **CLI-03**: `--verbose` 플래그로 각 step의 thought/action/input/output/status 전체 출력 (기본은 compact)
+- [x] **CLI-04**: Compact 모드는 step당 한 줄 요약 출력 (`> reading file...`, `> editing code...`)
+- [x] **CLI-05**: LLM 추론 대기 중 Spectre.Console spinner + 경과 시간 표시
+- [x] **CLI-06**: Argu 기반 인자 파싱, `--help` 자동 생성
+- [x] **CLI-07**: `--trace` 플래그 — 활성화 시 Serilog Debug 레벨로 각 step의 전체 input/output (truncation 없이)과 elapsed_ms를 stderr로 구조화 JSON 로그 출력. 기본 OFF (민감 데이터 — shell output, 파일 내용, LLM 응답 — 로그 누출 방지). `--verbose`(display toggle)와 독립 플래그 — `--verbose --trace` 동시 사용 가능
 
 ### Observability
 
 - [x] **OBS-01**: 모든 step이 JSONL 형식으로 `~/.bluecode/session_<timestamp>.jsonl`에 기록 (crash post-mortem용; 세션 resume 아님)
 - [x] **OBS-02**: Serilog로 구조화 로그를 stderr에 출력 (Spectre UI는 stdout, 로그는 stderr 분리)
-- [ ] **OBS-03**: 시작 시 `/v1/models`로 실제 `max_model_len` 조회, 누적 컨텍스트가 80% 도달 시 사용자에게 경고
+- [x] **OBS-03**: 시작 시 `/v1/models`로 실제 `max_model_len` 조회, 누적 컨텍스트가 80% 도달 시 사용자에게 경고
 - [x] **OBS-04**: 각 step의 타이밍 기록 — `Step` 레코드에 `startedAt: DateTimeOffset`, `endedAt: DateTimeOffset`, `durationMs: int64` 필드 추가. agent loop가 step 시작/종료에서 측정. 값은 OBS-01의 JSONL 출력과 CLI-03의 `--verbose` 렌더링에 모두 포함 (성능 튜닝 및 72B latency 디버깅 필수)
 
 ## v2 Requirements
@@ -162,15 +162,15 @@ v1 안정화 후 단계적 추가. 트리거 발생 시 v1.x로 이동.
 | OBS-01 | Phase 4 | ✓ Complete |
 | OBS-02 | Phase 4 | ✓ Complete |
 | OBS-04 | Phase 4 | ✓ Complete |
-| CLI-01 | Phase 5 | Pending |
-| CLI-02 | Phase 5 | Pending |
-| CLI-03 | Phase 5 | Pending |
-| CLI-04 | Phase 5 | Pending |
-| CLI-05 | Phase 5 | Pending |
-| CLI-06 | Phase 5 | Pending |
-| CLI-07 | Phase 5 | Pending |
-| OBS-03 | Phase 5 | Pending |
-| ROU-04 | Phase 5 | Pending |
+| CLI-01 | Phase 5 | ✓ Complete |
+| CLI-02 | Phase 5 | ✓ Complete |
+| CLI-03 | Phase 5 | ✓ Complete |
+| CLI-04 | Phase 5 | ✓ Complete |
+| CLI-05 | Phase 5 | ✓ Complete |
+| CLI-06 | Phase 5 | ✓ Complete |
+| CLI-07 | Phase 5 | ✓ Complete |
+| OBS-03 | Phase 5 | ✓ Complete |
+| ROU-04 | Phase 5 | ✓ Complete |
 
 **Coverage:**
 - v1 requirements: 39 total (TOOL-07 split into two rows for Phase 1 DU shape vs. Phase 3 semantic contract — still one requirement, two delivery points; OBS-04 and CLI-07 added 2026-04-22 for step-level debugging)

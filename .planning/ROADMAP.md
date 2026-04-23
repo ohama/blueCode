@@ -14,7 +14,7 @@ blueCode is a strong-typed F# agent loop that drives locally-served Qwen 32B/72B
 - [x] **Phase 2: LLM Client** - HTTP client, JSON extraction pipeline, schema validation ✓ 2026-04-22
 - [x] **Phase 3: Tool Executor** - 4 tools with security layer and output truncation ✓ 2026-04-23
 - [x] **Phase 4: Agent Loop** - End-to-end loop, guards, JSONL step log, Ctrl+C ✓ 2026-04-23
-- [ ] **Phase 5: CLI Polish** - Multi-turn REPL, verbose/compact toggle, daily-driver switch
+- [x] **Phase 5: CLI Polish** - Multi-turn REPL, verbose/compact toggle, daily-driver switch ✓ 2026-04-23
 
 ## Phase Details
 
@@ -112,10 +112,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Argu + AgentConfig.ForcedModel + multi-turn REPL + `--model` override (CLI-01, CLI-02, CLI-06, ROU-04)
-- [ ] 05-02-PLAN.md — RenderMode threading + LoggingLevelSwitch + `--verbose`/`--trace` wiring + spinner elapsed (CLI-03, CLI-04, CLI-05, CLI-07)
-- [ ] 05-03-PLAN.md — `/v1/models` probe + 80% intra-turn context warning + Fantomas local tool format pass (OBS-03)
-- [ ] 05-04-PLAN.md — Human checkpoint: retire `~/projs/claw-code-agent/` and complete one real UAT task (Phase 5 SC-5)
+- [x] 05-01: Argu + AgentConfig.ForcedModel + multi-turn REPL + `--model` override (CLI-01, CLI-02, CLI-06, ROU-04)
+- [x] 05-02: RenderMode threading + LoggingLevelSwitch + `--verbose`/`--trace` wiring + spinner elapsed (CLI-03, CLI-04, CLI-05, CLI-07)
+- [x] 05-03: `/v1/models` probe + 80% intra-turn context warning + Fantomas local tool format pass (OBS-03)
+- [x] 05-04: Human checkpoint — retired `~/projs/claw-code-agent/`, UAT passed via 72B (`--model 72b`); 32B Instruct re-download deferred to v1.1
 
 ---
 
@@ -129,4 +129,4 @@ Plans:
 | 2. LLM Client | 3/3 | ✓ Complete | 2026-04-22 |
 | 3. Tool Executor | 3/3 | ✓ Complete | 2026-04-23 |
 | 4. Agent Loop | 4/4 | ✓ Complete | 2026-04-23 |
-| 5. CLI Polish | 0/3 | Not started | - |
+| 5. CLI Polish | 4/4 | ✓ Complete | 2026-04-23 |

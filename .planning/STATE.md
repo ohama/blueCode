@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 5 of 5 (CLI Polish)
-Plan: 3 of 4 in Phase 5 — complete (05-03 done)
-Status: 05-03 complete — /v1/models probe + bootstrapAsync + 80% context warning + Fantomas 7.0.5; 208 tests pass (1 ignored smoke)
-Last activity: 2026-04-23 — Completed 05-03-PLAN.md (/v1/models probe + bootstrapAsync + AppComponents.MaxModelLen + 80% context warning + Fantomas)
+Phase: 5 of 5 (CLI Polish) — COMPLETE
+Plan: 4 of 4 in Phase 5 — all done
+Status: Phase 5 COMPLETE — v1.0 milestone ready. blueCode is sole daily-driver agent; claw-code-agent retired. 208 tests pass (1 ignored smoke). Live UAT passed via 72B (`--model 72b`).
+Last activity: 2026-04-23 — Completed 05-04 (pre-flight + retirement + UAT + docs). UAT uncovered Router.modelToName → loaded path (fix 5ab5a95) and that 32B is Base Coder (Instruct re-download deferred to v1.1); 72B Instruct confirmed working.
 
-Progress: [████████████████████] 100% autonomous plans (15 of 16 plans; 05-04 is human checkpoint)
+Progress: [████████████████████] 100% (16 of 16 plans complete)
 
 ## Performance Metrics
 
@@ -120,11 +120,17 @@ Recent decisions affecting current work:
 - 05-03: Integer-only 80% check: totalChars*5 >= maxModelLen*16 avoids float; derived from totalChars >= maxModelLen*4*0.8
 - 05-03: Fantomas 7.0.5 installed as local dotnet tool (.config/dotnet-tools.json); 35 files reformatted; format committed as isolated style(05-03) commit
 - 05-03: Cross-turn context accumulation is POST-V1 — totalChars/warnedThisTurn are mutable locals inside runSingleTurn; reset per turn naturally (Open Question 3)
+- 05-04: Router.modelToName returns loaded absolute path (not HF id) — mlx_lm.server resolves unknown ids against HuggingFace Hub (404); Phase 5 OBS-03 dynamic /v1/models lookup deferred to v1.1 for true portability (5ab5a95)
+- 05-04: mlx_lm.server 0.31.3 does NOT read external chat_template.jinja — only tokenizer_config.json.chat_template field. Instruct models ship with it inline; Base models don't
+- 05-04: 32B model variant `mlx-community/qwen2.5-32b-mlx` is Base Coder (FIM-only) — Instruct re-download is v1.1 open item; 72B is Instruct and works (`--model 72b`)
+- 05-04: QwenHttpClient.CompleteAsync logs POST body + response at Debug level (gated by --trace LoggingLevelSwitch); added for UAT diagnostics, kept as feature (ea18cf7)
+- 05-04: Pre-flight discovered Spectre spinner label "Thinking... [32B]" parsed [32B] as color tag — escaped to [[32B]] (Spectre literal bracket escape)
 
 ### Pending Todos
 
-- SC-01 manual verification: run `BLUECODE_SMOKE_TEST=1 dotnet test BlueCode.slnx --filter "Smoke"` with vLLM 32B serving on localhost:8000
-- SC-01 manual verification (04-02): run `BLUECODE_AGENT_SMOKE=1 dotnet test BlueCode.slnx --filter "FullyQualifiedName~AgentLoop.Smoke"` with vLLM 32B/72B serving on localhost:8000/8001
+- v1.1: re-download 32B Instruct model (`Qwen2.5-Coder-32B-Instruct` MLX variant) so default intent routing (without `--model 72b`) produces chat-correct responses
+- v1.1: OBS-03 dynamic model id — extend QwenHttpClient.getMaxModelLenAsync with getModelIdAsync so Router.modelToName queries server at startup (removes hardcoded path)
+- v1.1: decouple 32B bootstrap probe from Program.fs startup — 32B cold-start causes `/v1/models` timeout WARN even when user targets 72B
 
 ### Blockers/Concerns
 
