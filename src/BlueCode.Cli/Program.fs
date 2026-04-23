@@ -62,8 +62,8 @@ let main (argv: string array) : int =
             (if List.isEmpty promptWords then "repl" else "single")
         )
 
-        let components = (bootstrapAsync projectRoot opts).GetAwaiter().GetResult()
-        Log.Information("Context window resolved: max_model_len={MaxLen}", components.MaxModelLen)
+        let components = bootstrap projectRoot opts
+        Log.Information("Context window floor: max_model_len={MaxLen} (lazy per-port probe resolves actual)", components.MaxModelLen)
         use _jsonlSink = components.JsonlSink
 
         let exitCode =

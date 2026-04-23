@@ -277,48 +277,6 @@ let tryParseMaxModelLen (json: string) : int option =
     with _ ->
         None
 
-/// GET http://127.0.0.1:8000/v1/models and extract data[0].max_model_len.
-/// Returns the integer value on success; falls back to 8192 (conservative
-/// floor per research § Pattern 5) on any error: HTTP failure, JSON parse
-/// failure, missing/null field, non-positive value.
-///
-/// Fallback path logs a Warning to Serilog (stderr). This is intentional —
-/// the probe failing is not a fatal error; it means the warning threshold
-/// is based on 8192 rather than the real limit.
-///
-/// PUBLIC: called from CompositionRoot.bootstrapAsync.
-let getMaxModelLenAsync (ct: CancellationToken) : Task<int> =
-    task {
-        let fallback = 8192
-
-        try
-            use! resp = httpClient.GetAsync("http://127.0.0.1:8000/v1/models", ct)
-
-            if not resp.IsSuccessStatusCode then
-                Serilog.Log.Warning(
-                    "GET /v1/models returned {Status}; using fallback {Fallback}",
-                    int resp.StatusCode,
-                    fallback
-                )
-
-                return fallback
-            else
-                let! json = resp.Content.ReadAsStringAsync(ct)
-
-                match tryParseMaxModelLen json with
-                | Some v -> return v
-                | None ->
-                    Serilog.Log.Warning(
-                        "max_model_len missing/invalid in /v1/models response; using fallback {Fallback}",
-                        fallback
-                    )
-
-                    return fallback
-        with ex ->
-            Serilog.Log.Warning(ex, "GET /v1/models failed; using fallback {Fallback}", fallback)
-            return fallback
-    }
-
 /// Probe http://<host>/v1/models once and extract both ModelId and MaxModelLen
 /// from data[0]. Returns a ModelInfo record.
 ///
