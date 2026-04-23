@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 3 of 5 (Tool Executor) — COMPLETE
-Plan: 3 of 3 in Phase 3 — COMPLETE
-Status: Phase 3 complete — all 6 ROADMAP success criteria met, 153 tests pass (1 ignored smoke)
-Last activity: 2026-04-22 — Completed 03-02-PLAN.md (runShellImpl wired: BashSecurity gate + /bin/bash process + 30s timeout + concurrent read + two-stage cap; RunShellTests.fs with 8 tests; TOOL-07 ToolResult semantic contract closed)
+Phase: 4 of 5 (Agent Loop) — In progress
+Plan: 1 of 3 in Phase 4 — COMPLETE
+Status: 04-01 complete — AgentLoop.fs + Step timing + 6 tests; 159 tests pass (1 ignored smoke)
+Last activity: 2026-04-23 — Completed 04-01-PLAN.md (Domain.fs Step OBS-04 timing fields; AgentLoop.fs: runSession, runLoop, dispatchTool, callLlmWithRetry, loop guard, buildMessages, AgentConfig; 6 Expecto tests; LOOP-01..07+OBS-04 closed in Core)
 
-Progress: [████████████░░] 60% (9/15 plans)
+Progress: [█████████████░░] 67% (10/15 plans)
 
 ## Performance Metrics
 
@@ -84,6 +84,12 @@ Recent decisions affecting current work:
 - 03-02: use _ = proc for Dispose scope — idiomatic F# without try/finally in task CE
 - 03-02: ToolResult.Timeout 30 (seconds) returned on timeout; SHELL_TIMEOUT_SECONDS * 1000 in ToolFailure for error fidelity
 - 03-02: Concurrent stdout/stderr read via F# 10 let!/and! — sequential read deadlocks when stderr buffer fills (dotnet/runtime #98347)
+- 04-01: AgentLoop.fs placed in BlueCode.Core (pure) — no Serilog/Spectre/Cli refs; ports-and-adapters invariant preserved
+- 04-01: dispatchTool inlined in AgentLoop.fs — ToolRegistry.fs stays empty stub; no premature abstraction
+- 04-01: System prompt lives in AgentConfig record (not inline constant) — injectable for tests and production CompositionRoot
+- 04-01: onStep callback threaded through runSession/runLoop — enables 04-02 to wire JsonlSink for crash-safe per-step JSONL
+- 04-01: Step.Thought = Thought "[not captured in v1]" — capturing real thought deferred to Phase 5+ (requires ILlmClient returning Thought * LlmOutput)
+- 04-01: BlueCode.Core.Domain.Timeout qualifier needed in dispatchTool — Domain.Timeout (constructor) vs ToolResult.Timeout (case) name collision
 
 ### Pending Todos
 
@@ -96,6 +102,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-22T23:12:00Z
-Stopped at: Completed 03-02-PLAN.md — Phase 3 complete. runShellImpl wired (BashSecurity gate, /bin/bash process lifecycle, concurrent streams, 30s timeout, two-stage cap). RunShellTests.fs (8 tests). TOOL-07 closed. 153 tests pass. PHASE-SUMMARY.md written.
+Last session: 2026-04-23T09:40:00Z
+Stopped at: Completed 04-01-PLAN.md — AgentLoop.fs created (pure recursive loop, LOOP-01..07+OBS-04). Step record amended with StartedAt/EndedAt/DurationMs. 6 AgentLoopTests pass. 159 total tests pass.
 Resume file: None
