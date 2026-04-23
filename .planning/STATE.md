@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 4 of 5 (Agent Loop) — COMPLETE
-Plan: 3 of 3 in Phase 4 — all done (04-01, 04-03, 04-02)
-Status: 04-02 complete — CompositionRoot.fs + Repl.fs + Program.fs real entry + CompositionRootTests (2) + AgentLoopSmokeTests (env-gated); 173 tests pass (1 ignored smoke)
-Last activity: 2026-04-23 — Completed 04-02-PLAN.md (CompositionRoot.bootstrap wires adapters; Repl.runSingleTurn Ctrl+C exit 130, onStep->JsonlSink.WriteStep SC-6; Program.fs configure() first + use _jsonlSink)
+Phase: 4 of 5 (Agent Loop) — COMPLETE (SC-7 gap closed)
+Plan: 4 of 4 in Phase 4 — all done (04-01, 04-03, 04-02, 04-04)
+Status: 04-04 complete — renderStep Compact wired into Repl.fs onStep; ReplTests.fs stdout-capture test; 174 tests pass (1 ignored smoke)
+Last activity: 2026-04-23 — Completed 04-04-PLAN.md (SC-7 gap closure: printfn renderStep Compact in onStep; ReplTests captures stdout, asserts ms] marker per step)
 
-Progress: [████████████████░] 80% (12/15 plans)
+Progress: [█████████████████░] 87% (13/15 plans)
 
 ## Performance Metrics
 
@@ -110,10 +110,10 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 - Phase 5 implementation: /v1/models field name for max_model_len varies across vLLM releases — query at runtime and handle missing field gracefully.
-- Phase 4 implementation: HttpClient singleton should move to CompositionRoot.fs; Spectre.Console + Serilog stream separation needed when both active.
+- Phase 4 implementation: HttpClient singleton should move to CompositionRoot.fs; Spectre.Console + Serilog stream separation needed when both active. [SC-7 gap closed by 04-04]
 
 ## Session Continuity
 
 Last session: 2026-04-23
-Stopped at: Completed 04-02-PLAN.md — CompositionRoot.fs + Repl.fs + Program.fs + CompositionRootTests + AgentLoopSmokeTests. 3 new tests. 173 total tests pass. Phase 4 complete.
+Stopped at: Completed 04-04-PLAN.md — SC-7 gap closure. renderStep Compact wired into Repl.fs onStep. ReplTests.fs created with stdout-capture test. 174 total tests pass (1 ignored). Phase 4 all gaps closed.
 Resume file: None
