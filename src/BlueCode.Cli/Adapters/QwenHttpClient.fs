@@ -175,6 +175,11 @@ let toLlmOutput (step: LlmStep) : Result<LlmOutput, AgentError> =
 /// and should not show a spinner). Spectre auto-detects non-TTY (CI) and
 /// silently no-ops; no special handling needed.
 ///
+/// CLI-05: label is updated every 500ms with elapsed seconds so the user
+/// sees the spinner ticking (e.g., "Thinking... [32B] 3s"). The ticker
+/// fires and forgets on the thread pool; it checks a CancellationToken
+/// so it exits cleanly when the HTTP call completes.
+///
 /// PRIVATE: internal helper called only from CompleteAsync.
 let private withSpinner<'a>
     (label: string)
@@ -184,7 +189,25 @@ let private withSpinner<'a>
     AnsiConsole.Status()
         .Spinner(Spinner.Known.Dots)
         .SpinnerStyle(Style.Parse("cyan"))
-        .StartAsync(label, fun _ctx -> work ())
+        .StartAsync(label, fun ctx ->
+            task {
+                // Background ticker: update the spinner label with elapsed seconds.
+                // CLI-05: "spinner + elapsed time" requirement.
+                use cts = new System.Threading.CancellationTokenSource()
+                let sw = System.Diagnostics.Stopwatch.StartNew()
+                let _ticker =
+                    task {
+                        try
+                            while not cts.Token.IsCancellationRequested do
+                                do! Task.Delay(500, cts.Token)
+                                ctx.Status <- sprintf "%s %ds" label (int sw.Elapsed.TotalSeconds)
+                        with :? System.OperationCanceledException -> ()
+                    }
+                try
+                    return! work ()
+                finally
+                    cts.Cancel()
+            })
 
 // ── Public factory: ILlmClient implementation ───────────────────────────────
 

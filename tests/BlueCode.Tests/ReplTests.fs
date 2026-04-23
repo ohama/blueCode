@@ -130,4 +130,91 @@ let tests =
                 Console.SetIn(originalIn)
                 Console.SetOut(originalOut)
 
+        testCase "runSingleTurn Verbose mode: onStep prints multi-line verbose output with [Step, thought:, action:, result: labels" <| fun () ->
+            // Arrange: script LLM to return one FinalAnswer = 1 Step
+            let llm = stubLlm [
+                Ok (FinalAnswer "verbose done")
+            ]
+            let tempRoot = Path.Combine(Path.GetTempPath(), sprintf "bluecode-replv-%s" (Guid.NewGuid().ToString("N")))
+            Directory.CreateDirectory(tempRoot) |> ignore
+            let sinkPath = Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+            use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+            let components : BlueCode.Cli.CompositionRoot.AppComponents = {
+                LlmClient    = llm
+                ToolExecutor = stubToolsOk
+                JsonlSink    = sink
+                Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
+                ProjectRoot  = tempRoot
+                LogPath      = sinkPath
+            }
+            let originalOut = Console.Out
+            use sw = new StringWriter()
+            Console.SetOut(sw)
+            try
+                let exitCode =
+                    BlueCode.Cli.Repl.runSingleTurn "stub prompt" components Verbose
+                    |> fun t -> t.GetAwaiter().GetResult()
+                Console.Out.Flush()
+                let captured = sw.ToString()
+
+                Expect.equal exitCode 0 "Verbose runSingleTurn exit code on Ok result"
+
+                // Verbose format: "[Step N] (status, Nms)\n  thought: ...\n  action: ...\n  result: ..."
+                Expect.stringContains captured "[Step" "Verbose output should contain '[Step' banner"
+                Expect.stringContains captured "thought:" "Verbose output should contain 'thought:' label"
+                Expect.stringContains captured "action:" "Verbose output should contain 'action:' label"
+                Expect.stringContains captured "result:" "Verbose output should contain 'result:' label"
+
+                // Negative: Verbose should NOT show compact one-liner format ("> ... ms]")
+                let compactLines =
+                    captured.Split([| '\n' |])
+                    |> Array.filter (fun l -> l.StartsWith("> ") && l.Contains("ms]"))
+                Expect.equal compactLines.Length 0
+                    (sprintf "Verbose mode should not produce compact '> ... ms]' lines; captured:\n%s" captured)
+            finally
+                Console.SetOut(originalOut)
+
+        testCase "runSingleTurn Compact mode: onStep does NOT print thought: label" <| fun () ->
+            // Arrange: script LLM to return one FinalAnswer = 1 Step
+            let llm = stubLlm [
+                Ok (FinalAnswer "compact done")
+            ]
+            let tempRoot = Path.Combine(Path.GetTempPath(), sprintf "bluecode-replc-%s" (Guid.NewGuid().ToString("N")))
+            Directory.CreateDirectory(tempRoot) |> ignore
+            let sinkPath = Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+            use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+            let components : BlueCode.Cli.CompositionRoot.AppComponents = {
+                LlmClient    = llm
+                ToolExecutor = stubToolsOk
+                JsonlSink    = sink
+                Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
+                ProjectRoot  = tempRoot
+                LogPath      = sinkPath
+            }
+            let originalOut = Console.Out
+            use sw = new StringWriter()
+            Console.SetOut(sw)
+            try
+                let exitCode =
+                    BlueCode.Cli.Repl.runSingleTurn "stub prompt" components Compact
+                    |> fun t -> t.GetAwaiter().GetResult()
+                Console.Out.Flush()
+                let captured = sw.ToString()
+
+                Expect.equal exitCode 0 "Compact runSingleTurn exit code on Ok result"
+
+                // Compact mode MUST NOT contain verbose labels
+                let hasThought = captured.Contains("thought:")
+                Expect.isFalse hasThought
+                    (sprintf "Compact mode should not contain 'thought:' label; captured:\n%s" captured)
+
+                // Compact mode MUST contain the 'ms]' marker on step lines
+                let msLines =
+                    captured.Split([| '\n' |])
+                    |> Array.filter (fun l -> l.Contains("ms]"))
+                Expect.isGreaterThanOrEqual msLines.Length 1
+                    (sprintf "Compact mode should have at least 1 line with 'ms]' marker; captured:\n%s" captured)
+            finally
+                Console.SetOut(originalOut)
+
     ]  // end testSequenced
