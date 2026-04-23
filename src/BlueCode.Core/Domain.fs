@@ -1,5 +1,7 @@
 module BlueCode.Core.Domain
 
+open System
+
 // ── Routing ──────────────────────────────────────────────────────────────────
 
 /// User intent classified from input text (ROU-01).
@@ -107,6 +109,9 @@ type StepStatus =
 
 /// One completed iteration of the agent loop.
 /// ToolResult is Option because FinalAnswer actions do not execute a tool.
+/// OBS-04 (Phase 4): StartedAt captured immediately before ILlmClient.CompleteAsync,
+/// EndedAt captured immediately after IToolExecutor.ExecuteAsync returns (or LLM
+/// returns for a FinalAnswer step). DurationMs = (EndedAt - StartedAt).TotalMilliseconds.
 type Step = {
     StepNumber : int
     Thought    : Thought
@@ -114,6 +119,9 @@ type Step = {
     ToolResult : ToolResult option
     Status     : StepStatus
     ModelUsed  : Model
+    StartedAt  : DateTimeOffset
+    EndedAt    : DateTimeOffset
+    DurationMs : int64
 }
 
 // ── Agent state machine ───────────────────────────────────────────────────────
