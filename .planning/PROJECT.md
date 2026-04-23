@@ -4,6 +4,17 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
+## Current Milestone: v1.1 Refinement
+
+**Goal:** v1.0 UAT 중 노출된 3개 기술 빚 청소 — 이식성 (`Router.modelToName` 하드코딩 제거) + startup 품질 (lazy `/v1/models` probe) + `--verbose` 품질 (실제 LLM thought 캡처).
+
+**Target requirements:**
+- REF-01 — `/v1/models` 동적 model id 조회 + Router 주입
+- REF-02 — bootstrap 의 32B probe lazy 화
+- OBS-05 — `ILlmClient.CompleteAsync` 시그니처 확장 + `Step.Thought` 실제 reasoning 저장
+
+**Scope:** 기술 빚만. 새 기능 (streaming, edit_file, session 영속화 등) 없음. v1.2+ 후보.
+
 ## Core Value
 
 Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌린다. v1.0 UAT 검증 완료: 로컬 Qwen이 agent 루프 안에서 예측 가능하게 동작하며, JSON 스키마 검증 + 2회 재시도 + 5-step 루프 가드가 unstable LLM 응답을 전부 타입화된 `AgentError`로 수렴시킨다.
@@ -24,13 +35,13 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ Agent loop — 5-step 상한, `(action, input_hash)` 루프 가드, 2회 JSON retry, Ctrl+C graceful, JSONL per-step — v1.0 (LOOP-01..07, OBS-01, OBS-02, OBS-04)
 - ✓ CLI polish — Argu + 단일/멀티-turn REPL + `--verbose`/`--trace` + Spectre spinner + `/v1/models` 80% 경고 — v1.0 (CLI-01..07, OBS-03)
 
-### Active (v1.1)
+### Active (v1.1 Refinement)
 
-<!-- 다음 milestone에서 닫을 항목. v1.0 UAT에서 발견된 스냅샷 기준. -->
+<!-- v1.1 milestone scope. v1.0 UAT에서 노출된 기술 빚 청소. 새 기능 없음. -->
 
-- [ ] **OBS-03 동적 모델 id** — `QwenHttpClient.getMaxModelLenAsync` 옆에 `getModelIdAsync` 추가해 `Router.modelToName`이 서버가 리포트하는 id를 bootstrap 시 쿼리. 현재 절대 경로 하드코딩 제거 (`Router.fs:59-60`).
-- [ ] **32B cold-start probe 분리** — `bootstrapAsync`에서 32B `/v1/models` 대기가 `--model 72b` 모드에서도 발생. 첫 실제 LLM 호출 전으로 lazy 화.
-- [ ] **Real LLM thought 캡처 (선택)** — 현재 `Step.Thought = "[not captured in v1]"` 리터럴. `ILlmClient.CompleteAsync` 반환 타입을 `Thought * LlmOutput` 또는 `LlmStep`으로 확장 필요. `--verbose` 출력 품질을 위함.
+- [ ] **REF-01**: `Router.modelToName` 하드코딩 제거 — bootstrap 시점에 `/v1/models`의 `data[0].id`를 동적 조회해 Router에 주입. 모델 경로 변경 시 Core 재빌드 불필요.
+- [ ] **REF-02**: 32B cold-start probe bootstrap 분리 — `bootstrapAsync`의 `/v1/models` probe 를 lazy 화하여 첫 실제 LLM 호출 직전에 실행. `--model 72b` 모드에서 8000 타임아웃 WARN 제거.
+- [ ] **OBS-05**: 실제 LLM thought 캡처 — `ILlmClient.CompleteAsync` 반환 타입을 LlmStep 전체 (또는 `Thought * LlmOutput`)로 확장, AgentLoop가 `Step.Thought`에 LLM 실제 reasoning 저장. `--verbose` 출력 품질 향상.
 
 ### Out of Scope
 
@@ -126,4 +137,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-23 after v1.0 milestone complete*
+*Last updated: 2026-04-23 after starting v1.1 milestone*

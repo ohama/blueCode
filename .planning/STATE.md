@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-23 after v1.0 milestone)
+See: .planning/PROJECT.md (updated 2026-04-23 for v1.1 milestone start)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** v1.1 planning (not yet started)
+**Current focus:** v1.1 Refinement — tech debt cleanup (REF-01, REF-02, OBS-05)
 
 ## Current Position
 
-Milestone: v1.0 COMPLETE (shipped 2026-04-23)
-Phase: N/A — awaiting `/gsd:new-milestone` for v1.1
-Plan: N/A
-Status: v1.0 milestone archived. Fresh ROADMAP.md / REQUIREMENTS.md to be created by `/gsd:new-milestone`. 3 open v1.1 items carried below as seed.
-Last activity: 2026-04-23 — v1.0 milestone completion (archive, PROJECT.md evolution, git tag)
+Milestone: v1.1 Refinement (started 2026-04-23)
+Phase: Not started (defining requirements → roadmap)
+Plan: —
+Status: PROJECT.md updated with v1.1 Current Milestone section. REQUIREMENTS.md + ROADMAP.md to be created next.
+Last activity: 2026-04-23 — v1.1 milestone started (scope confirmed: 3 REQs, research skipped, 2 phases)
 
-Progress: N/A (between milestones)
+Progress: v1.1 [░░░░░░░░░░░░░░░░░░░░] 0% (0 of 3 REQs, 0 of 2 phases)
 
 ## Performance Metrics (v1.0 — final, frozen)
 
@@ -66,5 +66,5 @@ Carried forward from v1.0 into v1.1 planning — these are not full requirements
 ## Session Continuity
 
 Last session: 2026-04-23
-Stopped at: v1.0 milestone complete + archived + git tag `milestone-v1.0`. Ready for v1.1 scoping.
-Resume file: None — use `/gsd:new-milestone` to start v1.1.
+Stopped at: v1.1 milestone started. Scope confirmed (REF-01 / REF-02 / OBS-05). PROJECT.md + STATE.md updated. REQUIREMENTS.md + ROADMAP.md pending creation.
+Resume file: None — next action is `/gsd:discuss-phase 6` or `/gsd:plan-phase 6` after ROADMAP.md lands.
