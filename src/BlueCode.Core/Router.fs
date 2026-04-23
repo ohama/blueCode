@@ -56,8 +56,8 @@ let endpointToUrl: Endpoint -> string =
 /// will query this at runtime; Phase 2 hardcodes the served names).
 let modelToName: Model -> string =
     function
-    | Qwen32B -> "qwen2.5-coder-32b-instruct"
-    | Qwen72B -> "qwen2.5-coder-72b-instruct"
+    | Qwen32B -> "/Users/ohama/llm-system/models/qwen32b"
+    | Qwen72B -> "/Users/ohama/llm-system/models/qwen72b"
 
 /// Per-model sampling temperature (LLM-05). Hardcoded; MUST NOT be
 /// exposed to users via CLI flags. 32B uses 0.2 (precise code edits);
