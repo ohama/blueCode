@@ -59,6 +59,7 @@ let tests =
                 Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
                 ProjectRoot  = tempRoot
                 LogPath      = sinkPath
+                MaxModelLen  = 8192
             }
 
             // Act: capture stdout while runSingleTurn executes
@@ -111,6 +112,7 @@ let tests =
                 Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
                 ProjectRoot  = tempRoot
                 LogPath      = sinkPath
+                MaxModelLen  = 8192
             }
             try
                 // Act: run synchronously to avoid Console.Out interleaving
@@ -146,6 +148,7 @@ let tests =
                 Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
                 ProjectRoot  = tempRoot
                 LogPath      = sinkPath
+                MaxModelLen  = 8192
             }
             let originalOut = Console.Out
             use sw = new StringWriter()
@@ -190,6 +193,7 @@ let tests =
                 Config       = { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test-prompt"; ForcedModel = None }
                 ProjectRoot  = tempRoot
                 LogPath      = sinkPath
+                MaxModelLen  = 8192
             }
             let originalOut = Console.Out
             use sw = new StringWriter()

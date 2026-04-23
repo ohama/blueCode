@@ -209,6 +209,63 @@ let private withSpinner<'a>
                     cts.Cancel()
             })
 
+// ── /v1/models probe (OBS-03) ──────────────────────────────────────────────
+
+/// Parse max_model_len from the /v1/models JSON response body.
+/// Returns Some int on success, None on any structural mismatch
+/// (missing data array, missing/null field, non-positive value, parse error).
+///
+/// PUBLIC for ModelsProbeTests unit testing (pure JSON parsing logic).
+let tryParseMaxModelLen (json: string) : int option =
+    try
+        use doc = JsonDocument.Parse(json)
+        let root = doc.RootElement
+        match root.TryGetProperty("data") with
+        | true, data when data.ValueKind = JsonValueKind.Array && data.GetArrayLength() > 0 ->
+            let model0 = data.[0]
+            match model0.TryGetProperty("max_model_len") with
+            | true, el when el.ValueKind = JsonValueKind.Number ->
+                let ok, v = el.TryGetInt64()
+                if ok && v > 0L then Some(int v) else None
+            | _ -> None
+        | _ -> None
+    with _ -> None
+
+/// GET http://127.0.0.1:8000/v1/models and extract data[0].max_model_len.
+/// Returns the integer value on success; falls back to 8192 (conservative
+/// floor per research § Pattern 5) on any error: HTTP failure, JSON parse
+/// failure, missing/null field, non-positive value.
+///
+/// Fallback path logs a Warning to Serilog (stderr). This is intentional —
+/// the probe failing is not a fatal error; it means the warning threshold
+/// is based on 8192 rather than the real limit.
+///
+/// PUBLIC: called from CompositionRoot.bootstrapAsync.
+let getMaxModelLenAsync (ct: CancellationToken) : Task<int> =
+    task {
+        let fallback = 8192
+        try
+            use! resp = httpClient.GetAsync("http://127.0.0.1:8000/v1/models", ct)
+            if not resp.IsSuccessStatusCode then
+                Serilog.Log.Warning(
+                    "GET /v1/models returned {Status}; using fallback {Fallback}",
+                    int resp.StatusCode,
+                    fallback)
+                return fallback
+            else
+                let! json = resp.Content.ReadAsStringAsync(ct)
+                match tryParseMaxModelLen json with
+                | Some v -> return v
+                | None ->
+                    Serilog.Log.Warning(
+                        "max_model_len missing/invalid in /v1/models response; using fallback {Fallback}",
+                        fallback)
+                    return fallback
+        with ex ->
+            Serilog.Log.Warning(ex, "GET /v1/models failed; using fallback {Fallback}", fallback)
+            return fallback
+    }
+
 // ── Public factory: ILlmClient implementation ───────────────────────────────
 
 /// Build a QwenHttpClient that implements ILlmClient. Replace the Plan 02-01

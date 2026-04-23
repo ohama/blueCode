@@ -15,6 +15,7 @@ type AppComponents = {
     Config       : AgentConfig
     ProjectRoot  : string
     LogPath      : string
+    MaxModelLen  : int     // OBS-03: resolved at startup via /v1/models probe (default 8192)
 }
 
 /// Parsed CLI arguments, consumed by CompositionRoot.bootstrap and threaded
@@ -68,8 +69,10 @@ Rules:
 - When you have enough information, respond with action="final".
 - No markdown, no prose around the JSON. Respond with the object only."""
 
-/// Construct the component graph. The caller (Program.fs) owns the returned
+/// Construct the component graph synchronously. The caller (Program.fs) owns the returned
 /// AppComponents.JsonlSink with `use` to ensure Dispose flushes the session log.
+/// Sync version retained for tests that don't need the /v1/models HTTP probe —
+/// MaxModelLen defaults to 8192 (conservative fallback). See Open Question 2 decision.
 let bootstrap (projectRoot: string) (opts: CliOptions) : AppComponents =
     let logPath = buildSessionLogPath()
     {
@@ -84,4 +87,29 @@ let bootstrap (projectRoot: string) (opts: CliOptions) : AppComponents =
         }
         ProjectRoot  = projectRoot
         LogPath      = logPath
+        MaxModelLen  = 8192  // default; bootstrapAsync probes the real value
+    }
+
+/// Async bootstrap that probes /v1/models before returning enriched AppComponents.
+/// Program.fs uses this via .GetAwaiter().GetResult() (blocking call at startup).
+/// Sync `bootstrap` remains for tests that don't need the HTTP probe (fast + no-network).
+let bootstrapAsync (projectRoot: string) (opts: CliOptions) : System.Threading.Tasks.Task<AppComponents> =
+    task {
+        let! maxLen =
+            Adapters.QwenHttpClient.getMaxModelLenAsync System.Threading.CancellationToken.None
+        let logPath = buildSessionLogPath()
+        return {
+            LlmClient    = Adapters.QwenHttpClient.create()
+            ToolExecutor = Adapters.FsToolExecutor.create projectRoot
+            JsonlSink    = new JsonlSink(logPath)
+            Config       = {
+                MaxLoops        = 5
+                ContextCapacity = 3
+                SystemPrompt    = defaultSystemPrompt
+                ForcedModel     = opts.ForcedModel
+            }
+            ProjectRoot  = projectRoot
+            LogPath      = logPath
+            MaxModelLen  = maxLen
+        }
     }

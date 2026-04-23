@@ -56,7 +56,8 @@ let main (argv: string array) : int =
         let projectRoot = Directory.GetCurrentDirectory()
         Log.Information("blueCode starting: cwd={Root} mode={Mode}",
                         projectRoot, (if List.isEmpty promptWords then "repl" else "single"))
-        let components = bootstrap projectRoot opts
+        let components = (bootstrapAsync projectRoot opts).GetAwaiter().GetResult()
+        Log.Information("Context window resolved: max_model_len={MaxLen}", components.MaxModelLen)
         use _jsonlSink = components.JsonlSink
         let exitCode =
             match promptWords with
