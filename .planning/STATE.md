@@ -54,6 +54,16 @@ Carried forward from v1.1 into v1.2 planning — not full requirements yet, but 
 6. **Session persistence + `--resume <id>` (SES-01)** — context carry across process boundaries.
 7. **Prompt cache hygiene** — long-running mlx_lm.server accumulates prompt cache (observed 0.70 → 0.83 GB in 3 runs; 1.51 GB was OOM threshold pre-fix). Periodic `launchctl kickstart` or explicit cache clear endpoint candidate.
 
+**Added 2026-04-24 (from /gsd:new-milestone questioning + benchmark insights):**
+
+8. **`edit_file` (surgical exact-string edit)** — current `write_file` replaces full content; 1-line fix on 1000-line file requires whole-file rewrite. Token cost + generation latency (observed 72B W2 write step = 13.8s, much of it content regeneration). Surgical edit via exact-string old/new matching (ref: v1.0 research TLX-01).
+9. **`grep_search` (content pattern)** — currently workflows use `run_shell "grep -r ..."` with bash_security.py gating; native tool avoids gate overhead + provides structured output (file:line:content). Ref: v1.0 research TLX-03.
+10. **`glob_search` (file finding)** — similar reasoning: `find` via run_shell works but security-gate friction. Native tool cleaner. Ref: v1.0 research TLX-02.
+11. **`read_file` output enhancement** — optionally return total file length / line count in metadata so agent knows file bounds without trial-and-error. T6 benchmark failure (32B requesting `start_line=2001,4001,6001` on 150-line file) was partially due to missing "file size" signal.
+12. **Auto-escalation on `MaxLoopsExceeded`** — when 32B hits 5-step limit (e.g., T6), automatic re-run with 72B within same invocation. Currently user must manually `--model 72b`. Research open: history re-use across model switch, or fresh start?
+13. **Ctrl+C/cancellation indicator** — during long LLM inference, Ctrl+C ends turn silently. Consider brief "Cancelling..." message + incremental progress (e.g., partial token count) for better UX feedback.
+14. **Default system prompt length reduction** — current ~1200 chars. Bench data shows it consumes ~300 tokens per request (KV cache overhead). Tightening to ~600 chars could cut per-request latency ~15-20%. Needs careful revision to preserve JSON schema clarity.
+
 ### Resolved post-milestone
 
 (None yet — v1.1 just shipped.)
