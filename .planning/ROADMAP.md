@@ -88,6 +88,11 @@ Plans:
 3. Normal `read_file` with no `start_line` on a file under 2000 chars returns `[file: <path>, lines 1-N of N, not-truncated]` — existing callers see header prepended but content unchanged
 4. All 218 v1.1 tests (plus any new Phase 8 tests) still pass — `FsToolExecutor.executeAsync` change is backward-compatible; no Core type changes
 
+**Plans**: 1 plan
+
+Plans:
+- [ ] 09-01-read-file-metadata-PLAN.md — Prepend bounds/truncation header to read_file (3 tasks: impl + tests + system prompt)
+
 ---
 
 ## Progress
@@ -100,4 +105,4 @@ Plans:
 | 6. Dynamic Bootstrap | v1.1 | 3/3 | Complete | 2026-04-24 |
 | 7. Thought Capture | v1.1 | 2/2 | Complete | 2026-04-24 |
 | 8. Tool Expansion | v1.2 | 0/TBD | Not started | - |
-| 9. Read File Metadata | v1.2 | 0/TBD | Not started | - |
+| 9. Read File Metadata | v1.2 | 0/1 | Planned (awaiting execute) | - |
