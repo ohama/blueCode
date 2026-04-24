@@ -9,13 +9,13 @@ See: .planning/PROJECT.md (updated 2026-04-23 for v1.1 milestone start)
 
 ## Current Position
 
-Milestone: v1.1 Refinement (COMPLETE — 2026-04-23)
-Phase: Phase 7 — Thought Capture (COMPLETE)
-Plan: 2 of 2 complete
-Status: Phase 7 complete. All 3 v1.1 requirements done (REF-01, REF-02, OBS-05). 216 tests passing. SC-3 live smoke deferred (GPU busy at time of 07-02 execution; resume command documented in 07-02-SUMMARY.md).
-Last activity: 2026-04-23 — Completed 07-02-PLAN.md (test migration + live smoke attempt)
+Milestone: v1.1 Refinement (COMPLETE — 2026-04-24, gap closure confirmed)
+Phase: Phase 6 — Dynamic Bootstrap (gap closed 2026-04-24); Phase 7 — Thought Capture (COMPLETE)
+Plan: Phase 6: 3/3 complete (06-03 gap closure landed); Phase 7: 2/2 complete
+Status: All 3 v1.1 requirements done (REF-01 gap closed, REF-02 done, OBS-05 done). 218 tests passing. Phase 7 SC-3 live verification unblocked (Instruct tokenizer preserved by 06-03 fix).
+Last activity: 2026-04-24 — Completed 06-03-PLAN.md (tryParseModelId path-preference gap closure)
 
-Progress: v1.1 [████████████████████] 100% (REF-01 done, REF-02 done, OBS-05 done)
+Progress: v1.1 [████████████████████] 100% (REF-01 gap closed, REF-02 done, OBS-05 done; 218 tests passing)
 
 ## Performance Metrics (v1.0 — final, frozen)
 
@@ -62,6 +62,12 @@ Notable items marked `⚠ Revisit` for v1.1 scoping:
 | getMaxModelLenAsync fully removed | 06-02 | No caller after bootstrapAsync deletion; probeModelInfoAsync supersedes it |
 | Test port 64321 instead of 8000 for closed-port test | 06-02 | 8000 may be live (flaky); 64321 is deterministically closed on any standard machine |
 
+**v1.1 decisions (Phase 6, gap closure 06-03):**
+
+| Decision | Plan | Rationale |
+|----------|------|-----------|
+| tryParseModelId path-preference heuristic (StartsWith('/')) avoids mlx_lm.server HF fallback trap | 06-03 | HF repo ids are "Org/Name" (slash in middle, never at start); no false-positive collision with absolute paths; single-id servers fall through to List.tryHead fallback unchanged |
+
 **v1.1 decisions (Phase 7):**
 
 | Decision | Plan | Rationale |
@@ -89,6 +95,6 @@ All three items converted to requirements REF-01, REF-02, OBS-05. See `.planning
 
 ## Session Continuity
 
-Last session: 2026-04-23T18:42:00Z
-Stopped at: Completed 07-02-PLAN.md. Test migration complete. 216 tests passing. v1.1 milestone complete.
-Resume file: None — v1.1 complete. Next milestone is v1.2 (scope TBD). SC-3 can be re-verified once GPU is free: `dotnet run --project src/BlueCode.Cli -- --verbose "List the files in src" 2>&1 | grep "thought:"`
+Last session: 2026-04-24T02:32:52Z
+Stopped at: Completed 06-03-PLAN.md. Phase 6 gap closed (tryParseModelId path-preference). 218 tests passing. Phase 7 SC-3 live verification unblocked.
+Resume file: None — v1.1 complete including gap closure. Next: SC-3 live verify once GPU free (`dotnet run --project src/BlueCode.Cli -- --verbose --trace --model 32b "Say OK in 3 words" 2>&1 | grep '"model"'`), then v1.2 scoping.
