@@ -1,8 +1,9 @@
 ---
 phase: 06-dynamic-bootstrap
 verified: 2026-04-23T09:15:24Z
-status: human_needed
-score: 5/5
+re_verified: 2026-04-24T11:15:00Z
+status: gaps_found
+score: 4/5 structural; live verification revealed behavioral regression
 must_haves:
   truths:
     - "No absolute filesystem path in src/ (SC-1)"
@@ -155,3 +156,49 @@ The phase goal is achieved in the codebase: `modelToName` and all absolute files
 
 _Verified: 2026-04-23T09:15:24Z_
 _Verifier: Claude (gsd-verifier)_
+
+---
+
+## Gap Found (2026-04-24 re-verification, live run)
+
+**SC-3 behavioral regression — `tryParseModelId` picks HF id over local path.**
+
+### Evidence
+
+Re-verification with live Qwen revealed `blueCode` POST body contains `"model":"Qwen/Qwen2.5-Coder-32B"` (the HF repo id), not the local path. mlx_lm.server err log shows repeated HF fetches triggered by this id:
+
+```
+2026-04-24 11:07:37 - HTTP Request: GET huggingface.co/api/models/Qwen/Qwen2.5-Coder-32B → 200 OK
+Fetching 21 files: 100%|██████████| 21/21
+```
+
+Each blueCode request triggers the server to re-fetch the Base Coder 32B tokenizer from HuggingFace and overwrite its in-memory Instruct tokenizer. Result: chat template is lost, model reverts to Base continuation mode, responses echo the system prompt as document continuation, no valid JSON output possible.
+
+Behavioral symptom: 3 consecutive `--model 32b "Say OK in 3 words"` runs all produced `InvalidJsonOutput` after ~290s each (2-attempt LOOP-05 retry with max_tokens=1024 exhausting on Base continuation).
+
+### Root Cause
+
+`/v1/models` reports TWO ids:
+```json
+{"data": [
+  {"id": "Qwen/Qwen2.5-Coder-32B"},              // HF repo id (Base Coder — triggers HF fallback!)
+  {"id": "/Users/ohama/llm-system/models/qwen32b"} // local path (safe — no HF fallback)
+]}
+```
+
+`tryParseModelId` returns `data[0].id` — the HF id. Sending this id to mlx_lm.server triggers its HF Hub fallback resolution, fetching the Base Coder 32B tokenizer. This is the same regression v1.0 UAT fixed by hardcoding the local path; Phase 6 REF-01 removed the hardcode but selected the wrong id from the server's own advertisement.
+
+### Fix
+
+`tryParseModelId` should prefer local absolute paths over HF repo ids. Iterate `data[]`, return first id that starts with `/`. Fall back to `data[0].id` only when no path id is present (covers non-mlx_lm servers that report a single id).
+
+### Scope
+
+- File: `src/BlueCode.Cli/Adapters/QwenHttpClient.fs`
+- Function: `tryParseModelId`
+- Tests: extend `ModelsProbeTests.fs` with local-path-preference cases (≥2 — multi-id mlx_lm case, single-id fallback case)
+- Retry: after fix, re-run `blueCode --verbose --model 32b "Say OK in 3 words"` — expect valid JSON response + non-placeholder `Thought:` line within ~10s
+
+### Phase 7 impact
+
+Phase 7 (Thought Capture) structural verification is unaffected by this gap — the pipeline wiring is correct; the issue is upstream at the LLM producing unusable output due to Base-mode reversion. Once Phase 6 gap closes, Phase 7 SC-3 live observation unblocks.
