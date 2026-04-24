@@ -4,11 +4,19 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current State: v1.1 shipped — between milestones
+## Current Milestone: v1.2 Tool Expansion
 
-**v1.1 Refinement** 완료 (2026-04-24). v1.0 기술 빚 3개 모두 해결 + 중간 regression (06-03 gap closure) 포함. 218 tests pass, live UAT 통과 (Instruct 유지, 실제 thought 캡처, dual-service stress no OOM). 자세한 기록: `.planning/MILESTONES.md` + `.planning/milestones/v1.1-ROADMAP.md`.
+**Goal:** Agent 의 일상 코딩 워크플로 병목 제거 — 전체파일 rewrite 대신 surgical edit, shell 을 우회한 native search, 그리고 read_file 의 bounds metadata 제공.
 
-**다음 milestone (v1.2) 는 아직 스코핑 전**. `/gsd:new-milestone` 으로 requirements 정의부터 시작.
+**Target requirements (4개, 오늘 벤치마크 실측 근거):**
+- **TLX-01**: `edit_file` — exact-string find-and-replace (write_file 의 full-file rewrite 비용 회피; 벤치마크 W2 에서 72B write 29s 의 대부분이 content 재생성)
+- **TLX-02**: `glob_search` — 파일 패턴 찾기 (file-finding 을 `run_shell find` 게이트 우회)
+- **TLX-03**: `grep_search` — content 패턴 찾기 (구조화된 `(file, line, content)` 반환; `run_shell grep` 게이트 우회)
+- **TOOL-08**: `read_file` 응답에 `total_lines`/`returned_range` 메타데이터 — T6 실패 (32B 가 out-of-range `start_line` 반복) 근본 해결
+
+**Scope:** 실측 pain signal 있는 4개만. 제외: Streaming (재설계 큰 대신 pain 없음), Session 영속화 (XL, pain 없음), System prompt 단축 (pre-research 필요), Auto-escalation (TOOL-08 이 대체), test helper 통합 (minor), multi-platform (Windows OOS).
+
+**v1.1 Refinement** 완료 (2026-04-24). 자세한 기록: `.planning/MILESTONES.md` + `.planning/milestones/v1.1-ROADMAP.md`.
 
 ## Core Value
 
@@ -32,16 +40,25 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ Dynamic `/v1/models` 모델 id 조회 + lazy per-port probe + local-path preference heuristic — v1.1 (REF-01, REF-02)
 - ✓ Real LLM thought 캡처 — `LlmResponse` Core 레코드로 `ILlmClient.CompleteAsync` 확장, `--verbose` 에 실제 reasoning 표시 — v1.1 (OBS-05)
 
-### Active (v1.2 — not yet scoped)
+### Active (v1.2 Tool Expansion)
 
-<!-- v1.2 milestone goals will be defined by /gsd:new-milestone. Seed candidates below: -->
+<!-- v1.2 scope confirmed 2026-04-24. 4 requirements, all backed by measured pain signals in today's benchmark. -->
 
-- Per-port `MaxModelLen` visibility in `AppComponents` (v1.1 kept hardcoded 8192 floor)
-- `makeMockResponse` test helper consolidation to shared module (v1.1 duplicated in AgentLoopTests + ReplTests)
-- Multi-platform `tryParseModelId` path detection (v1.1 `StartsWith("/")` is macOS/Linux only)
-- Streaming output (STM-01 from v1.0 research)
-- Tool extensions (`edit_file`, `glob_search`, `grep_search` — TLX-01..03)
-- Session persistence + `--resume <id>` (SES-01)
+- [ ] **TLX-01**: `edit_file` — exact-string surgical edit (avoid full-file rewrite cost)
+- [ ] **TLX-02**: `glob_search` — native file finder (pattern-based, project-root scoped)
+- [ ] **TLX-03**: `grep_search` — native content search (structured `file:line:content` output)
+- [ ] **TOOL-08**: `read_file` 응답에 file bounds 메타데이터 포함 (total_lines 등) — T6 multi-step 탐색 실패 방지
+
+### Deferred to v1.3+ (from v1.2 scoping)
+
+- Streaming output (STM-01) — big redesign, 현재 pain 없음
+- Session persistence + `--resume` (SES-01) — XL, pain 없음
+- Auto-escalation on MaxLoopsExceeded — TOOL-08 root-cause fix 로 우선 대체
+- System prompt 단축 (1200→600자) — 별도 pre-research + experimental validation 필요
+- Ctrl+C UX polish — minor
+- Per-port `MaxModelLen` visibility — 실측 문제 없음
+- Shared `makeMockResponse` helper — minor code hygiene
+- Multi-platform `tryParseModelId` — Windows OOS
 
 ### Out of Scope
 
@@ -141,4 +158,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-24 after v1.1 milestone complete*
+*Last updated: 2026-04-24 after starting v1.2 milestone*

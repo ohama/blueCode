@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24 after v1.1 milestone)
+See: .planning/PROJECT.md (updated 2026-04-24 for v1.2 milestone start)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** v1.2 planning (not yet started)
+**Current focus:** v1.2 Tool Expansion — edit_file + glob_search + grep_search + read_file metadata
 
 ## Current Position
 
-Milestone: v1.1 COMPLETE (shipped 2026-04-24)
-Phase: N/A — awaiting `/gsd:new-milestone` for v1.2
-Plan: N/A
-Status: v1.1 milestone archived. Fresh ROADMAP.md / REQUIREMENTS.md to be created by `/gsd:new-milestone`. v1.2 seed candidates carried below.
-Last activity: 2026-04-24 — v1.1 milestone completion (archive, PROJECT.md evolution, git tag)
+Milestone: v1.2 Tool Expansion (started 2026-04-24)
+Phase: Not started (defining requirements → roadmap)
+Plan: —
+Status: PROJECT.md updated with v1.2 Current Milestone section (4 REQs: TLX-01..03, TOOL-08). Scope confirmed as "Minimum" per user — pain-evidence backed only. REQUIREMENTS.md + ROADMAP.md to be created next.
+Last activity: 2026-04-24 — v1.2 milestone started; scope decision logged in PROJECT.md + STATE.md
 
-Progress: N/A (between milestones)
+Progress: v1.2 [░░░░░░░░░░░░░░░░░░░░] 0% (0 of 4 REQs)
 
 ## Performance Metrics (v1.0 + v1.1 — cumulative, frozen)
 
