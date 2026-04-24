@@ -79,19 +79,17 @@ v1 정의 유지. v1.2 에서 추가 제외 없음.
 
 ## Traceability
 
-Roadmap 생성 후 채워짐.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TLX-01 | TBD | Pending |
-| TLX-02 | TBD | Pending |
-| TLX-03 | TBD | Pending |
-| TOOL-08 | TBD | Pending |
+| TLX-01 | Phase 8 | Pending |
+| TLX-02 | Phase 8 | Pending |
+| TLX-03 | Phase 8 | Pending |
+| TOOL-08 | Phase 9 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 4 total
-- Mapped to phases: 0 (pre-roadmap)
+- Mapped to phases: 4/4 (100%)
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-04-24 — v1.2 Minimum scope confirmed*
+*Last updated: 2026-04-23 — Traceability filled after ROADMAP.md creation (Phase 8: TLX-01/02/03; Phase 9: TOOL-08)*
