@@ -2,8 +2,9 @@
 phase: 06-dynamic-bootstrap
 verified: 2026-04-23T09:15:24Z
 re_verified: 2026-04-24T11:15:00Z
-status: gaps_found
-score: 4/5 structural; live verification revealed behavioral regression
+re_verified_post_gap_closure: 2026-04-24T11:45:00Z
+status: passed
+score: 5/5 — all SCs verified including live end-to-end (06-03 gap closure)
 must_haves:
   truths:
     - "No absolute filesystem path in src/ (SC-1)"
@@ -202,3 +203,33 @@ Behavioral symptom: 3 consecutive `--model 32b "Say OK in 3 words"` runs all pro
 ### Phase 7 impact
 
 Phase 7 (Thought Capture) structural verification is unaffected by this gap — the pipeline wiring is correct; the issue is upstream at the LLM producing unusable output due to Base-mode reversion. Once Phase 6 gap closes, Phase 7 SC-3 live observation unblocks.
+
+---
+
+## Post-Gap-Closure Live Verification (2026-04-24T11:45:00Z)
+
+After 06-03 landed (`a794b42`), live retry confirmed all SCs pass end-to-end:
+
+```
+$ dotnet run --project src/BlueCode.Cli -- --trace --verbose --model 32b "Say OK in 3 words"
+
+[Step 1] (ok, 6473ms)
+  thought: The user wants a simple phrase.
+  action:  final: OK
+  result:  (final answer — no tool)
+
+OK
+
+# EXIT: 0, DURATION: 8s (vs pre-fix 290s timeout)
+```
+
+**Direct observations:**
+
+1. **POST body model field**: `"model":"/Users/ohama/llm-system/models/qwen32b"` — local path, NOT HF repo id (SC-3 behavioral confirmed)
+2. **Thought captured**: `"The user wants a simple phrase."` — real LLM reasoning, not placeholder (bonus: Phase 7 SC-3 also confirmed)
+3. **No HF fetch**: 32B server err log shows no `huggingface.co/api/models` GET during or after the test (HF fallback prevented)
+4. **Full cycle in 8s**: Instruct tokenizer kept loaded, chat template applied, valid JSON generated, agent loop executed, final answer printed
+
+All 5 SCs now fully verified (structural + live). Phase 6 complete.
+
+**Side effect — Phase 7 SC-3 observational gate cleared**: The same run shows `--verbose` `thought:` line contains non-placeholder LLM-generated text, satisfying Phase 7 SC-3.

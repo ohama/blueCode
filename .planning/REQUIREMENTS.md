@@ -10,12 +10,12 @@ v1.0 UAT(05-04) 및 후속 세션에서 노출된 기술 빚. 새 기능 없음.
 
 ### Refactor / Portability
 
-- [ ] **REF-01**: `Router.modelToName` 하드코딩 제거 — `CompositionRoot.bootstrapAsync` 가 `/v1/models` 응답의 `data[0].id` 를 조회해 `Router` 에 (또는 `AppComponents` 에) 동적으로 주입. 모델 디렉토리 경로가 바뀌어도 Core 재컴파일 필요 없이 작동. v1.0 UAT 핫픽스 (`5ab5a95`) 로 들어간 절대경로 하드코딩 제거.
-- [ ] **REF-02**: `/v1/models` probe 를 bootstrap 에서 lazy 화 — 현재 `bootstrapAsync` 가 8000 을 동기적으로 probe, 이 때문에 `--model 72b` 모드에서도 32B cold-start 시 타임아웃 WARN 발생. probe 를 각 model 의 첫 실제 LLM 호출 직전으로 이동하여 해당 포트만 probe. bootstrap 은 네트워크 터치 없이 반환.
+- [x] **REF-01**: `Router.modelToName` 하드코딩 제거 — Phase 6에서 adapter-layer `tryParseModelId` + `probeModelInfoAsync` + per-port `Lazy<Task<ModelInfo>>` 로 구현 완료. 06-03 gap closure 로 local-path preference 추가 (HF fallback 차단). 2026-04-24 live 검증 통과.
+- [x] **REF-02**: `/v1/models` probe 를 bootstrap 에서 lazy 화 — Phase 6에서 `bootstrapAsync` 삭제 + sync `bootstrap` + lazy per-port probe 로 구현 완료. 2026-04-24 live 검증 통과 (startup 에 HTTP 0건).
 
 ### Observability
 
-- [ ] **OBS-05**: 실제 LLM thought 를 `Step.Thought` 에 저장 — 현재 placeholder `"[not captured in v1]"` 리터럴. `ILlmClient.CompleteAsync` 반환 타입을 확장하여 LLM 의 `thought` 필드를 Step 까지 전달 (예: `Task<Result<LlmStep, AgentError>>` 또는 `Task<Result<(Thought * LlmOutput), AgentError>>`). `--verbose` 출력이 실제 reasoning 을 보여주도록. Schema 는 Phase 2 에서 이미 `thought` 필드를 검증하므로 parsing 은 기존 pipeline 재사용.
+- [x] **OBS-05**: 실제 LLM thought 를 `Step.Thought` 에 저장 — Phase 7에서 `LlmResponse = { Thought; Output }` Core 레코드 추가 + `ILlmClient.CompleteAsync` 시그니처 확장 + `AgentLoop` Step 생성 + `toLlmOutput` 경로 연결로 구현 완료. 2026-04-24 live 검증 통과 (예: `thought: "The user wants a simple phrase."`).
 
 ## Deferred / v1.2+ Candidates
 
@@ -61,9 +61,9 @@ Roadmap created 2026-04-23. Phase mappings confirmed.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REF-01 | Phase 6 | Pending |
-| REF-02 | Phase 6 | Pending |
-| OBS-05 | Phase 7 | Pending |
+| REF-01 | Phase 6 | ✓ Complete |
+| REF-02 | Phase 6 | ✓ Complete |
+| OBS-05 | Phase 7 | ✓ Complete |
 
 **Coverage:**
 - v1.1 requirements: 3 total

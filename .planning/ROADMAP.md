@@ -14,8 +14,8 @@ Integer phases 6-7 continue directly from v1.0 (Phases 1-5). No decimal phases w
 
 ## Phases
 
-- [ ] **Phase 6: Dynamic Bootstrap** — replace hardcoded model path in `Router.modelToName` with a live `/v1/models` query, and lazy-ify the bootstrap probe so `--model 72b` mode no longer touches port 8000 at startup.
-- [ ] **Phase 7: Thought Capture** — extend `ILlmClient.CompleteAsync` to surface the LLM `thought` field through to `Step.Thought`, replacing the `"[not captured in v1]"` placeholder with real reasoning text in `--verbose` output.
+- [x] **Phase 6: Dynamic Bootstrap** — replace hardcoded model path in `Router.modelToName` with a live `/v1/models` query, and lazy-ify the bootstrap probe so `--model 72b` mode no longer touches port 8000 at startup. ✓ 2026-04-24
+- [x] **Phase 7: Thought Capture** — extend `ILlmClient.CompleteAsync` to surface the LLM `thought` field through to `Step.Thought`, replacing the `"[not captured in v1]"` placeholder with real reasoning text in `--verbose` output. ✓ 2026-04-24
 
 ---
 
@@ -71,8 +71,8 @@ Plans:
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 6 — Dynamic Bootstrap | Runtime model-id resolution + lazy probe | REF-01, REF-02 | Planned (2 plans) |
-| 7 — Thought Capture | Real LLM thought in Step.Thought | OBS-05 | Planned (2 plans) |
+| 6 — Dynamic Bootstrap | Runtime model-id resolution + lazy probe | REF-01, REF-02 | ✓ Complete 2026-04-24 (3 plans incl. 06-03 gap closure) |
+| 7 — Thought Capture | Real LLM thought in Step.Thought | OBS-05 | ✓ Complete 2026-04-24 (2 plans) |
 
 **Requirement coverage:** 3/3 (100%) — REF-01 → Phase 6, REF-02 → Phase 6, OBS-05 → Phase 7.
 
