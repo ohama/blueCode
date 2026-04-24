@@ -2,99 +2,68 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-23 for v1.1 milestone start)
+See: .planning/PROJECT.md (updated 2026-04-24 after v1.1 milestone)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** v1.1 Refinement — tech debt cleanup (REF-01, REF-02, OBS-05)
+**Current focus:** v1.2 planning (not yet started)
 
 ## Current Position
 
-Milestone: v1.1 Refinement (COMPLETE — 2026-04-24, gap closure confirmed)
-Phase: Phase 6 — Dynamic Bootstrap (gap closed 2026-04-24); Phase 7 — Thought Capture (COMPLETE)
-Plan: Phase 6: 3/3 complete (06-03 gap closure landed); Phase 7: 2/2 complete
-Status: All 3 v1.1 requirements done (REF-01 gap closed, REF-02 done, OBS-05 done). 218 tests passing. Phase 7 SC-3 live verification unblocked (Instruct tokenizer preserved by 06-03 fix).
-Last activity: 2026-04-24 — Completed 06-03-PLAN.md (tryParseModelId path-preference gap closure)
+Milestone: v1.1 COMPLETE (shipped 2026-04-24)
+Phase: N/A — awaiting `/gsd:new-milestone` for v1.2
+Plan: N/A
+Status: v1.1 milestone archived. Fresh ROADMAP.md / REQUIREMENTS.md to be created by `/gsd:new-milestone`. v1.2 seed candidates carried below.
+Last activity: 2026-04-24 — v1.1 milestone completion (archive, PROJECT.md evolution, git tag)
 
-Progress: v1.1 [████████████████████] 100% (REF-01 gap closed, REF-02 done, OBS-05 done; 218 tests passing)
+Progress: N/A (between milestones)
 
-## Performance Metrics (v1.0 — final, frozen)
+## Performance Metrics (v1.0 + v1.1 — cumulative, frozen)
 
 **v1.0 totals:**
-- 5 phases, 17 plans (16 autonomous + 1 human-gated)
-- 85 commits, 5891 LOC F#, 208 tests passing (1 ignored smoke)
-- ~27 hours calendar time (2026-04-22 14:37 → 2026-04-23 17:18)
+- 5 phases, 17 plans (16 autonomous + 1 human-gated), 208 tests
+- 85 commits, 5891 LOC F#
+- ~27 hours (2026-04-22 14:37 → 2026-04-23 17:18)
 
-**By phase (v1.0 plans):**
+**v1.1 totals:**
+- 2 phases, 5 plans (3 in Phase 6 incl. 06-03 gap closure, 2 in Phase 7)
+- 218 tests (208 v1.0 baseline + 10 v1.1 additions)
+- 23 commits, +315 / -124 LOC F# delta
+- ~19 hours (2026-04-23 17:32 → 2026-04-24 12:21)
 
-| Phase | Plans | Key metric |
-|-------|-------|------------|
-| 01-foundation | 3/3 | 32 min avg 11 min/plan |
-| 02-llm-client | 3/3 | 13 min avg 4 min/plan |
-| 03-tool-executor | 3/3 | 27 min avg 9 min/plan |
-| 04-agent-loop | 4/4 | incl. 04-04 SC-7 gap closure (2 task, ~5 min) |
-| 05-cli-polish | 4/4 | incl. 05-04 human-gated UAT (retirement + real-task) |
-
-Detailed per-plan history archived in `.planning/milestones/v1.0-phases/`.
+Detailed per-plan history archived in `.planning/milestones/v1.0-phases/` and `.planning/milestones/v1.1-phases/`.
 
 ## Accumulated Context
 
 ### Decisions
 
-**Rolled up into PROJECT.md Key Decisions table at v1.0 milestone completion.** See `.planning/PROJECT.md` → "Key Decisions" for the cumulative log with outcomes (✓ Good / ⚠ Revisit / — Pending).
+**Rolled up into PROJECT.md Key Decisions table at v1.0 + v1.1 milestone completions.** See `.planning/PROJECT.md` → "Key Decisions" for cumulative log with outcomes (✓ Good / ⚠ Revisit / — Pending).
 
-Notable items marked `⚠ Revisit` for v1.1 scoping:
-- Expecto `[<Tests>]` auto-discovery disabled — 4 executors hit the rootTests registration pitfall
-- `Router.modelToName` absolute-path hardcode (UAT hotfix) — **RESOLVED in 06-01**: deleted from Core; adapter now resolves via Lazy<Task<ModelInfo>> probe
-- `Step.Thought = "[not captured in v1]"` placeholder — reconsider for `--verbose` quality
+Notable items marked `⚠ Revisit` for v1.2:
+- Expecto `[<Tests>]` auto-discovery disabled — documented convention, multiple executors hit rootTests registration pitfall across v1.0 + v1.1
+- `makeMockResponse` test helper duplicated in 2 test files — v1.2 test infra pass candidate
 
-**v1.1 decisions (Phase 6):**
+### Pending Todos (v1.2 seed candidates)
 
-| Decision | Plan | Rationale |
-|----------|------|-----------|
-| Option B: delete modelToName from Core; adapter owns wire value | 06-01 | Core purity preserved; buildRequestBody gets modelId: string injected from lazy probe |
-| Two explicit Lazy<Task<ModelInfo>> (not Map) | 06-01 | Simpler for two Model cases; named bindings probe8000/probe8001 are clearer |
-| CancellationToken.None in Lazy factory | 06-01 | Shared task must not be cancelled by one caller's Ctrl+C (06-RESEARCH Pitfall 6) |
-| Empty ModelId -> POST 4xx (no silent failure) | 06-01 | Surfaces probe miss as LlmUnreachable at user-visible call site |
-| AppComponents.MaxModelLen stays 8192 floor | 06-01 | Known regression for 72B warning accuracy; v1.2 candidate |
-| getMaxModelLenAsync left in place | 06-01 | CompositionRoot.bootstrapAsync still needs it; plan 06-02 decides fate |
-| bootstrapAsync deleted; bootstrap is sole factory | 06-02 | REF-02 satisfied: zero HTTP calls at startup; lazy probe fires on first LLM call per port |
-| Log.Information reworded 'resolved' -> 'floor' | 06-02 | MaxModelLen is static 8192 default; 'resolved' was misleading (implied live probe result) |
-| getMaxModelLenAsync fully removed | 06-02 | No caller after bootstrapAsync deletion; probeModelInfoAsync supersedes it |
-| Test port 64321 instead of 8000 for closed-port test | 06-02 | 8000 may be live (flaky); 64321 is deterministically closed on any standard machine |
+Carried forward from v1.1 into v1.2 planning — not full requirements yet, but known gaps the next milestone should scope:
 
-**v1.1 decisions (Phase 6, gap closure 06-03):**
+1. **Per-port `MaxModelLen` visibility** — `AppComponents.MaxModelLen` hardcoded `int = 8192` floor; 72B's actual max_model_len (e.g., 32K) not surfaced. Per-port cache exists inside `QwenHttpClient` lazy probe; plumbing to `AppComponents` is the remaining work.
+2. **Shared test helper module** — consolidate `makeMockResponse` (currently in AgentLoopTests.fs + ReplTests.fs).
+3. **Multi-platform `tryParseModelId`** — current `StartsWith("/")` heuristic is macOS/Linux only; Windows path detection (if ever in scope) needs different approach.
+4. **Streaming output (STM-01)** — SSE token-by-token stdout, addresses "blank terminal UX" pitfall documented in v1.0 research.
+5. **Tool extensions (TLX-01..03)** — `edit_file` for surgical edits (avoid full-file write diff noise), `glob_search` for file finding, `grep_search` for content search.
+6. **Session persistence + `--resume <id>` (SES-01)** — context carry across process boundaries.
+7. **Prompt cache hygiene** — long-running mlx_lm.server accumulates prompt cache (observed 0.70 → 0.83 GB in 3 runs; 1.51 GB was OOM threshold pre-fix). Periodic `launchctl kickstart` or explicit cache clear endpoint candidate.
 
-| Decision | Plan | Rationale |
-|----------|------|-----------|
-| tryParseModelId path-preference heuristic (StartsWith('/')) avoids mlx_lm.server HF fallback trap | 06-03 | HF repo ids are "Org/Name" (slash in middle, never at start); no false-positive collision with absolute paths; single-id servers fall through to List.tryHead fallback unchanged |
+### Resolved post-milestone
 
-**v1.1 decisions (Phase 7):**
-
-| Decision | Plan | Rationale |
-|----------|------|-----------|
-| Option C: LlmResponse record (not tuple) for ILlmClient.CompleteAsync | 07-01 | Named fields prevent ordering drift; callLlmWithRetry return type reads as first-class; extensible |
-| Big-bang single commit: no transitional API | 07-01 | F# compiler enforces completeness; 2 callsites only; cleaner history |
-| Retry semantics preserved: 2 CompleteAsync calls unchanged | 07-01 | LOOP-05 invariant; Ok response passes through both attempts without modification |
-| Schema unchanged: llmStepSchema thought minLength:1 already enforces non-empty | 07-01 | SC-5 confirmed; no new validation needed in toLlmOutput |
-| Stale "Known v1 limitation" comment removed from AgentLoop.fs header | 07-01 | Comment became false once LlmResponse wired; misleading to leave |
-| makeMockResponse duplicated (not shared) in AgentLoopTests + ReplTests | 07-02 | No shared helper module; Phase 7 scope discipline; pre-decided in 07-RESEARCH.md Q5 |
-| SmokeTests.fs fix included in 07-02 scope | 07-02 | 07-01 SUMMARY flagged it; single Ok { Output = output } destructuring fix; 0 new behavior |
-| SC-3 live smoke deferred | 07-02 | GPU busy at execution time; chat completions timeout 180s; structural SCs 1/2/4/5 fully satisfied |
-
-### Pending Todos (v1.1 seed)
-
-All three items converted to requirements REF-01, REF-02, OBS-05. See `.planning/REQUIREMENTS.md`.
-
-### Resolved post-milestone (v1.0 → v1.1 transition)
-
-- **2026-04-23**: 32B Instruct re-download complete. Replaced Base Coder model at `~/llm-system/models/qwen32b/`. Verified: `special_tokens_map.json` + `added_tokens.json` present, chat smoke `finish: stop, content: 'OK'`, `dotnet run -- --model 32b "List files in src"` → 2 steps (3.5s + 3.3s) exit 0. Procedure documented in `documentations/qwen32b-base-to-instruct.md`.
+(None yet — v1.1 just shipped.)
 
 ### Blockers/Concerns
 
-(None — roadmap created, planning can begin.)
+(None — v1.1 shipped clean with live verification.)
 
 ## Session Continuity
 
-Last session: 2026-04-24T02:32:52Z
-Stopped at: Completed 06-03-PLAN.md. Phase 6 gap closed (tryParseModelId path-preference). 218 tests passing. Phase 7 SC-3 live verification unblocked.
-Resume file: None — v1.1 complete including gap closure. Next: SC-3 live verify once GPU free (`dotnet run --project src/BlueCode.Cli -- --verbose --trace --model 32b "Say OK in 3 words" 2>&1 | grep '"model"'`), then v1.2 scoping.
+Last session: 2026-04-24
+Stopped at: v1.1 milestone complete + archived + git tag `milestone-v1.1`. Ready for v1.2 scoping.
+Resume file: None — use `/gsd:new-milestone` to start v1.2.

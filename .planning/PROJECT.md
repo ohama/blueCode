@@ -4,16 +4,11 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current Milestone: v1.1 Refinement
+## Current State: v1.1 shipped — between milestones
 
-**Goal:** v1.0 UAT 중 노출된 3개 기술 빚 청소 — 이식성 (`Router.modelToName` 하드코딩 제거) + startup 품질 (lazy `/v1/models` probe) + `--verbose` 품질 (실제 LLM thought 캡처).
+**v1.1 Refinement** 완료 (2026-04-24). v1.0 기술 빚 3개 모두 해결 + 중간 regression (06-03 gap closure) 포함. 218 tests pass, live UAT 통과 (Instruct 유지, 실제 thought 캡처, dual-service stress no OOM). 자세한 기록: `.planning/MILESTONES.md` + `.planning/milestones/v1.1-ROADMAP.md`.
 
-**Target requirements:**
-- REF-01 — `/v1/models` 동적 model id 조회 + Router 주입
-- REF-02 — bootstrap 의 32B probe lazy 화
-- OBS-05 — `ILlmClient.CompleteAsync` 시그니처 확장 + `Step.Thought` 실제 reasoning 저장
-
-**Scope:** 기술 빚만. 새 기능 (streaming, edit_file, session 영속화 등) 없음. v1.2+ 후보.
+**다음 milestone (v1.2) 는 아직 스코핑 전**. `/gsd:new-milestone` 으로 requirements 정의부터 시작.
 
 ## Core Value
 
@@ -34,14 +29,19 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ 4개 툴 (read_file, write_file, list_dir, run_shell) + 22-validator bash 보안 체인 + 2000자 truncation — v1.0 (TOOL-01..07)
 - ✓ Agent loop — 5-step 상한, `(action, input_hash)` 루프 가드, 2회 JSON retry, Ctrl+C graceful, JSONL per-step — v1.0 (LOOP-01..07, OBS-01, OBS-02, OBS-04)
 - ✓ CLI polish — Argu + 단일/멀티-turn REPL + `--verbose`/`--trace` + Spectre spinner + `/v1/models` 80% 경고 — v1.0 (CLI-01..07, OBS-03)
+- ✓ Dynamic `/v1/models` 모델 id 조회 + lazy per-port probe + local-path preference heuristic — v1.1 (REF-01, REF-02)
+- ✓ Real LLM thought 캡처 — `LlmResponse` Core 레코드로 `ILlmClient.CompleteAsync` 확장, `--verbose` 에 실제 reasoning 표시 — v1.1 (OBS-05)
 
-### Active (v1.1 Refinement)
+### Active (v1.2 — not yet scoped)
 
-<!-- v1.1 milestone scope. v1.0 UAT에서 노출된 기술 빚 청소. 새 기능 없음. -->
+<!-- v1.2 milestone goals will be defined by /gsd:new-milestone. Seed candidates below: -->
 
-- [ ] **REF-01**: `Router.modelToName` 하드코딩 제거 — bootstrap 시점에 `/v1/models`의 `data[0].id`를 동적 조회해 Router에 주입. 모델 경로 변경 시 Core 재빌드 불필요.
-- [ ] **REF-02**: 32B cold-start probe bootstrap 분리 — `bootstrapAsync`의 `/v1/models` probe 를 lazy 화하여 첫 실제 LLM 호출 직전에 실행. `--model 72b` 모드에서 8000 타임아웃 WARN 제거.
-- [ ] **OBS-05**: 실제 LLM thought 캡처 — `ILlmClient.CompleteAsync` 반환 타입을 LlmStep 전체 (또는 `Thought * LlmOutput`)로 확장, AgentLoop가 `Step.Thought`에 LLM 실제 reasoning 저장. `--verbose` 출력 품질 향상.
+- Per-port `MaxModelLen` visibility in `AppComponents` (v1.1 kept hardcoded 8192 floor)
+- `makeMockResponse` test helper consolidation to shared module (v1.1 duplicated in AgentLoopTests + ReplTests)
+- Multi-platform `tryParseModelId` path detection (v1.1 `StartsWith("/")` is macOS/Linux only)
+- Streaming output (STM-01 from v1.0 research)
+- Tool extensions (`edit_file`, `glob_search`, `grep_search` — TLX-01..03)
+- Session persistence + `--resume <id>` (SES-01)
 
 ### Out of Scope
 
@@ -125,6 +125,10 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 | `Step.Thought = "[not captured in v1]"` placeholder | `ILlmClient.CompleteAsync` 시그니처 확장 Phase 4 scope 넘음 | ⚠ Revisit — v1.1에서 `--verbose` 품질 관점 재평가 |
 | 32B Instruct 재다운 (v1.0 UAT 중 발견) | `qwen2.5-32b-mlx`가 Base Coder (FIM) 였음 | ✓ Good (post-milestone) — `documentations/qwen32b-base-to-instruct.md` 프로세스 수립 |
 | Fantomas 7.0.5 로컬 도구로 repo-wide 포맷 | CI-free 운영 + 단일 사용자 통일 | ✓ Good — 35 파일 정리, isolated commit으로 feature diff와 분리 |
+| v1.1: Option B (Core에서 modelToName 삭제, adapter가 wire id 소유) | 기존 `AgentConfig.ForcedModel` precedent 동일 패턴 | ✓ Good — Core purity 유지, 06-03 gap closure 로 `StartsWith('/')` heuristic 추가 |
+| v1.1: Option C (new Core record `LlmResponse`) | 대안 A/B (LlmStep/tuple)보다 named 필드 + Core 포함 안전 | ✓ Good — F# big-bang 컴파일 캐스케이드로 단일 atomic commit 가능 |
+| v1.1: `tryParseModelId` local-path preference heuristic | mlx_lm.server의 HF Hub fallback 이 Instruct tokenizer 를 Base 로 덮어쓰는 regression 우회 | ✓ Good — live 검증 통과. 단점: Windows 지원 시 path 감지 로직 재설계 필요 (v1 Mac-only라 무관) |
+| v1.1: `makeMockResponse` 테스트 헬퍼 중복 (shared 모듈 아님) | scope 관리; shared 모듈 추출은 별도 test infra 작업 | ⚠ Revisit — v1.2 test infrastructure 패스에서 통합 고려 |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -137,4 +141,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-23 after starting v1.1 milestone*
+*Last updated: 2026-04-24 after v1.1 milestone complete*
