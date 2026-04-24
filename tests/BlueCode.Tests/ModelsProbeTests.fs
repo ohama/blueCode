@@ -151,7 +151,37 @@ let private modelIdTests =
               Expect.equal
                   (tryParseModelId json)
                   None
-                  "Non-string id (number 42) should produce None (schema defense)" ]
+                  "Non-string id (number 42) should produce None (schema defense)"
+
+          testCase "multi-id response (mlx_lm.server shape) prefers local path at data[1] over HF id at data[0]"
+          <| fun _ ->
+              // This fixture reproduces the exact shape reported by mlx_lm.server:
+              // data[0].id is a HuggingFace repo id ("Qwen/Qwen2.5-Coder-32B") and
+              // data[1].id is the local absolute path. The parser MUST pick the path
+              // because sending the HF id back in the POST body triggers mlx_lm.server
+              // to refetch the Base Coder tokenizer from HF Hub, destroying the
+              // loaded Instruct tokenizer. See 06-VERIFICATION.md "Gap Found (2026-04-24)".
+              let json =
+                  """{"object":"list","data":[{"id":"Qwen/Qwen2.5-Coder-32B","object":"model"},{"id":"/Users/ohama/llm-system/models/qwen32b","object":"model"}]}"""
+
+              Expect.equal
+                  (tryParseModelId json)
+                  (Some "/Users/ohama/llm-system/models/qwen32b")
+                  "Multi-id response must prefer the absolute-path id (StartsWith '/') over the HF repo id, regardless of array position"
+
+          testCase "multi-id response with only HF-style ids falls back to data[0].id"
+          <| fun _ ->
+              // Hypothetical server that advertises multiple HF-style ids and no local
+              // path. Preserves v1.1 behavior: pick the first usable id. This guards
+              // against over-correction where the heuristic silently swallows responses
+              // that contain no path-like id at all.
+              let json =
+                  """{"object":"list","data":[{"id":"Qwen/Qwen2.5-Coder-32B","object":"model"},{"id":"Qwen/Qwen2.5-Coder-32B-Instruct","object":"model"}]}"""
+
+              Expect.equal
+                  (tryParseModelId json)
+                  (Some "Qwen/Qwen2.5-Coder-32B")
+                  "When no id starts with '/', fall back to the first usable id (single-id-server compatibility)" ]
 
 let tests =
     testList

@@ -233,10 +233,25 @@ let private withSpinner<'a> (label: string) (work: unit -> Task<'a>) : Task<'a> 
 
 // ── /v1/models probe (OBS-03) ──────────────────────────────────────────────
 
-/// Parse data[0].id from a GET /v1/models response body.
-/// Returns Some non-empty string on success; None on any structural
-/// mismatch (missing data array, empty array, missing/null id, non-string id,
-/// empty string id, JSON parse error).
+/// Parse the best id from a GET /v1/models response body (prefers absolute-path ids over HF repo ids; see docblock below).
+///
+/// Heuristic (REF-01 gap fix, 2026-04-24): some servers (notably mlx_lm.server)
+/// advertise MULTIPLE ids per model entry — e.g. a HuggingFace repo id
+/// ("Qwen/Qwen2.5-Coder-32B") alongside the local absolute path
+/// ("/Users/.../qwen32b"). Sending the HF id back in the POST "model" field
+/// triggers the server's HF Hub fallback, which refetches the tokenizer and
+/// overwrites the currently-loaded Instruct tokenizer with the Base variant,
+/// destroying chat-template behavior.
+///
+/// We prefer ids that start with '/' (absolute filesystem paths on macOS/Linux)
+/// because those keep the server on its locally-loaded tokenizer. HF repo ids
+/// are of shape "Org/Name" (slash in the middle, never at the start) so there
+/// is no collision.
+///
+/// Fallback: when no path-like id is present (vllm, llama.cpp, and other single-id
+/// servers), we return the first non-empty id, preserving v1.1 behavior.
+///
+/// Returns None on missing data array, empty data array, no usable ids, or JSON parse error.
 ///
 /// PUBLIC for ModelsProbeTests unit testing (pure, no IO).
 let tryParseModelId (json: string) : string option =
@@ -246,13 +261,25 @@ let tryParseModelId (json: string) : string option =
 
         match root.TryGetProperty("data") with
         | true, data when data.ValueKind = JsonValueKind.Array && data.GetArrayLength() > 0 ->
-            let model0 = data.[0]
+            // Collect all non-empty string ids, in original array order.
+            let ids =
+                seq {
+                    for i in 0 .. data.GetArrayLength() - 1 do
+                        let entry = data.[i]
+                        match entry.TryGetProperty("id") with
+                        | true, el when el.ValueKind = JsonValueKind.String ->
+                            let s = el.GetString()
+                            if not (System.String.IsNullOrEmpty(s)) then yield s
+                        | _ -> ()
+                }
+                |> List.ofSeq
 
-            match model0.TryGetProperty("id") with
-            | true, el when el.ValueKind = JsonValueKind.String ->
-                let s = el.GetString()
-                if System.String.IsNullOrEmpty(s) then None else Some s
-            | _ -> None
+            // Prefer the first path-like id (absolute filesystem path → keeps
+            // loaded tokenizer, avoids HF Hub fallback on mlx_lm.server).
+            // Fall back to the first usable id for single-id servers.
+            match ids |> List.tryFind (fun s -> s.StartsWith("/")) with
+            | Some pathId -> Some pathId
+            | None -> List.tryHead ids
         | _ -> None
     with _ ->
         None
