@@ -378,6 +378,8 @@ dotnet run --project src/BlueCode.Cli/BlueCode.Cli.fsproj -- "hi"
 
 ## 10. 관련 문서
 
+- **메모리 프로파일**: `documentation/memory-profile.md` — 32B / 72B / 둘 다 구동 시 실측 메모리 사용량 + OOM 대응
+
 - **32B 모델 교체**: `documentation/qwen32b-base-to-instruct.md` — 현재 32B가 Base Coder(FIM 전용)로 잘못 받아져 있음. Instruct 로 교체하는 절차.
 - 원본 설치 노트: `localLLM/qwen32b_install.md`, `localLLM/qwen72b_install.md`
 - 본래 production 설정 원본: `localLLM/llm_production_setup.md` (이 문서의 기반)
