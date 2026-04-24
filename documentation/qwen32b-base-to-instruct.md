@@ -324,7 +324,7 @@ Instruct 모델을 받았는데도 나오면 두 가지:
 
 ## 8. 관련 문서
 
-- `documentations/local-llm-services.md` — launchd 서비스 운영 가이드 (항상 떠있게 하기)
+- `documentation/local-llm-services.md` — launchd 서비스 운영 가이드 (항상 떠있게 하기)
 - `.planning/PROJECT.md` — "Mac 로컬 Qwen 32B/72B" 전제
 - `.planning/phases/05-cli-polish/05-04-SUMMARY.md` — 이 문제가 발견된 UAT 과정
 - `src/BlueCode.Core/Router.fs:57-60` — `modelToName` (v1 하드코딩, v1.1 에서 동적화)

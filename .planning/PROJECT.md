@@ -71,8 +71,8 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Qwen 32B Instruct (Coder) @ `localhost:8000` via `mlx_lm.server` + launchd (`com.ohama.qwen32b.plist`)
 - Qwen 72B Instruct (AWQ 4-bit) @ `localhost:8001` 동일 패턴
 - 모델 경로: `~/llm-system/models/qwen{32b,72b}/`
-- 서비스 운영 문서: `documentations/local-llm-services.md`
-- 32B 모델 교체 가이드: `documentations/qwen32b-base-to-instruct.md`
+- 서비스 운영 문서: `documentation/local-llm-services.md`
+- 32B 모델 교체 가이드: `documentation/qwen32b-base-to-instruct.md`
 
 **사용자 피드백 (v1.0 UAT 기반):**
 - 실제 "List files in src" 요청 → 2 step (list_dir → final), 6.8s, exit 0 — end-to-end chat 정상
@@ -123,7 +123,7 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 | Spinner `withSpinner`가 HTTP call만 감싸고 onStep은 감싸지 않음 | stream 분리 + stdout 경합 회피 | ✓ Good — `--verbose` 다줄 출력과 공존 |
 | `Router.modelToName` 로컬 절대경로 하드코딩 (v1.0 UAT hotfix) | `mlx_lm.server`가 HF id로 해석 404 반환 | ⚠ Revisit — v1.1 OBS-03 동적 쿼리가 적절 |
 | `Step.Thought = "[not captured in v1]"` placeholder | `ILlmClient.CompleteAsync` 시그니처 확장 Phase 4 scope 넘음 | ⚠ Revisit — v1.1에서 `--verbose` 품질 관점 재평가 |
-| 32B Instruct 재다운 (v1.0 UAT 중 발견) | `qwen2.5-32b-mlx`가 Base Coder (FIM) 였음 | ✓ Good (post-milestone) — `documentations/qwen32b-base-to-instruct.md` 프로세스 수립 |
+| 32B Instruct 재다운 (v1.0 UAT 중 발견) | `qwen2.5-32b-mlx`가 Base Coder (FIM) 였음 | ✓ Good (post-milestone) — `documentation/qwen32b-base-to-instruct.md` 프로세스 수립 |
 | Fantomas 7.0.5 로컬 도구로 repo-wide 포맷 | CI-free 운영 + 단일 사용자 통일 | ✓ Good — 35 파일 정리, isolated commit으로 feature diff와 분리 |
 | v1.1: Option B (Core에서 modelToName 삭제, adapter가 wire id 소유) | 기존 `AgentConfig.ForcedModel` precedent 동일 패턴 | ✓ Good — Core purity 유지, 06-03 gap closure 로 `StartsWith('/')` heuristic 추가 |
 | v1.1: Option C (new Core record `LlmResponse`) | 대안 A/B (LlmStep/tuple)보다 named 필드 + Core 포함 안전 | ✓ Good — F# big-bang 컴파일 캐스케이드로 단일 atomic commit 가능 |

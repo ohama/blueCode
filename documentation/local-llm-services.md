@@ -378,7 +378,7 @@ dotnet run --project src/BlueCode.Cli/BlueCode.Cli.fsproj -- "hi"
 
 ## 10. 관련 문서
 
-- **32B 모델 교체**: `documentations/qwen32b-base-to-instruct.md` — 현재 32B가 Base Coder(FIM 전용)로 잘못 받아져 있음. Instruct 로 교체하는 절차.
+- **32B 모델 교체**: `documentation/qwen32b-base-to-instruct.md` — 현재 32B가 Base Coder(FIM 전용)로 잘못 받아져 있음. Instruct 로 교체하는 절차.
 - 원본 설치 노트: `localLLM/qwen32b_install.md`, `localLLM/qwen72b_install.md`
 - 본래 production 설정 원본: `localLLM/llm_production_setup.md` (이 문서의 기반)
 - 프로젝트 전반: `.planning/PROJECT.md` ("Core value" → Qwen 상시 구동 전제)
