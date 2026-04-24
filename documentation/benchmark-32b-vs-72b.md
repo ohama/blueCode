@@ -411,3 +411,269 @@ curl -fsS http://127.0.0.1:8001/v1/models > /dev/null && echo 72B OK
 *벤치마크 수행: 2026-04-24*
 *blueCode: v1.1 post-06-03 gap closure*
 *모델: Qwen 32B Instruct MLX 4-bit / 72B Instruct AWQ 4-bit*
+
+
+---
+
+# Part 2: Extended Benchmark (2026-04-24 afternoon)
+
+Part 1 의 한계 (n=1, 단일 debug test, write-task 부재) 를 보완한 확장 벤치마크. 총 22 추가 runs.
+
+## 7. 구성
+
+| Phase | 목적 | Tests | Runs |
+|-------|-----|-------|------|
+| A — Variance | T1, T6 일관성 측정 | 2 × 2 models × 3 iterations | 12 |
+| B — Debug | 실제 버그 식별 정확도 | 3 bugs × 2 models | 6 |
+| C — Write | read → modify → write_file 전체 파이프라인 | 2 tasks × 2 models | 4 |
+
+Fixtures: `bench-fixtures/bug_{lastchar,average,validate}.fs` (Part 2 종료 후 삭제).
+
+---
+
+## 8. Phase A — Variance
+
+T1 (단순 recall) 과 T6 (다단계 추론, Part 1 에서 32B 실패) 를 각 모델당 3회 반복.
+
+### 8.1 결과
+
+| Test × Model | Run 1 | Run 2 | Run 3 | Exit (1/2/3) | Std dev 느낌 |
+|--------------|-------|-------|-------|--------------|-------------|
+| T1 × 32B | 3s / 1 step | 3s / 1 | 2s / 1 | 0, 0, 0 | 매우 안정 |
+| T1 × 72B | 7s / 1 | 6s / 1 | 6s / 1 | 0, 0, 0 | 안정 |
+| **T6 × 32B** | **16s / 5 / FAIL** | **16s / 5 / FAIL** | **16s / 5 / FAIL** | **1, 1, 1** | **결정적 실패** |
+| **T6 × 72B** | **29s / 4 / OK** | **28s / 4 / OK** | **29s / 4 / OK** | **0, 0, 0** | **결정적 성공** |
+
+### 8.2 해석
+
+**T6 의 32B 실패는 noise 가 아니라 구조적**. 3/3 전부 **동일 시간 (16초) 에 동일 방식 (5 steps → MaxLoopsExceeded) 으로 실패**. 32B 의 추론 전략 (`start_line` 을 2000씩 증가) 이 deterministic 하게 잘못됨을 확인.
+
+**T6 의 72B 성공도 deterministic**. 3/3 전부 4 steps 로 28-29초에 정답. 72B 의 탐색 전략 (`start_line=50`, `101` 등 작은 단위) 역시 안정적으로 작동.
+
+**T1 variance**: 32B 의 duration 편차 ±0.5s (2-3초 범위), 72B ±0.5s (6-7초). **Prompt cache 온도 영향은 실측상 미미** (n=3 에서). 둘 다 항상 정답 "1024" 반환.
+
+### 8.3 결론 (Phase A)
+
+- **Part 1 의 T6 결과는 재현성 높음** — 샘플 크기 증가에도 32B 실패 / 72B 성공 관찰.
+- **"variance" 로 설명 불가능** — model architecture 의 결정적 차이. 벤치마크 신뢰도 상승.
+
+---
+
+## 9. Phase B — Debug Tests (실제 버그 식별)
+
+3개 F# 파일에 각각 다른 유형의 버그 심음:
+
+### 9.1 Fixtures
+
+**bug_lastchar.fs (B1)** — 고전 off-by-one:
+```fsharp
+let getLastChar (s: string) : char =
+    s.[s.Length]                    // BUG: s.Length - 1 이어야 함
+```
+
+**bug_average.fs (B2)** — 경계 케이스 (divide by zero):
+```fsharp
+let average (xs: int list) : int =
+    (List.sum xs) / (List.length xs)  // BUG: empty list 시 DivideByZeroException
+```
+
+**bug_validate.fs (B3)** — 미묘한 논리:
+```fsharp
+let validatePositive (x: int) : ValidationResult =
+    if x > 0 then Ok x
+    else if x = 0 then Ok x          // BUG: 0 은 positive 아님, Error 여야
+    else Error "negative"
+```
+
+### 9.2 결과 (채점)
+
+| Test | 32B | 32B 응답 요약 | 72B | 72B 응답 요약 |
+|------|-----|---------------|-----|---------------|
+| B1 (off-by-one) | 9s ✓ | "`s.[s.Length]` out of bounds, should be `s.Length - 1`, any non-empty string triggers, e.g. \"hello\"" | 23s ✓ | "`IndexOutOfRangeException` for any non-empty string, e.g. `getLastChar \"hello\"`" |
+| B2 (divide by zero) | 9s ✓ | "`System.DivideByZeroException` when called with empty list" | 21s ✓ | "division by zero error because length is 0 and sum is 0" |
+| B3 (logic bug) | 9s ✓ | "Returns Ok for both positive and zero, but zero is not positive, should be Error for 0" | 17s ✓ | "Ok for both positive and zero, typically validation should exclude zero" |
+
+### 9.3 해석
+
+**두 모델 모두 3 버그 전부 정확히 식별**. 응답 품질 거의 동등. 차이:
+
+- **속도**: 32B 평균 9s, 72B 평균 20s. **2.2x** 차이, Part 1 과 일치.
+- **32B 응답이 미세하게 더 구체적** (B1 에서 "e.g. \"hello\"" 명시, B3 에서 "zero is not positive" 를 명확히 말함)
+- **72B 의 thought 가 더 길지만 final 응답의 정보량은 대등**
+
+### 9.4 놀라운 반증 — Debug 가 72B 의 독점 영역 아니다
+
+v1.0 research 는 `classifyIntent` 가 "debug" keyword 탐지 시 72B 로 라우팅하게 설계. 근거는 "debug 는 복잡 추론 요구".
+
+**실측**: **단일 파일의 직접적 버그 식별에서 32B 가 동등한 정확도로 2x 빠르게 해결**. 72B 의 우위는 **다단계 파일 탐색 (T6)** 같은 **전략 수립** 영역에 국한.
+
+### 9.5 라우팅 정책 재평가 제안
+
+```
+현재:    Debug | Design | Analysis → Qwen72B
+실측 기반: "파일 여러개 뒤져야 하는 task" → Qwen72B
+         "특정 파일 내 단순 버그 분석" → Qwen32B 로도 충분
+```
+
+하지만 blueCode 의 `classifyIntent` 는 prompt 내 키워드만 보므로 task 복잡도를 사전 예측 불가. **현재 라우팅은 "안전한 default"** — 기존 정책 유지 권장.
+
+---
+
+## 10. Phase C — Write Task (read → modify → write_file)
+
+### 10.1 태스크
+
+**W1**: "Read `bench-fixtures/bug_lastchar.fs` and fix the bug. Save the corrected version using write_file."
+
+**W2**: "Read `bench-fixtures/bug_average.fs` and add a new function `averageSafe` that returns `int option` (None for empty list). Save the updated file."
+
+### 10.2 결과 (실제 쓰여진 파일 내용)
+
+#### W1 — Fix lastchar bug
+
+**32B** (4 steps, 14s):
+```fsharp
+module LastChar
+
+/// Returns the last character of a string.
+let getLastChar (s: string) : char =
+    s.[s.Length - 1]
+```
+
+**72B** (3 steps, 23s):
+```fsharp
+module LastChar
+
+/// Returns the last character of a string.
+let getLastChar (s: string) : char =
+    s.[s.Length - 1]
+```
+
+**✓ 둘 다 bit-identical** — 정확한 fix + 원본 docstring 보존.
+
+**Step 차이**: 32B 는 4-step 으로 진행: read → write → **verification re-read** → final. 72B 는 3-step: read → write → final. **32B 가 오히려 더 신중한 패턴** (본인 작성 결과 확인).
+
+#### W2 — Add averageSafe function
+
+**32B** (3 steps, 14s):
+```fsharp
+module Average
+
+let average (xs: int list) : int =
+    (List.sum xs) / (List.length xs)
+
+let averageSafe (xs: int list) : int option =
+    match xs with
+    | [] -> None
+    | _ -> Some ((List.sum xs) / (List.length xs))
+```
+
+**72B** (3 steps, 29s):
+```fsharp
+module Average
+
+let average (xs: int list) : int =
+    (List.sum xs) / (List.length xs)
+
+let averageSafe (xs: int list) : int option =
+    if List.isEmpty xs then None
+    else Some ((List.sum xs) / (List.length xs))
+```
+
+**둘 다 functionally correct**. 차이:
+
+- **32B 가 pattern matching (`match xs with | [] -> None`)** — F# 관례상 더 idiomatic
+- **72B 가 `if List.isEmpty xs then None`** — 더 절차적 스타일
+
+**F# 커뮤니티 convention**: pattern matching 선호. **32B 가 미세 품질 우위**.
+
+### 10.3 Write generation 속도 비교
+
+```
+Step 2 (write_file 포함 step) inference 시간:
+  32B W1:  5.5s
+  72B W1: 11.9s  (2.2x)
+  32B W2:  6.2s
+  72B W2: 13.8s  (2.2x)
+```
+
+큰 `content` 필드를 생성하는 write 에서 **72B 의 token generation 속도 페널티가 두드러짐**.
+
+### 10.4 결론 (Phase C)
+
+- **양 모델 모두 write_file 정확히 사용** — content 필드 JSON escape 완벽, 기존 코드 보존.
+- **32B 가 오히려 더 F#-idiomatic** (pattern matching) + **self-verification 습관** (W1 에서 re-read).
+- **72B 가 2x 느리면서 품질 동등 또는 열위** — write task 에서도 72B 사용이 비용 대비 효과 낮음.
+
+---
+
+## 11. 종합 재평가 (Part 1 + Part 2)
+
+### 11.1 업데이트 된 총계
+
+| 카테고리 | 32B 결과 | 72B 결과 |
+|---------|----------|---------|
+| 단순 recall / 언어지식 (T1, T2, A-T1 variance) | 6/6 pass, 매우 빠름 | 6/6 pass, 2x 느림 |
+| 파일 read + 단순 처리 (T3, T4, T5) | 3/3 pass, 빠름 | 3/3 pass, 느림 |
+| **다단계 파일 탐색 (T6, A-T6 variance)** | **0/4 pass** ⭐ | **4/4 pass** ⭐ |
+| 엣지 케이스 추론 (T7) | 1/1 pass, 빠름 | 1/1 pass, 느림 |
+| **Debug (버그 식별, B1-B3)** | **3/3 pass** | **3/3 pass** |
+| **Write (read → modify → write, W1-W2)** | **2/2 pass** (idiomatic) | **2/2 pass** (절차적) |
+| **합계** | **15/16** (94%) | **19/19** (100%) |
+
+### 11.2 누적 시간
+
+- 32B 총합: ~165s (1 실패 포함)
+- 72B 총합: ~310s
+- **비율 72B/32B ≈ 1.88** — 일관된 2x 페널티
+
+### 11.3 의사결정 매트릭스 (실측 기반)
+
+| Task 특성 | 권장 모델 | 근거 |
+|-----------|----------|------|
+| 단일 파일 내 분석/설명 | **32B** | Debug 포함 대등한 정확도 + 2x 빠름 |
+| **단일 파일 버그 식별 + 수정 (write_file)** | **32B** | W1/W2 결과 동등, idiomatic 코드 선호 시 우위 |
+| **여러 파일에서 정보 수집/합성** | **72B** | T6 같은 multi-file 전략 필요 |
+| Counting / precise 계수 | 72B | T3 (32B "6" vs 72B "7") |
+| 신속 응답 우선 task | 32B | 특히 CLI 대화형 사용성 측면 |
+
+### 11.4 `classifyIntent` 라우팅 정책에 대한 제언
+
+현재:
+```
+Debug | Design | Analysis  → 72B
+Implementation | General   → 32B
+```
+
+실측에 따르면 **Debug intent 가 실제론 대부분 32B 로 충분**. 하지만 prompt keyword 로 "단일 파일 버그" vs "다파일 디자인 고찰" 을 구분하기 어렵다. **현재 정책은 보수적 over-routing 이며, 안전 측면에서 유지 권장**.
+
+대안 (v1.2+ 후보):
+- **Agent loop 중 step 2 에서 tool call count / file access count 관찰 후 runtime escalation** 이 가능하다면 더 효율적. 예: "3번째 `read_file` 이후 72B 로 자동 전환" 같은 adaptive routing.
+- 복잡도: 중간 step 에서 model 전환은 context history 재구성 등 추가 설계 필요.
+
+### 11.5 무엇이 여전히 미검증
+
+- **실제 race condition / concurrency bug 탐지** (F# `task {}` 계열의 subtle issue) — 위 B-tests 는 sequential 버그만 다룸
+- **여러 파일 간 일관성 검증** (한 파일의 변경이 다른 파일에 맞는지)
+- **Long multi-turn REPL** 에서 컨텍스트 누적 후 응답 품질 저하 여부
+- **72B 의 "창의적 설계" 영역** (새로운 module 디자인, 아키텍처 제안) — 본 벤치마크는 modification 만 다룸
+
+이런 영역은 **v1.2+ 벤치마크 패스** 또는 실사용 관찰로 측정 가능.
+
+---
+
+## 12. Fixture 정리
+
+Part 2 실행 후 `bench-fixtures/` 는 다음에 의해 git 에 commit 되지 않아야 함:
+
+```bash
+rm -rf /Users/ohama/projs/blueCode/bench-fixtures/
+```
+
+이 문서는 fixture 내용을 inline 으로 담고 있어 재현 가능. 실제 파일은 불필요.
+
+---
+
+*Part 2 수행: 2026-04-24 afternoon*
+*총 실행: 22 runs (variance 12 + debug 6 + write 4)*
+*결과 재현성: T6 의 32B 실패 / 72B 성공 모두 3/3 결정적 — variance 가설 기각*
