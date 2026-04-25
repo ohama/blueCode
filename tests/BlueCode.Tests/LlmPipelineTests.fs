@@ -74,7 +74,7 @@ let extractionTests =
 // ── Schema validation tests ───────────────────────────────────────────────────
 // Cover all schema violation modes: missing required field, unknown enum,
 // empty thought, wrong input type, extra field, and a happy-path for all
-// 5 valid action values.
+// 8 valid action values.
 
 let schemaTests =
     testList
@@ -122,9 +122,9 @@ let schemaTests =
               | Error(SchemaViolation _) -> ()
               | other -> failtestf "Expected SchemaViolation but got: %A" other
 
-          testCase "all 5 valid action enum values accepted"
+          testCase "all 8 valid action enum values accepted"
           <| fun () ->
-              for action in [ "read_file"; "write_file"; "list_dir"; "run_shell"; "final" ] do
+              for action in [ "read_file"; "write_file"; "list_dir"; "run_shell"; "edit_file"; "glob_search"; "grep_search"; "final" ] do
                   let content = sprintf """{"thought":"t","action":"%s","input":{}}""" action
 
                   match parseLlmResponse content with

@@ -377,4 +377,10 @@ let create (projectRoot: string) : IToolExecutor =
             | ReadFile(FilePath path, lineRange) -> readFileImpl rootNormalized path lineRange ct
             | WriteFile(FilePath path, content) -> writeFileImpl rootNormalized path content ct
             | ListDir(FilePath path, depth) -> listDirImpl rootNormalized path depth ct
-            | RunShell(Command cmd, BlueCode.Core.Domain.Timeout _timeoutMs) -> runShellImpl rootNormalized cmd ct }
+            | RunShell(Command cmd, BlueCode.Core.Domain.Timeout _timeoutMs) -> runShellImpl rootNormalized cmd ct
+            | EditFile(FilePath _, _, _) ->
+                task { return failwith "EditFile impl not yet wired (plan 08-02)" }
+            | GlobSearch(_, _) ->
+                task { return failwith "GlobSearch impl not yet wired (plan 08-02)" }
+            | GrepSearch(_, _, _) ->
+                task { return failwith "GrepSearch impl not yet wired (plan 08-02)" } }

@@ -30,7 +30,7 @@ let tests =
               finally
                   (c.JsonlSink :> IDisposable).Dispose()
 
-          testCase "bootstrap SystemPrompt mentions all 5 actions"
+          testCase "bootstrap SystemPrompt mentions all 8 actions"
           <| fun _ ->
               let tempRoot = Path.GetTempPath()
               let c = bootstrap tempRoot defaultCliOptions
@@ -38,7 +38,7 @@ let tests =
               try
                   let p = c.Config.SystemPrompt
 
-                  for action in [ "read_file"; "write_file"; "list_dir"; "run_shell"; "final" ] do
+                  for action in [ "read_file"; "write_file"; "list_dir"; "run_shell"; "edit_file"; "glob_search"; "grep_search"; "final" ] do
                       Expect.stringContains p action (sprintf "system prompt mentions %s" action)
               finally
                   (c.JsonlSink :> IDisposable).Dispose() ]
