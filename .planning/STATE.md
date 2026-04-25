@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-24 for v1.2 milestone start)
 ## Current Position
 
 Milestone: v1.2 Tool Expansion (started 2026-04-24)
-Phase: Phase 8 (not started — roadmap ready, awaiting plan-phase)
-Plan: —
-Status: ROADMAP.md created. Phase 8 covers TLX-01/02/03; Phase 9 covers TOOL-08. Ready to plan Phase 8.
-Last activity: 2026-04-23 — ROADMAP.md + traceability written; STATE.md updated to roadmap-ready position
+Phase: Phase 8 (in progress — Plan 01 complete; Plan 02 next)
+Plan: 08-01 complete; 08-02 is next
+Status: Shared-seam foundation wired. Tool DU has 7 cases, schema enum 8 values, system prompt describes 8 actions, FsToolExecutor has stubs. Plan 08-02 implements real edit_file/glob_search/grep_search logic.
+Last activity: 2026-04-25 — Completed 08-01-PLAN.md (shared seam foundation)
 
-Progress: v1.2 [░░░░░░░░░░░░░░░░░░░░] 0% (0 of 4 REQs)
+Progress: v1.2 [░░░░░░░░░░░░░░░░░░░░] 0% (0 of 4 REQs satisfied — stubs don't count toward TLX-01/02/03)
 
 ## Performance Metrics (v1.0 + v1.1 — cumulative, frozen)
 
@@ -55,10 +55,10 @@ v1.3+ seed candidates (not v1.2 scope):
 
 ### Blockers/Concerns
 
-None — v1.1 shipped clean. Roadmap ready. Next: `/gsd:plan-phase 8`.
+None — v1.1 shipped clean. Plan 08-01 complete. Next: execute plan 08-02 (fill stubs with real impls + add tests).
 
 ## Session Continuity
 
-Last session: 2026-04-23
-Stopped at: ROADMAP.md created for v1.2 (Phases 8-9). REQUIREMENTS.md traceability filled. Ready to plan Phase 8.
-Resume file: None — run `/gsd:plan-phase 8` to begin.
+Last session: 2026-04-25
+Stopped at: Completed 08-01-PLAN.md — shared-seam foundation for edit_file/glob_search/grep_search.
+Resume file: None — run `/gsd:execute-phase 8` plan 02 (or directly execute .planning/phases/08-tool-expansion/08-02-PLAN.md).
