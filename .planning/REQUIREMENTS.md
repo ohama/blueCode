@@ -88,24 +88,22 @@ v1 boundaries unchanged. v1.3 adds no new exclusions; the deferred items above a
 
 ## Traceability
 
-Empty until roadmap creation. Each requirement maps to exactly one phase.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BENCH-01    | TBD   | Pending |
-| BENCH-02    | TBD   | Pending |
-| BENCH-03    | TBD   | Pending |
-| BENCH-04    | TBD   | Pending |
-| BENCH-05    | TBD   | Pending |
-| PERF-01     | TBD   | Pending |
-| PERF-02     | TBD   | Pending |
-| PERF-03     | TBD   | Pending |
+| BENCH-01    | Phase 10 | Pending |
+| BENCH-02    | Phase 10 | Pending |
+| BENCH-03    | Phase 10 | Pending |
+| BENCH-04    | Phase 10 | Pending |
+| BENCH-05    | Phase 10 | Pending |
+| PERF-01     | Phase 11 | Pending |
+| PERF-02     | Phase 11 | Pending |
+| PERF-03     | Phase 11 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 8 total
-- Mapped to phases: 0 (roadmap not yet created)
-- Unmapped: 8 ⚠
+- Mapped to phases: 8 (roadmap created 2026-04-26)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 — initial v1.3 definition*
+*Last updated: 2026-04-26 — traceability filled after roadmap creation*
