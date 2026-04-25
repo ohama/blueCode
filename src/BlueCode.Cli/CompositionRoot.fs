@@ -57,6 +57,7 @@ Every response MUST be strict JSON of this shape:
 Action input schemas:
 - read_file:   {"path": "<rel-path>", "start_line": <int?>, "end_line": <int?>}
                Tool output begins: [file: <path>, lines X-Y of Z, not-truncated|truncated|out-of-range]
+               If truncated: content was clipped to 2000 chars; pick a smaller window (e.g., end_line - start_line < 50) to fetch unclipped content.
                If out-of-range: requested start_line > total_lines (Z); choose a start_line <= Z.
 - write_file:  {"path": "<rel-path>", "content": "<full-new-content>"}
 - list_dir:    {"path": "<rel-path>", "depth": <int?>}
