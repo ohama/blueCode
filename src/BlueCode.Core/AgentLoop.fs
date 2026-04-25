@@ -197,7 +197,12 @@ let private callLlmWithRetry
 /// model away from write_file/read_file on the already-edited path. This message
 /// appears AFTER the user turn so it post-dates and overrides any user-prompt tool
 /// instruction (loop-injection Option A, Plan 09.1-05).
-let private buildMessages (systemPrompt: string) (userInput: string) (recentSteps: Step list) (lastEditPath: string option) : Message list =
+///
+/// lastReadHint: when Some (path, status) where status is "truncated" or
+/// "out-of-range", appends a System-role [POST-READ HINT] message at the END
+/// of the message list guiding the model toward a smaller window or a valid
+/// start_line. Extends the 09.1-05 loop-injection primitive (Plan 11-01).
+let private buildMessages (systemPrompt: string) (userInput: string) (recentSteps: Step list) (lastEditPath: string option) (lastReadHint: (string * string) option) : Message list =
     let systemMsg =
         { Role = System
           Content = systemPrompt }
@@ -232,16 +237,32 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
 
     let baseMsgs = systemMsg :: userMsg :: stepMsgs
 
-    match lastEditPath with
-    | Some path ->
-        let constraintMsg =
+    let withEdit =
+        match lastEditPath with
+        | Some path ->
+            let constraintMsg =
+                { Role = System
+                  Content =
+                    sprintf
+                        "[POST-EDIT CONSTRAINT] You just successfully edited %s. The edit is already persisted. Your next action MUST be either `final` (preferred) or `edit_file` on a different concern. Do NOT call `write_file` on `%s` — it is redundant. Do NOT call `read_file` on `%s` to verify — `edit_file` already confirmed the change. This constraint is mandatory regardless of any earlier user instruction."
+                        path path path }
+            baseMsgs @ [ constraintMsg ]
+        | None -> baseMsgs
+
+    match lastReadHint with
+    | Some (path, "truncated") ->
+        withEdit @ [
             { Role = System
               Content =
-                sprintf
-                    "[POST-EDIT CONSTRAINT] You just successfully edited %s. The edit is already persisted. Your next action MUST be either `final` (preferred) or `edit_file` on a different concern. Do NOT call `write_file` on `%s` — it is redundant. Do NOT call `read_file` on `%s` to verify — `edit_file` already confirmed the change. This constraint is mandatory regardless of any earlier user instruction."
-                    path path path }
-        baseMsgs @ [ constraintMsg ]
-    | None -> baseMsgs
+                sprintf "[POST-READ HINT] The previous read_file on %s returned truncated content (clipped to 2000 chars). Pick a smaller window — set end_line - start_line < 50 — and read again to get unclipped content." path }
+        ]
+    | Some (path, "out-of-range") ->
+        withEdit @ [
+            { Role = System
+              Content =
+                sprintf "[POST-READ HINT] The previous read_file on %s returned out-of-range (start_line > total_lines). The header reported total_lines; choose a start_line <= total_lines and read again." path }
+        ]
+    | _ -> withEdit
 
 // ── Recursive agent loop (LOOP-01..05, OBS-04) ───────────────────────────────
 
@@ -252,6 +273,10 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
 /// lastEditPath: Some path when the immediately preceding step was a successful
 /// EditFile on that path; None otherwise. Used by buildMessages to inject a
 /// post-edit constraint message (Plan 09.1-05 loop-injection Option A).
+/// lastReadHint: Some (path, status) when the immediately preceding step was a
+/// read_file whose Success header reported "truncated" or "out-of-range"; None
+/// otherwise. Used by buildMessages to inject a post-read hint message
+/// (Plan 11-01, extending 09.1-05's loop-injection primitive).
 let rec private runLoop
     (config: AgentConfig)
     (model: Model)
@@ -263,6 +288,7 @@ let rec private runLoop
     (loopN: int)
     (steps: Step list)
     (lastEditPath: string option)
+    (lastReadHint: (string * string) option)
     (onStep: Step -> unit)
     (ct: CancellationToken)
     : Task<Result<AgentResult, AgentError>> =
@@ -271,7 +297,7 @@ let rec private runLoop
             return Error MaxLoopsExceeded
         else
             let history = ContextBuffer.toList ctx |> List.rev // chronological
-            let messages = buildMessages config.SystemPrompt userInput history lastEditPath
+            let messages = buildMessages config.SystemPrompt userInput history lastEditPath lastReadHint
             let startedAt = DateTimeOffset.UtcNow
 
             let! llmResult = callLlmWithRetry client messages model ct
@@ -344,7 +370,19 @@ let rec private runLoop
                                 match tool, tr with
                                 | EditFile (FilePath p, _, _), Success _ -> Some p
                                 | _ -> None
-                            return! runLoop config model client tools userInput ctx' guard' (loopN + 1) steps' lastEditPath' onStep ct
+                            let lastReadHint' =
+                                match tool, tr with
+                                | ReadFile (FilePath p, _), Success payload ->
+                                    // payload starts with "[file: <path>, lines X-Y of Z, <status>]\n..."
+                                    // Cheapest reliable check: substring search on the FIRST line only.
+                                    let firstLine =
+                                        let nl = payload.IndexOf('\n')
+                                        if nl > 0 then payload.Substring(0, nl) else payload
+                                    if firstLine.Contains(", truncated]") then Some (p, "truncated")
+                                    elif firstLine.Contains(", out-of-range]") then Some (p, "out-of-range")
+                                    else None
+                                | _ -> None
+                            return! runLoop config model client tools userInput ctx' guard' (loopN + 1) steps' lastEditPath' lastReadHint' onStep ct
     }
 
 // ── Public entry point ────────────────────────────────────────────────────────
@@ -367,4 +405,4 @@ let runSession
 
     let ctx = ContextBuffer.create config.ContextCapacity
     let guard = Map.empty: LoopGuardState
-    runLoop config model client tools userInput ctx guard 0 [] None onStep ct
+    runLoop config model client tools userInput ctx guard 0 [] None None onStep ct
