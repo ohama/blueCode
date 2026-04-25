@@ -158,6 +158,21 @@ CI fails on any `async {}` literal in `src/BlueCode.Core/`. All Core CE use `tas
 - Don't assume Windows paths; `tryParseModelId`'s `StartsWith("/")` heuristic is Unix-only (v1 Mac-only permits this)
 - Don't commit `.claude/` or `localLLM/` — they're intentionally untracked
 
+## Bench
+
+`bench/run.sh` is the canonical regression harness — repo-tracked replacement for
+v1.2's ephemeral `/tmp/bench-v1.2/run.sh`. Run `bench/run.sh --gate` (added in
+Plan 10-02) to validate the current binary against `bench/baseline.json`.
+
+- `--gate` — regression subset (~8 invocations, ~2 min); exits non-zero on regression
+- `--canary` — quick smoke (4 invocations, ~1.5 min)
+- `--regression` — full Part 1 reproducibility (14 invocations)
+- `--all` — everything (~25 min)
+- `--b2` — B2 divide-by-zero diagnose only
+
+Fixtures live in `bench/fixtures/`. Logs land in `bench/runs/<timestamp>/`
+(gitignored). See `documentation/bench.md` for full usage and fixture conventions.
+
 ## When Stuck
 
 1. Check `.planning/STATE.md` for the most recent Accumulated Decisions — v1.0 and v1.1 sessions captured dozens of subtle gotchas there
