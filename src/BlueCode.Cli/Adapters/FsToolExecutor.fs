@@ -104,6 +104,15 @@ let private validatePath (projectRoot: string) (inputPath: string) : Result<stri
 /// Read a file with an optional 1-indexed inclusive line range.
 /// None          -> return the whole file (truncated at 2000 chars)
 /// Some (s, e)   -> return lines s..e (truncated at 2000 chars)
+///
+/// TOOL-08: every Success payload begins with a one-line metadata header:
+///   [file: <relPath>, lines X-Y of Z, <not-truncated|truncated|out-of-range>]
+/// followed by '\n' + the (possibly truncated) content. For out-of-range
+/// requests (start_line > totalLines), the payload is the header alone — no
+/// trailing newline, no content. The header itself is NEVER truncated; only
+/// the content portion is fed through `truncateOutput`. Use the input `path`
+/// (relative) in the header — never `resolved` (absolute) — to avoid leaking
+/// host paths through the LLM message history (CLAUDE.md invariant).
 let private readFileImpl
     (projectRoot: string)
     (path: string)
@@ -117,24 +126,56 @@ let private readFileImpl
         | Error tr -> return Ok tr
         | Ok resolved ->
             try
-                let content =
-                    match lineRange with
-                    | None -> File.ReadAllText(resolved)
-                    | Some(startLine, endLine) when startLine >= 1 && endLine >= startLine ->
-                        let lines = File.ReadLines(resolved)
+                // TOOL-08: unify on ReadAllLines so we have totalLines for the header.
+                let allLines = File.ReadAllLines(resolved)
+                let totalLines = allLines.Length
 
-                        let selected =
-                            lines
-                            |> Seq.skip (startLine - 1)
-                            |> Seq.truncate (endLine - startLine + 1)
-                            |> Seq.toArray
+                match lineRange with
+                | Some(s, e) when not (s >= 1 && e >= s) ->
+                    // Invalid range — keep the existing Failure path; no header.
+                    return Ok(Failure(1, sprintf "[invalid line range: (%d, %d)]" s e))
+                | _ ->
+                    let headerStart, headerEnd, rawContent, status =
+                        match lineRange with
+                        | None ->
+                            let raw = String.Join("\n", allLines)
+                            let st =
+                                if raw.Length > MESSAGE_HISTORY_CAP then "truncated"
+                                else "not-truncated"
+                            (1, totalLines, raw, st)
+                        | Some(startLine, endLine) ->
+                            if startLine > totalLines then
+                                // out-of-range: preserve the RAW requested range in the header,
+                                // empty content. Do NOT clamp endLine here (RESEARCH Pitfall 3).
+                                (startLine, endLine, "", "out-of-range")
+                            else
+                                let selected =
+                                    allLines
+                                    |> Array.skip (startLine - 1)
+                                    |> Array.truncate (endLine - startLine + 1)
+                                let raw = String.Join("\n", selected)
+                                let actualEnd = min endLine totalLines
+                                let st =
+                                    if raw.Length > MESSAGE_HISTORY_CAP then "truncated"
+                                    else "not-truncated"
+                                (startLine, actualEnd, raw, st)
 
-                        String.Join("\n", selected)
-                    | Some(s, e) ->
-                        // Invalid range: report as Failure so the LLM can correct.
-                        sprintf "[invalid line range: (%d, %d)]" s e
+                    let header =
+                        sprintf
+                            "[file: %s, lines %d-%d of %d, %s]"
+                            path
+                            headerStart
+                            headerEnd
+                            totalLines
+                            status
 
-                return Ok(Success(truncateOutput content))
+                    let payload =
+                        if status = "out-of-range" then
+                            header
+                        else
+                            header + "\n" + truncateOutput rawContent
+
+                    return Ok(Success payload)
             with
             | :? FileNotFoundException as ex -> return Ok(Failure(1, ex.Message))
             | :? DirectoryNotFoundException as ex -> return Ok(Failure(1, ex.Message))

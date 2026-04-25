@@ -83,10 +83,13 @@ let readFileTests =
 
                   match result with
                   | Ok(Success content) ->
-                      Expect.isFalse (content.Contains("a")) "should NOT include line 1"
-                      Expect.stringContains content "b" "should include line 2"
-                      Expect.stringContains content "c" "should include line 3"
-                      Expect.isFalse (content.Contains("d")) "should NOT include line 4"
+                      // TOOL-08: header contains letters like 'a' (in "truncated")
+                      // and 'd' (in "truncated"); anchor body checks with '\n' so they
+                      // can only match the line content, never the header.
+                      Expect.isFalse (content.Contains("\na\n")) "should NOT include line 1"
+                      Expect.stringContains content "\nb" "should include line 2"
+                      Expect.stringContains content "\nc" "should include line 3"
+                      Expect.isFalse (content.Contains("\nd")) "should NOT include line 4"
                   | other -> failtestf "expected Success, got %A" other
               finally
                   cleanup root
