@@ -5,17 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-04-24 for v1.2 milestone start)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** v1.2 Tool Expansion — milestone complete (Phases 8 + 9 verified ✓); ready to audit + archive
+**Current focus:** v1.2 Tool Expansion — Phase 9.1 inserted to close audit tech-debt (TOOL-08 dispatcher gap, 72B `truncated` regression, 32B edit_file+write_file redundancy) before milestone archive.
 
 ## Current Position
 
-Milestone: v1.2 Tool Expansion (started 2026-04-24, completed 2026-04-25)
-Phase: All v1.2 phases complete and verified (Phase 8 ✓ 5/5, Phase 9 ✓ 5/5). Milestone-level audit + archive next.
-Plan: 09-01 SUMMARY landed — 3 atomic task commits (bf6cfce, ab14cd0, 32f5376) + plan-metadata commit (27d5732). All 4 v1.2 REQs satisfied.
-Status: read_file Success payloads now begin with '[file: <path>, lines X-Y of Z, <not-truncated|truncated|out-of-range>]\n' — TOOL-08 closed. 240 tests pass (236 baseline + 4 new TOOL-08), 1 ignored, 0 failed. Core untouched (zero diff in src/BlueCode.Core/).
-Last activity: 2026-04-25 — Phase 9 verified passed (09-VERIFICATION.md, 5/5 must-haves); v1.2 milestone ready for /gsd:audit-milestone or /gsd:complete-milestone
+Milestone: v1.2 Tool Expansion (started 2026-04-24; Phases 8 + 9 verified 2026-04-25; **9.1 inserted 2026-04-25** post-audit re-bench)
+Phase: 9.1 Bench Follow-up Fixes — 1/3 plans complete
+Plan: 09.1-01 complete (system prompt clarifications — Fix 2 truncated hint + Fix 3 edit_file terminal hint). Ready for Wave 2: Plan 09.1-02 (dispatcher fix + production-trace test).
+Status: 240 tests passing; two atomic commits landed (6eb0892, d251489). Wave 1 (lowest-risk system-prompt edits) done. v1.2 milestone close still blocked on 9.1 completion.
+Last activity: 2026-04-25 — Completed 09.1-01-PLAN.md. Added Fix 2 + Fix 3 verbatim hints to defaultSystemPrompt in CompositionRoot.fs (+2 lines, 0 deletions). Next: execute Plan 09.1-02 (dispatcher partial-bounds fix + production-trace test).
 
-Progress: v1.2 [████████████████████] 100% (4 of 4 REQs satisfied — TLX-01/02/03 ✓ Phase 8; TOOL-08 ✓ Phase 9)
+Progress: v1.2 [██████████████████░░] structurally 100% (4/4 REQs marked Complete by spec) but **behaviorally ~75%** until Phase 9.1 closes TOOL-08's dispatcher bridge and recovers the 72B T6 baseline.
+
+### Roadmap Evolution
+
+- **2026-04-25** — Phase 9.1 (Bench Follow-up Fixes) inserted after Phase 9 via `/gsd:insert-phase`. URGENT — closes three tech-debt items from `.planning/v1.2-MILESTONE-AUDIT.md` discovered in same-day live re-bench (Part 3 of `documentation/benchmark-32b-vs-72b.md`, 36 runs). Reason: spec-vs-implementation contract was clean (audit `passed` initially), but T6 32B failure trace (`start_line` only, no `end_line`) never reaches the new out-of-range branch because `AgentLoop.dispatchTool` collapses partial bounds to `None`; and 72B's `truncated` semantics regressed v1.1 baseline 4/4 → 0/4. Implementation framing: Option A from `documentation/v1.2-bench-followup.md` §6 — ship v1.2 with the actual T6 fix landed rather than carrying the regression into v1.3.
 
 ## Performance Metrics (v1.0 + v1.1 — cumulative, frozen)
 
@@ -62,10 +66,10 @@ v1.3+ seed candidates (not v1.2 scope):
 
 ### Blockers/Concerns
 
-None — Phase 9 verified passed (5/5 must-haves). 240 tests passing (236 baseline + 4 new TOOL-08), 1 ignored, 0 failed. Core diff empty. All 4 v1.2 REQs satisfied. Next: `/gsd:audit-milestone` or `/gsd:complete-milestone` to archive v1.2 and tag.
+None blocking 9.1 planning. Pre-existing structural state: 240 tests passing, Core diff empty for Phase 9, all spec-level v1.2 REQs Complete. Behavioral concerns are the explicit subject of Phase 9.1 — see `.planning/v1.2-MILESTONE-AUDIT.md` `tech_debt[]` for the bench evidence and `documentation/v1.2-bench-followup.md` §1 for root-cause attribution.
 
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 9 complete + verified. ROADMAP/STATE/REQUIREMENTS updated; TOOL-08 marked Complete.
-Resume file: None — run `/gsd:audit-milestone` to verify cross-phase integration before archive, or `/gsd:complete-milestone` to archive v1.2 directly.
+Stopped at: Completed 09.1-01-PLAN.md (system prompt clarifications — Fix 2 + Fix 3).
+Resume file: None — execute Plan 09.1-02 (dispatcher partial-bounds fix + production-trace test), then 09.1-03 (benchmark re-run), then `/gsd:verify-work 9.1` → `/gsd:audit-milestone` → `/gsd:complete-milestone`.
