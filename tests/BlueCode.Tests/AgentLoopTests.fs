@@ -162,4 +162,47 @@ let agentLoopTests =
                   Expect.isTrue (step.DurationMs >= 0L) "DurationMs should be non-negative"
           }
 
+          testCaseAsync "post-edit_file injection: second LLM call sees [POST-EDIT CONSTRAINT] with edited path"
+          <| async {
+              // Capture every messages list passed to CompleteAsync
+              let captured = System.Collections.Generic.List<Message list>()
+
+              let scriptedReplies =
+                  [ makeMockResponse "editing"
+                        (toolCall "edit_file"
+                            "{\"path\":\"foo.fs\",\"old_string\":\"a\",\"new_string\":\"b\"}")
+                    makeMockResponse "done" (FinalAnswer "ok") ]
+              let queue = System.Collections.Generic.Queue<_>(scriptedReplies)
+
+              let recordingLlm : ILlmClient =
+                  { new ILlmClient with
+                      member _.CompleteAsync messages _model _ct =
+                          captured.Add(messages)
+                          Task.FromResult(queue.Dequeue()) }
+
+              let! result =
+                  runSession testConfig recordingLlm mockToolsOk discardStep "edit foo.fs" CancellationToken.None
+                  |> Async.AwaitTask
+
+              match result with
+              | Error e -> failtestf "expected Ok, got Error %A" e
+              | Ok _ ->
+                  Expect.equal captured.Count 2 "should be exactly 2 LLM calls (edit + final)"
+                  let secondCallText =
+                      captured.[1]
+                      |> List.map (fun m -> m.Content)
+                      |> String.concat "\n"
+                  Expect.stringContains secondCallText "[POST-EDIT CONSTRAINT]"
+                      "second LLM call must contain the injection marker"
+                  Expect.stringContains secondCallText "foo.fs"
+                      "second LLM call must reference the edited path"
+                  // Negative check: first call must NOT contain the marker
+                  let firstCallText =
+                      captured.[0]
+                      |> List.map (fun m -> m.Content)
+                      |> String.concat "\n"
+                  Expect.isFalse (firstCallText.Contains("[POST-EDIT CONSTRAINT]"))
+                      "first LLM call (no prior edit) must not contain the marker"
+          }
+
           ]
