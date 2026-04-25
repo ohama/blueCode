@@ -4,14 +4,22 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
+## Current Milestone: v1.3 Bench-Driven Quality Gates
+
+**Goal:** Lock in v1.2's behavioral wins as a regressable suite (move bench from `/tmp/` to repo-tracked `bench/` with `--gate` mode), then use that suite to validate a system-prompt shrink that closes the B2 regression and creates headroom for future tools.
+
+**Target features (8 requirements, 2 phases):**
+
+- **Bench (BENCH-01..05)**: `bench/run.sh` consolidates v1.2's `/tmp/` selectors with semantic names; `bench/fixtures/` versions the bug fixtures; `bench/baseline.json` records the post-9.1 baseline; `--gate` mode runs the regression subset (~2 min) and exits non-zero on regression; `documentation/bench.md` explains conventions
+- **Performance (PERF-01..03)**: `defaultSystemPrompt` cut from ~1500 chars to ≤800 chars without regressing any bench gate; 09.1-05 loop-injection primitive extended to post-tool-result hints (`read_file`-truncated, optionally post-`write_file`); B2 fixture (divide-by-zero misdiagnosis) returns to v1.1 baseline behavior
+
+**Scope:** Quality gates only. Excluded: STM-01 streaming (UX win, no measured pain), SES-01 session persistence (XL), ROU-05 auto-escalation (less urgent post-9.1), OPS-01 cache hygiene (9.1 needed zero kickstarts), OBS-06 max-model-len visibility (minor), TST-01 mock-helper dedupe (minor).
+
+**Phase numbering:** continues at 10, 11 (v1.0 used 1-5; v1.1 used 6-7; v1.2 used 8 + 9 + 9.1 inserted).
+
 ## Current State (post-v1.2)
 
 v1.2 Tool Expansion shipped 2026-04-26. blueCode now has 7 first-class agent tools (`read_file` with metadata header, `write_file`, `list_dir`, `run_shell`, `edit_file`, `glob_search`, `grep_search`), an 8-value action schema enum, and a code-level loop-injection primitive (`lastEditPath` threaded through `runLoop` + post-user `[POST-EDIT CONSTRAINT]` System message) that enforces tool-terminality independent of system-prompt wording. Three milestones shipped: v1.0 MVP, v1.1 Refinement, v1.2 Tool Expansion. Daily-driver use ongoing as the user's primary Mac coding agent (Python `claw-code-agent` retired post-v1.0).
-
-**Next milestone TBD.** Run `/gsd:new-milestone` to scope v1.3. Strongest candidates from the v1.2 audit + Phase 9.1 discoveries:
-- **Bench harness formalization** — move `/tmp/bench-v1.2/run.sh` and `bench-fixtures/` to repo-tracked `bench/` with `--gate` mode for regression detection
-- **PERF-01** system prompt shrink (~1500 → ~700 chars) using 09.1-05's loop-injection primitive to move contextual hints out of the base prompt; B2 regression provides concrete validation signal
-- **STM-01** SSE streaming output (deferred from v1.0/v1.1; no measured pain but a UX win)
 
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2}-ROADMAP.md`.
 
@@ -42,23 +50,28 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ `read_file` metadata header `[file:..., lines X-Y of Z, not-truncated|truncated|out-of-range]` with dispatcher default-window for partial bounds — v1.2 (TOOL-08, behaviorally completed in 9.1)
 - ✓ Code-level loop-injection primitive — `lastEditPath` threaded through `runLoop`; post-user-prompt System-role message enforces tool-terminality at conversation-history layer (overrides user-prompt explicit tool naming) — v1.2 (Phase 9.1, reusable for future post-tool constraints)
 
-### Active (next milestone — TBD)
+### Active (v1.3 Bench-Driven Quality Gates)
 
-<!-- Cleared after v1.2 close. Run /gsd:new-milestone to scope v1.3 requirements. -->
+<!-- v1.3 scope confirmed 2026-04-26. 8 requirements across 2 phases. -->
 
-(none — v1.3 scope pending)
+- [ ] **BENCH-01**: `bench/run.sh` repo-tracked, consolidates v1.2's `/tmp/` selectors with semantic names
+- [ ] **BENCH-02**: `bench/fixtures/` holds versioned bug fixtures (currently in untracked `bench-fixtures/`)
+- [ ] **BENCH-03**: `bench/baseline.json` records the post-9.1 baseline (T6 32B/72B step counts + pass status, W1/W2 32B step counts, T1/T5 timings, B2 regression status)
+- [ ] **BENCH-04**: `bench/run.sh --gate` runs the regression subset (~2 min), prints one-line PASS/FAIL + diff, exits non-zero on regression
+- [ ] **BENCH-05**: `documentation/bench.md` explains fixture conventions and how to add new tests
+- [ ] **PERF-01**: `defaultSystemPrompt` cut from ~1500 to ≤800 chars without regressing any `bench/run.sh --gate` test
+- [ ] **PERF-02**: 09.1-05 loop-injection primitive extended to post-`read_file`-truncated (and optionally post-`write_file`) cases; contextual hints move from base prompt to post-tool injections
+- [ ] **PERF-03**: B2 fixture (divide-by-zero misdiagnosis) returns to v1.1 baseline behavior — validates the audit's prompt-length hypothesis
 
-### Deferred (v1.3+ candidates from v1.2 close)
+### Deferred (v1.4+ candidates)
 
-- Bench harness formalization — `/tmp/bench-v1.2/run.sh` → repo-tracked `bench/` with `--gate` regression mode (newly motivated by v1.2's two audit-rebench cycles)
-- System prompt shrink (PERF-01, ~1500 → ~700 chars) — pre-research + experimental validation; B2 regression provides concrete signal; could leverage 9.1-05 loop-injection to move contextual hints to post-tool injections
 - Streaming output (STM-01) — big redesign, no measured pain
 - Session persistence + `--resume` (SES-01) — XL, no measured pain
 - Auto-escalation on MaxLoopsExceeded (ROU-05) — TOOL-08 + 9.1 closure makes this less urgent
 - Ctrl+C UX polish (CLI-08) — minor
 - Per-port `MaxModelLen` visibility (OBS-06) — minor
 - Prompt cache hygiene / launchd kickstart (OPS-01) — 9.1-05 bench needed zero kickstarts
-- Shared `makeMockResponse` helper (TST-01) — minor code hygiene
+- Shared `makeMockResponse` helper (TST-01) — minor; possible bundle into Phase 10 cleanup
 - Multi-platform `tryParseModelId` — Windows OOS
 
 ### Out of Scope
@@ -166,4 +179,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-26 after v1.2 milestone complete*
+*Last updated: 2026-04-26 after starting v1.3 milestone*
