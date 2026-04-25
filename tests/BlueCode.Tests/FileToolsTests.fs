@@ -138,6 +138,100 @@ let readFileTests =
                       Expect.stringContains content "[truncated:" "marker must be present"
                   | other -> failtestf "expected Success, got %A" other
               finally
+                  cleanup root
+
+          testCase "TOOL-08: header present for full-file read (not-truncated)"
+          <| fun () ->
+              let root = newFixture ()
+              try
+                  File.WriteAllText(Path.Combine(root, "hdr.txt"), "one\ntwo\nthree\n")
+                  let exe = create root
+                  let result = exec exe (ReadFile(FilePath "hdr.txt", None))
+                  match result with
+                  | Ok(Success content) ->
+                      Expect.stringContains
+                          content
+                          "[file: hdr.txt, lines 1-3 of 3, not-truncated]"
+                          "header present for full-file read"
+                      Expect.stringContains content "one" "content still present"
+                      Expect.stringContains content "three" "last line still present"
+                  | other -> failtestf "expected Success, got %A" other
+              finally
+                  cleanup root
+
+          testCase "TOOL-08: header present for bounded read (not-truncated)"
+          <| fun () ->
+              let root = newFixture ()
+              try
+                  File.WriteAllText(Path.Combine(root, "range.txt"), "a\nb\nc\nd\ne\n")
+                  let exe = create root
+                  let result = exec exe (ReadFile(FilePath "range.txt", Some(2, 4)))
+                  match result with
+                  | Ok(Success content) ->
+                      Expect.stringContains
+                          content
+                          "[file: range.txt, lines 2-4 of 5, not-truncated]"
+                          "header correct for bounded read"
+                      // Body checks anchored with '\n' so single-letter line markers
+                      // cannot collide with header words like 'truncated' (has 'a')
+                      // or 'lines' / 'file' (have 'e').
+                      Expect.stringContains content "\nb" "line 2 present"
+                      Expect.stringContains content "\nc" "line 3 present"
+                      Expect.stringContains content "\nd" "line 4 present"
+                      Expect.isFalse (content.Contains("\na")) "line 1 absent"
+                      Expect.isFalse (content.Contains("\ne")) "line 5 absent"
+                  | other -> failtestf "expected Success, got %A" other
+              finally
+                  cleanup root
+
+          testCase "TOOL-08: header shows truncated when content exceeds 2000 chars"
+          <| fun () ->
+              let root = newFixture ()
+              try
+                  // 30 lines of 100 'x' chars each = 3029 chars raw (> 2000 cap).
+                  let bigLine = String.replicate 100 "x"
+                  let lines = Array.create 30 bigLine
+                  File.WriteAllText(Path.Combine(root, "big.txt"), String.Join("\n", lines))
+                  let exe = create root
+                  let result = exec exe (ReadFile(FilePath "big.txt", None))
+                  match result with
+                  | Ok(Success content) ->
+                      Expect.stringContains
+                          content
+                          "[file: big.txt, lines 1-30 of 30, truncated]"
+                          "header shows truncated status"
+                      Expect.stringContains
+                          content
+                          "[truncated:"
+                          "existing TOOL-06 truncation marker still in content"
+                  | other -> failtestf "expected Success, got %A" other
+              finally
+                  cleanup root
+
+          testCase "TOOL-08: out-of-range start_line returns header-only with out-of-range status"
+          <| fun () ->
+              let root = newFixture ()
+              try
+                  File.WriteAllText(
+                      Path.Combine(root, "small.txt"),
+                      "only\nthree\nlines\n"
+                  )
+                  let exe = create root
+                  // Request start_line=100 on a 3-line file — out-of-range.
+                  let result = exec exe (ReadFile(FilePath "small.txt", Some(100, 200)))
+                  match result with
+                  | Ok(Success content) ->
+                      Expect.stringContains
+                          content
+                          "[file: small.txt, lines 100-200 of 3, out-of-range]"
+                          "out-of-range header preserves requested range"
+                      // Content section MUST be empty — no file lines after the header.
+                      Expect.isFalse (content.Contains("only")) "no file content in out-of-range response"
+                      Expect.isFalse (content.Contains("three")) "no file content in out-of-range response"
+                      // Note: 'lines' appears in the header itself, so we cannot assert
+                      // its absence; the other two body words are sufficient proof.
+                  | other -> failtestf "expected Success, got %A" other
+              finally
                   cleanup root ]
 
 let writeFileTests =
