@@ -205,4 +205,53 @@ let agentLoopTests =
                       "first LLM call (no prior edit) must not contain the marker"
           }
 
+          testCaseAsync "post-read_file injection: truncated header triggers [POST-READ HINT] on next call"
+          <| async {
+              let captured = System.Collections.Generic.List<Message list>()
+
+              let scriptedReplies =
+                  [ makeMockResponse "reading"
+                        (toolCall "read_file" "{\"path\":\"big.fs\"}")
+                    makeMockResponse "done" (FinalAnswer "ok") ]
+              let queue = System.Collections.Generic.Queue<_>(scriptedReplies)
+
+              let recordingLlm : ILlmClient =
+                  { new ILlmClient with
+                      member _.CompleteAsync messages _model _ct =
+                          captured.Add(messages)
+                          Task.FromResult(queue.Dequeue()) }
+
+              // Tool executor: return a Success payload whose first line carries the
+              // ", truncated]" status — same format FsToolExecutor.readFileImpl emits.
+              let truncatedTools : IToolExecutor =
+                  { new IToolExecutor with
+                      member _.ExecuteAsync _tool _ct =
+                          let payload = "[file: big.fs, lines 1-100 of 100, truncated]\nfile contents go here ..."
+                          Task.FromResult(Ok (Success payload)) }
+
+              let! result =
+                  runSession testConfig recordingLlm truncatedTools discardStep "read big.fs" CancellationToken.None
+                  |> Async.AwaitTask
+
+              match result with
+              | Error e -> failtestf "expected Ok, got Error %A" e
+              | Ok _ ->
+                  Expect.equal captured.Count 2 "should be exactly 2 LLM calls (read + final)"
+                  let secondCallText =
+                      captured.[1]
+                      |> List.map (fun m -> m.Content)
+                      |> String.concat "\n"
+                  Expect.stringContains secondCallText "[POST-READ HINT]"
+                      "second LLM call must contain the post-read injection marker"
+                  Expect.stringContains secondCallText "big.fs"
+                      "second LLM call must reference the read path"
+                  // Negative check: first call must NOT contain the marker
+                  let firstCallText =
+                      captured.[0]
+                      |> List.map (fun m -> m.Content)
+                      |> String.concat "\n"
+                  Expect.isFalse (firstCallText.Contains("[POST-READ HINT]"))
+                      "first LLM call (no prior read) must not contain the marker"
+          }
+
           ]
