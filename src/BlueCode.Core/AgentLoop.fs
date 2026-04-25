@@ -191,7 +191,13 @@ let private callLlmWithRetry
 /// Message list per research § Pattern 10. FinalAnswer step emits only one
 /// assistant message (no observation). ToolCall step emits an assistant +
 /// observation pair.
-let private buildMessages (systemPrompt: string) (userInput: string) (recentSteps: Step list) : Message list =
+///
+/// lastEditPath: when Some path, appends a System-role constraint message at the
+/// END of the message list (after the user prompt and step history) directing the
+/// model away from write_file/read_file on the already-edited path. This message
+/// appears AFTER the user turn so it post-dates and overrides any user-prompt tool
+/// instruction (loop-injection Option A, Plan 09.1-05).
+let private buildMessages (systemPrompt: string) (userInput: string) (recentSteps: Step list) (lastEditPath: string option) : Message list =
     let systemMsg =
         { Role = System
           Content = systemPrompt }
@@ -224,7 +230,18 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
                 Content = assistantContent }
               { Role = User; Content = observation } ])
 
-    systemMsg :: userMsg :: stepMsgs
+    let baseMsgs = systemMsg :: userMsg :: stepMsgs
+
+    match lastEditPath with
+    | Some path ->
+        let constraintMsg =
+            { Role = System
+              Content =
+                sprintf
+                    "[POST-EDIT CONSTRAINT] You just successfully edited %s. The edit is already persisted. Your next action MUST be either `final` (preferred) or `edit_file` on a different concern. Do NOT call `write_file` on `%s` — it is redundant. Do NOT call `read_file` on `%s` to verify — `edit_file` already confirmed the change. This constraint is mandatory regardless of any earlier user instruction."
+                    path path path }
+        baseMsgs @ [ constraintMsg ]
+    | None -> baseMsgs
 
 // ── Recursive agent loop (LOOP-01..05, OBS-04) ───────────────────────────────
 
@@ -232,6 +249,9 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
 /// loopN >= config.MaxLoops return Error MaxLoopsExceeded (LOOP-02).
 /// onStep callback invoked after every completed Step — enables 04-02/04-03
 /// to write JSONL per-step (OBS-01).
+/// lastEditPath: Some path when the immediately preceding step was a successful
+/// EditFile on that path; None otherwise. Used by buildMessages to inject a
+/// post-edit constraint message (Plan 09.1-05 loop-injection Option A).
 let rec private runLoop
     (config: AgentConfig)
     (model: Model)
@@ -242,6 +262,7 @@ let rec private runLoop
     (guard: LoopGuardState)
     (loopN: int)
     (steps: Step list)
+    (lastEditPath: string option)
     (onStep: Step -> unit)
     (ct: CancellationToken)
     : Task<Result<AgentResult, AgentError>> =
@@ -250,7 +271,7 @@ let rec private runLoop
             return Error MaxLoopsExceeded
         else
             let history = ContextBuffer.toList ctx |> List.rev // chronological
-            let messages = buildMessages config.SystemPrompt userInput history
+            let messages = buildMessages config.SystemPrompt userInput history lastEditPath
             let startedAt = DateTimeOffset.UtcNow
 
             let! llmResult = callLlmWithRetry client messages model ct
@@ -319,7 +340,11 @@ let rec private runLoop
                             onStep step
                             let ctx' = ContextBuffer.add step ctx
                             let steps' = step :: steps
-                            return! runLoop config model client tools userInput ctx' guard' (loopN + 1) steps' onStep ct
+                            let lastEditPath' =
+                                match tool, tr with
+                                | EditFile (FilePath p, _, _), Success _ -> Some p
+                                | _ -> None
+                            return! runLoop config model client tools userInput ctx' guard' (loopN + 1) steps' lastEditPath' onStep ct
     }
 
 // ── Public entry point ────────────────────────────────────────────────────────
@@ -342,4 +367,4 @@ let runSession
 
     let ctx = ContextBuffer.create config.ContextCapacity
     let guard = Map.empty: LoopGuardState
-    runLoop config model client tools userInput ctx guard 0 [] onStep ct
+    runLoop config model client tools userInput ctx guard 0 [] None onStep ct
