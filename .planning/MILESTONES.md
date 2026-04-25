@@ -1,5 +1,36 @@
 # Project Milestones: blueCode
 
+## v1.2 Tool Expansion (Shipped: 2026-04-26)
+
+**Delivered:** Three new agent tools (`edit_file`, `glob_search`, `grep_search`) plus a `read_file` metadata header (TOOL-08), with a post-audit Phase 9.1 that hardened TOOL-08's actual behavioral effectiveness and shipped a reusable code-level loop-injection mechanism for tool-terminality enforcement (`[POST-EDIT CONSTRAINT]` System-role message, post-user-prompt position).
+
+**Phases completed:** 8 - 9 + 9.1 (decimal insertion) — 8 plans total (3 original + 5 in inserted Phase 9.1 across two gap-closure rounds)
+
+**Key accomplishments:**
+
+- Three new tools across the full stack (Tool DU + 8-value schema enum + executor + system prompt + 18 unit tests in `ToolExpansionTests.fs`) — `edit_file` exact-string surgical edit with 0/1/N match handling, `glob_search` project-rooted pattern finder, `grep_search` regex content search with ReDoS guard
+- `read_file` structured metadata header `[file: <path>, lines X-Y of Z, not-truncated|truncated|out-of-range]` prepended to every Success payload, with raw-`endLine` preservation on out-of-range to give the LLM an unambiguous bounds-violation signal
+- Phase 9.1 closed three audit-discovered effectiveness gaps via a multi-layered fix: dispatcher default-window for partial line bounds (`Some s, None → Some(s, s+99)`), system-prompt `truncated` strategy hint (restored 72B's narrow-window heuristic), directive `edit_file` terminal wording, and — when wording-only intervention proved insufficient against user-prompt explicit tool naming (W1's "using write_file") — a code-level `[POST-EDIT CONSTRAINT]` System-role message threaded through `runLoop` via `lastEditPath: string option` and appended at the END of `buildMessages`, leveraging conversation-history position-as-authority to override prior user instructions
+- Bench evidence: T6 × 32B 0/3 FAIL → 3/3 PASS; T6 × 72B 0/3 FAIL → 3/3 PASS (exceeded ≥2/3 prediction); W1 × 32B 4 → 3 steps PASS; W2 × 32B 4 → 3 steps PASS; T1/T5 canaries unchanged. Smoking-gun thought diff on W1 (post-09.1-05): `"Now, I will save the corrected version"` → `"The bug has been fixed and the change is confirmed. No further action is needed on this file."`
+- New architectural primitive — the loop-injection mechanism is reusable for any future tool-terminality concern (post-`read_file`-truncated hint, post-`write_file` redundancy guard, etc.); could let v1.3's PERF-01 prompt-shrink work move contextual hints out of the base system prompt and into post-tool-result injections
+
+**Stats:**
+
+- 3 phases (8, 9, 9.1), 8 plans, 242 tests passing (1 env-gated smoke ignored)
+- Source code delta confined to `src/BlueCode.Core/{AgentLoop.fs, Domain.fs}` and `src/BlueCode.Cli/{CompositionRoot.fs, Adapters/Json.fs, Adapters/FsToolExecutor.fs}`, plus `ToolExpansionTests.fs` (new) and `FileToolsTests.fs` / `AgentLoopTests.fs` additions
+- 43 commits since v1.1 close
+- ~3 days wall-clock (2026-04-24 milestone start → 2026-04-26 Phase 9.1 verifier passed)
+
+**Git range:** `c4f087e` (v1.1 close) → `776e1be` (Phase 9.1 phase-completion)
+
+**What's next:**
+
+v1.3 candidate: "Bench-Driven Quality Gates" — formalize the bench harness (move from `/tmp/bench-v1.2/` to repo-tracked `bench/` with regression-gate mode) and execute PERF-01 system-prompt shrink (~1500 → ~700 chars) with the formalized bench as the validation gate. The 09.1-05 loop-injection mechanism is a primitive that could let some prompt content move to post-tool-result injections instead of always living in the base prompt. Alternatives: tactical "just lock the bench" 1-phase milestone, or "+ STM-01 streaming" 3-phase milestone.
+
+**Audit note:** v1.2 ran `/gsd:audit-milestone` mid-milestone (post-Phase 9 completion). Initial verdict was `passed`; revised to `tech_debt` after a same-day 36-run re-bench surfaced TOOL-08 dispatcher gap, 72B `truncated` regression, and 32B edit_file+write_file redundancy. The audit's `tech_debt[]` items mapped 1:1 to Phase 9.1's deliverables, which closed all three. Final phase verifier returned `passed` 5/5 on 2026-04-26; v1.2 ships clean. **Bench discipline lesson:** structural verification (line numbers, schema enum, test pass) is necessary but insufficient — requirements citing specific failure traces need probe-style behavioral tests at phase verification time.
+
+---
+
 ## v1.1 Refinement (Shipped: 2026-04-24)
 
 **Delivered:** Three pieces of v1.0 technical debt cleaned up — portable model id resolution, lazy bootstrap probe, and real LLM thought capture in `--verbose` output. Mid-milestone gap closure (06-03) fixed a live regression where mlx_lm.server's HF Hub fallback overwrote the Instruct tokenizer with Base Coder weights.

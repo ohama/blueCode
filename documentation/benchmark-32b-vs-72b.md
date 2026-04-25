@@ -677,3 +677,240 @@ rm -rf /Users/ohama/projs/blueCode/bench-fixtures/
 *Part 2 수행: 2026-04-24 afternoon*
 *총 실행: 22 runs (variance 12 + debug 6 + write 4)*
 *결과 재현성: T6 의 32B 실패 / 72B 성공 모두 3/3 결정적 — variance 가설 기각*
+
+
+---
+
+# Part 3: v1.2 Re-bench (2026-04-25, post-milestone audit)
+
+v1.2 Tool Expansion 완료 후 동일한 36 runs 재실행. 새 기능 (TLX-01 `edit_file`, TLX-02 `glob_search`, TLX-03 `grep_search`, TOOL-08 `read_file` metadata header) 가 측정된 v1.1 pain point 들을 실제로 해결했는지, 그리고 부작용 (regression) 이 없는지 검증.
+
+**측정**: 2026-04-25, blueCode `5fbb940` (v1.2 Phase 9 complete), mlx_lm.server 0.31.3 (동일).
+
+> **TL;DR (가장 중요한 발견)**
+> - **T6 32B 실패는 여전 (3/3 결정적 fail)** — TOOL-08 metadata header 가 *원인적으로* 해결한다고 plan 했지만, **dispatcher 의 lineRange 구성 조건이 두 bound 모두를 요구** ([`AgentLoop.fs:69-72`](../src/BlueCode.Core/AgentLoop.fs#L69-L72)) 해서 LLM 이 `start_line` 만 보낼 때 `out-of-range` 헤더가 발동되지 않음. 부분 좌표 케이스가 v1.2 fix 의 사각지대.
+> - **T6 72B 가 PASS → FAIL 로 regress** (4/4 → 0/4). 새 헤더의 `truncated` 키워드가 72B 를 "전체 파일 다시 요청" 루프로 유도. v1.1 의 작은-window 탐색 전략이 사라짐.
+> - **B2 (divide-by-zero) 양 모델 모두 regress** — v1.1 둘 다 잡았으나 v1.2 둘 다 다른 버그 (integer truncation) 로 오인. 동일 fixture, 동일 프롬프트, 다른 시스템 프롬프트.
+> - **승점:** T3 32B counting accuracy 회복 ("6"→"7"), T5 72B 가 **`glob_search` 를 first-class 로 picking** (bash security gate 회피), T7 32B 가 ContextBuffer 의 "not a true ring buffer" 본질적 비판 도달.
+> - **W1/W2:** 32B 가 `edit_file` + `write_file` 을 **둘 다** 호출하는 redundant 패턴 (1-line edit 인데 full content 도 보냄). 72B 는 여전히 `write_file` only.
+> - 양 모델 합산 정확도: v1.1 34/35 (97%) → v1.2 24/30 (80%). **T6 72B regression 과 B2 양쪽 regression 이 주된 원인**.
+
+## 13. 실측 비교 표 (v1.1 vs v1.2)
+
+### 13.1 Part 1 (7 main tests × 2 models)
+
+| Test | Model | v1.1 | v1.2 | Δ |
+|------|-------|------|------|---|
+| T1 (2^10) | 32B | 3.3s ✓ | 3s ✓ | comparable |
+| T1 | 72B | 8.4s ✓ | 10s ✓ | comparable |
+| T2 (F# pipe) | 32B | 3.4s ✓ | 5s ✓ | +1.6s |
+| T2 | 72B | 6.6s ✓ | 8s ✓ | comparable |
+| T3 (file count) | 32B | 5.4s **"6 files" ✗** | 6s **"7 files" ✓** | **fixed** |
+| T3 | 72B | 10.3s ✓ | 10s ✓ | unchanged |
+| T4 (classifyIntent) | 32B | 8.8s ✓ | 10s ✓ | +1.2s |
+| T4 | 72B | 16.7s ✓ | 18s ✓ | comparable |
+| T5 (slnx wc -c) | 32B | 6.4s ✓ direct | 8s ✓ direct | unchanged path |
+| T5 | 72B | 21.5s ✓ via `find -exec` SecurityDenied retry | **20s ✓ via `glob_search`+wc** | **new tool picked** |
+| **T6** (Step fields) | **32B** | 32.4s ✗ MaxLoops | **21s ✗ LoopGuard** | **still fail (faster)** |
+| **T6** | **72B** | **46.5s ✓ 4 steps** | **78s ✗ MaxLoops** | **REGRESSION** |
+| T7 (CtxBuf edge) | 32B | 10.7s ✓ surface | 18s ✓ **"not true ring buffer"** | deeper, slower |
+| T7 | 72B | 27.3s ✓ | 32s ✓ | comparable |
+
+### 13.2 Phase A variance (T1, T6 × 3 each)
+
+| Test × Model | v1.1 (3 runs) | v1.2 (3 runs) | 결정성 |
+|--------------|---------------|---------------|--------|
+| T1 32B | 3 / 3 / 2 s | 4 / 3 / 3 s | 양쪽 안정 |
+| T1 72B | 7 / 6 / 6 s | 6 / 7 / 6 s | 양쪽 안정 |
+| **T6 32B** | **16 / 16 / 16 s, 3 fail** | **13 / 13 / 13 s, 3 fail** | **결정적 fail (faster)** |
+| **T6 72B** | **29 / 28 / 29 s, 3 PASS** | **36 / 37 / 36 s, 3 FAIL** | **결정적 regression** |
+
+T6 72B 의 PASS → FAIL 은 noise 가 아님. 3/3 동일한 방식으로 실패. v1.2 의 헤더 변경이 72B 의 추론 전략을 바꿨다.
+
+### 13.3 Phase B debug
+
+| Test | Model | v1.1 응답 | v1.2 응답 | 판정 |
+|------|-------|-----------|-----------|------|
+| B1 (off-by-one) | 32B | "out of bounds" ✓ | "IndexOutOfRangeException, zero-based, s.Length-1" ✓ | 둘 다 정확 |
+| B1 | 72B | "IndexOutOfRangeException for any non-empty string" ✓ | "index out of bounds, indices are 0-based" ✓ | 둘 다 정확 |
+| **B2** (div by zero) | **32B** | **"DivideByZeroException with empty list" ✓** | **"integer truncation"** ✗ | **regress** |
+| **B2** | **72B** | **"division by zero, length is 0 and sum is 0" ✓** | **"integer truncation"** ✗ | **regress** |
+| B3 (logic) | both | both ✓ | fixture 가 외부에서 수정되어 비교 불가 | N/A |
+
+**B2 regression 분석:** 동일한 4-line fixture (`(List.sum xs) / (List.length xs)`). v1.1 은 양 모델이 즉시 "empty list 면 length=0" 을 catch. v1.2 는 양 모델이 "integer 나눗셈은 소수 잘림" 으로 답함. 두 답 모두 *코드의 결함* 이긴 하지만 v1.1 의 catch (런타임 exception) 가 더 critical. 가능한 원인: v1.2 시스템 프롬프트가 ~2x 길어지면서 LLM 의 attention 이 분산되었거나, presence_penalty 1.5 + 더 많은 가능 actions (8) 가 응답 분포를 변동.
+
+### 13.4 Phase C write tasks
+
+| Task | Model | v1.1 | v1.2 | Style 비교 |
+|------|-------|------|------|------------|
+| W1 (fix lastchar) | 32B | 14s, 4 steps, write_file only | **15s, 4 steps, edit_file + write_file (둘 다)** | 새 tool 사용하지만 redundant |
+| W1 | 72B | 23s, 3 steps, write_file | 35s, 4 steps, write_file + `fsharpi` 검증 시도 | 더 신중 (셸 검증), 새 tool 미사용 |
+| W2 (add averageSafe) | 32B | 14s, 3 steps, write_file, **`match xs with`** (idiomatic F#) | 23s*, 4 steps, edit_file + write_file, **`if List.isEmpty`** (procedural) | redundant tool + style regression |
+| W2 | 72B | 29s, 3 steps, write_file, `if List.isEmpty` | 28s, 3 steps, write_file, `if List.isEmpty` | 동일 |
+
+\* W2 32B 첫 시도는 mlx_lm.server 32B 가 응답 hang (HTTP 200 시작 후 토큰 생성 stuck). `launchctl kickstart -k com.ohama.qwen32b` 로 reload 후 재시도하여 23s 에 성공. **이 hang 은 v1.2 와 관계없는 server 자체 issue 일 가능성** (v1.1 벤치 도중 한 번도 안 봤지만 변동 가능).
+
+**32B 의 redundant edit_file+write_file 패턴 (W1):**
+```
+Step 1: read_file
+Step 2: edit_file  oldString="s.[s.Length]" newString="s.[s.Length - 1]"   ← actually fixes the file
+Step 3: write_file content="<full file>"                                    ← REDUNDANT, file already correct
+Step 4: final
+```
+
+LLM 의 멘탈 모델이 `edit_file` 의 부작용을 신뢰하지 않아 보임. 시스템 프롬프트에 "edit_file modifies the file in place; do not also call write_file" 같은 명시적 가이드가 v1.3 후보.
+
+**32B W2 style regression (`match` → `if`):** v1.1 32B 는 F# pattern matching idiom 을 골랐으나 v1.2 32B 는 72B 와 동일한 `if List.isEmpty xs` 절차적 스타일. 가능 원인은 B2 와 동일 (시스템 프롬프트 길이/구조 변경의 attention 영향).
+
+## 14. v1.2 Feature 별 검증
+
+### 14.1 TLX-01 `edit_file` — 부분 채택, redundant 패턴
+
+| 사용처 | 32B | 72B |
+|--------|-----|-----|
+| W1 (1-line bug fix) | ✓ 사용 (`s.[s.Length]` → `s.[s.Length - 1]`), 그러나 직후 redundant `write_file` 도 호출 | ✗ `write_file` 만 사용 |
+| W2 (function 추가) | ✓ 사용 (`average` 정의 전체를 `old_string` 으로 anchoring), 또한 redundant `write_file` 호출 | ✗ `write_file` 만 사용 |
+
+**평가:**
+- 32B 가 새 tool 을 시스템 프롬프트로부터 학습해 채택 — 긍정.
+- 그러나 mental model 결함 — `edit_file` 호출 후에도 LLM 이 "이제 write_file 로 저장해야 한다" 고 생각해 file 을 다시 작성. 결과는 동일하지만 **성능 손해** (불필요한 1024-token content 생성 + JSON serialize).
+- 72B 는 새 tool 자체를 채택하지 않음. 기존 `write_file` 패턴이 학습된 분포에 더 강하게 박혀 있는 것으로 보임.
+- W2 32B 의 `match` → `if` style regression 은 `edit_file` 사용 자체와 별개. v1.1 32B 는 처음부터 새 함수를 작성했는데, v1.2 32B 는 기존 코드를 anchor 로 잡고 `edit_file` 의 "append-after" 식으로 추가 → 그 과정에서 idiom 선택이 달라졌을 수 있음.
+
+**권장 v1.3 개선:** 시스템 프롬프트에 `edit_file` 후 `write_file` 추가 호출 금지 hint. 예:
+```
+edit_file modifies the file directly. After a successful edit_file, the file is already saved.
+Do NOT call write_file with the same path unless the entire file needs to be rewritten.
+```
+
+### 14.2 TLX-02 `glob_search` — 72B 자발 채택, security gate 회피 검증
+
+T5 72B v1.1 에서 `find -exec wc {} \;` 가 bash_security 게이트에 차단되었던 시나리오. v1.2 에서 72B 는 **첫 step 에서** `glob_search {"pattern": "**/BlueCode.slnx"}` 로 native tool 사용 → 즉시 파일 발견 → step 2 에서 단순 `wc -c` 호출 → 285 bytes 응답. 3 step 깔끔.
+
+```
+Step 1: glob_search **/BlueCode.slnx → "BlueCode.slnx"
+Step 2: run_shell "wc -c BlueCode.slnx" → "285 BlueCode.slnx"
+Step 3: final "285 bytes"
+```
+
+v1.1 의 동일 task: `find -exec wc \;` denied → `find -print0 | xargs wc` retry → success (3 step + 1 SecurityDenied = effectively 4 attempts, 21.5s).
+
+v1.2: 3 step, 20s. **시간 단축은 미미** (mlx_lm.server prompt processing 비용이 dominant) 하지만 **flow 가 훨씬 깔끔** + bash security gate 트리거 zero. 새 tool 의 가치 검증.
+
+### 14.3 TLX-03 `grep_search` — 자발 채택 안 됨
+
+이 벤치 테스트 set 은 grep 시나리오 (특정 문자열 위치 찾기) 가 명시적이지 않음. 양 모델 모두 `grep_search` 를 한 번도 picking 하지 않음. **별도의 grep-friendly prompt** ("Where is `classifyIntent` called?") 로 검증할 필요. v1.3 벤치 후보.
+
+### 14.4 TOOL-08 `read_file` metadata header — 작동하지만 dispatcher 갭이 발목
+
+설계상 의도:
+- `[file: path, lines X-Y of Z, not-truncated|truncated|out-of-range]` 헤더로 LLM 이 파일 bounds 를 즉시 인식.
+- T6 의 32B `start_line=2001` 무한 루프 해결 — `out-of-range` 헤더로 즉시 자기 교정.
+
+실측:
+- **유효한 case**: `start_line=170, end_line=180` 같이 **두 좌표 모두** 보낼 때 헤더 정확히 emit. 직접 probe 결과 `[file: src/BlueCode.Core/Domain.fs, lines 170-179 of 179, not-truncated]` ✓.
+- **사각지대**: LLM 이 `start_line` 만 보내고 `end_line` 누락하면 `AgentLoop.fs:69-72` 의 dispatcher pattern match (`Some s, Some e ...`) 가 `None` 을 반환 → `lineRange = None` → 전체 파일 read + 2000-char truncation, **out-of-range 분기 절대 발동 안 함**.
+- T6 32B 가 정확히 이 모드로 실패. step 2 에서 `{"path": "...", "start_line": 180}` (no `end_line`) 보냄 → `lineRange = None` → 전체 파일 truncated 응답 → 동일한 응답 3번 반복 → LoopGuard.
+
+**T6 72B 의 다른 실패 모드**: 72B 는 `start_line=1, end_line=179` (full range) 와 `start_line=1, end_line=null` 사이를 진동. 후자는 dispatcher 에서 `None` (null endL) → 전체 파일 truncated. 전자는 dispatcher 에서 `Some(1, 179)` → in-range, 단 file 이 7038 chars 라 2000 chars 로 truncated. **둘 다 동일한 truncated payload 반환** → 72B 는 "여전히 truncated 다, 다시 요청" 결론 → MaxLoops.
+
+**v1.1 vs v1.2 72B T6 비교:**
+- v1.1: 헤더 없음. 72B 가 `start_line=50,end_line=100` 시도 → 2047 chars (truncate marker visible). 다음 `start_line=101,end_line=150` 시도 → 1823 chars (smaller, no truncate marker) → "더 작은 window 가 작동한다" 학습 → step 4 에서 답.
+- v1.2: 헤더 있음. 72B 가 첫 step 에서 `truncated` 키워드 봄 → "the file is truncated, request the full content" → `end_line=179` 시도 (full range). 동일하게 `truncated` 헤더 → 같은 결론 반복. **새 헤더 키워드가 v1.1 의 size-comparison heuristic 을 덮어씀**.
+
+**v1.2 fix 의 본질적 한계:**
+1. 부분 좌표 (start_line only) 케이스에서 out-of-range 미발동 — `AgentLoop.fs:69-72` 의 boolean AND 가 너무 보수적.
+2. `truncated` 키워드의 의미 모호 — "응답이 잘렸다" vs "더 큰 window 가 필요하다" 를 LLM 이 헷갈림.
+
+**권장 fix (v1.3 후보):**
+1. **Dispatcher 완화**: `start_line` 만 있고 `end_line` 누락이면 `Some(s, s + DEFAULT_WINDOW)` (예: 100 lines) 로 자동 채움. 그러면 `start_line=2001` 이 `Some(2001, 2100)` 이 되어 `s > totalLines` 분기 → `out-of-range` 헤더 발동.
+2. **헤더 키워드 명확화**: `truncated` → `content-truncated-2000ch` 로 더 길게. 또는 `[showing X chars; full file is Y chars; narrow start_line/end_line to read more]` 식 prescriptive hint.
+
+## 15. v1.2 누적 통계
+
+| 카테고리 | 32B v1.1 | 32B v1.2 | 72B v1.1 | 72B v1.2 |
+|---------|----------|----------|----------|----------|
+| Part 1 (T1-T7) | 6/7 | 6/7 | 7/7 | **5/7** ⚠ |
+| Phase A T6 ×3 | 0/3 (fail) | 0/3 (fail) | **3/3 (pass)** | **0/3 (fail)** ⚠ |
+| Phase A T1 ×3 | 3/3 | 3/3 | 3/3 | 3/3 |
+| Phase B (B1-B3) | 3/3 | **2/3** ⚠ (B2 miss) | 3/3 | **2/3** ⚠ (B2 miss; B3 N/A) |
+| Phase C (W1-W2) | 2/2 | 2/2 | 2/2 | 2/2 |
+| **합계** | **15/16 (94%)** | **13/16 (81%)** | **19/19 (100%)** | **12/16 (75%)** |
+
+(B3 v1.2 양쪽 N/A 라 분모에서 제외 시: 32B 13/15 = 87%, 72B 12/15 = 80%.)
+
+72B 의 큰 하락 (100% → 75-80%) 은 거의 전적으로 **T6 regression** 에 기인. T6 ×4 fail 만 빼면 72B 는 12/12 → 100%.
+
+### 15.1 누적 시간 (v1.2)
+
+- 32B 합계: ~75s (Part 1) + ~60s (Phase A) + ~38s (Phase B) + ~38s (Phase C) ≈ **211s** (v1.1: 165s, +28%)
+- 72B 합계: ~176s (Part 1) + ~131s (Phase A) + ~82s (Phase B) + ~63s (Phase C) ≈ **452s** (v1.1: 310s, +46%)
+
+72B 가 v1.2 에서 **현저히 느려짐** — 주로 T6 4-runs 의 MaxLoopsExceeded (각 36-78s) 가 시간 소비. 정상 task 는 v1.1 과 비슷.
+
+## 16. 라우팅 정책 재평가 (실측 기반)
+
+v1.2 결과는 v1.1 의 "Debug | Design | Analysis → 72B" 정책을 **부분적으로 무력화**:
+- 72B 의 T6 우위 (다단계 파일 탐색) 가 v1.2 에서 사라짐 — 새 헤더가 72B 의 전략을 깨뜨림.
+- B2 양쪽 regress — debug 영역에서 양 모델 동등 (둘 다 잘못된 답).
+- 32B 가 W1/W2 에서 `edit_file` 까지 자발 채택 — implementation 영역에서 32B 가 **여전히 capable**.
+
+**현실적 v1.3 라우팅 후보:**
+- Default → 32B (모든 single-file task, 단순 분석, 빠른 응답).
+- 72B 로 escalate 하는 trigger:
+  - `MaxLoopsExceeded` / `LoopGuardTripped` 발생 후 자동 retry (ROU-05 v1.1 deferred candidate)
+  - 명시적 `--model 72b` flag
+  - `tool call count > N` (multi-file 탐색 휴리스틱)
+- v1.2 결과가 보여주듯 keyword-based intent 라우팅의 ROI 가 낮음.
+
+## 17. v1.2 행동 차이 요약 (한 페이지 결론)
+
+**개선 (v1.2 win):**
+1. ✓ T3 32B counting fix — `list_dir` 결과 해석 정확도 개선
+2. ✓ T5 72B `glob_search` 자발 채택 — bash security gate 회피
+3. ✓ T7 32B 더 깊은 분석 — "not a true ring buffer with wrap-around"
+4. ✓ TLX-01 `edit_file` 32B 자발 채택 (W1, W2)
+
+**regression (v1.2 loss):**
+1. ✗ T6 72B 4/4 PASS → 0/4 FAIL — 새 헤더의 `truncated` 키워드가 전략 와해
+2. ✗ B2 양 모델 → 둘 다 잘못된 답 (integer truncation 으로 오인)
+3. ✗ W2 32B style regression — `match` (idiomatic) → `if List.isEmpty` (procedural)
+4. ✗ 32B `edit_file` + `write_file` redundant 호출 패턴
+5. ⚠ 32B server hang on long content generation (W2 32B 첫 시도, kickstart 후 해결) — 빈도 미측정
+
+**근본 원인 분석:**
+- T6: dispatcher 의 lineRange 구성이 너무 strict (`Some s, Some e` 둘 다 요구) + 새 헤더 키워드 모호 → out-of-range 헤더가 의도된 효과 미달성.
+- B2 / W2 style: 시스템 프롬프트 길이 및 구조 변화의 attention shift 추정. 정량적 검증 필요 (PERF-01 가 system prompt 단축을 다룸).
+- redundant write_file: LLM 의 mental model 에서 `edit_file` 의 부작용 신뢰도 부족 → 시스템 프롬프트에 "edit_file modifies in place" hint 필요.
+
+**v1.3 권장:**
+1. **HIGH**: `AgentLoop.fs:69-72` dispatcher 완화 — `start_line` 만 있어도 `lineRange = Some(s, s + 100)` 같은 default window 적용. 그러면 `start_line=2001` 이 자동으로 out-of-range 헤더 트리거.
+2. **HIGH**: 시스템 프롬프트에 `edit_file` 후 `write_file` 호출 금지 + `truncated` 헤더의 의미 명시 ("content was truncated to 2000 chars; narrow start_line/end_line to see more").
+3. **MEDIUM**: `MaxLoopsExceeded` / `LoopGuardTripped` 후 자동 32B → 72B escalation (ROU-05).
+4. **MEDIUM**: prompt 길이 정량 측정 + B2 regression 재현 → PERF-01 system prompt 단축의 실효성 평가.
+5. **LOW**: `grep_search` 직접 prompt 로 채택률 검증 (이번 set 에 부적합).
+
+## 18. 재현
+
+```bash
+# 동일 36 runs 실행
+bash /tmp/bench-v1.2/run.sh all
+# Phase 단위:
+bash /tmp/bench-v1.2/run.sh phase1
+bash /tmp/bench-v1.2/run.sh phaseA
+bash /tmp/bench-v1.2/run.sh phaseB
+bash /tmp/bench-v1.2/run.sh phaseC
+
+# Direct probe of metadata header:
+dotnet run --project src/BlueCode.Cli -- --trace --model 32b "Read just lines 170 to 180 of src/BlueCode.Core/Domain.fs"
+# → [OBSERVATION] 안에 "[file: src/BlueCode.Core/Domain.fs, lines 170-179 of 179, not-truncated]" 헤더 확인 가능.
+```
+
+세션 로그: `/tmp/bench-v1.2/p{1,A,B,C}_*.log` (이 문서 작성 후 cleanup 가능). bench script: `/tmp/bench-v1.2/run.sh`.
+
+---
+
+*Part 3 수행: 2026-04-25*
+*총 실행: 36 runs (v1.1 와 동일 set) + 추가 probe 2 + W2 32B 1 retry (server kickstart 후)*
+*blueCode HEAD: `5fbb940` (v1.2 Phase 9 verified)*
+*결과: T6 72B regression + B2 양쪽 regression + 새 tool 부분 채택 — v1.2 fix 의 한계와 부작용을 정량적으로 노출*

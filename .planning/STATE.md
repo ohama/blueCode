@@ -2,26 +2,22 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24 for v1.2 milestone start)
+See: .planning/PROJECT.md (updated 2026-04-26 after v1.2 milestone complete)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** v1.2 Tool Expansion — all phases complete and verified (Phases 8 + 9 ✓, Phase 9.1 ✓ 5/5 plans, verifier `passed` 5/5 must-haves on 2026-04-26). Ready for milestone archive.
+**Current focus:** Between milestones — v1.2 archived 2026-04-26; v1.3 scope pending
 
 ## Current Position
 
-Milestone: v1.2 Tool Expansion (started 2026-04-24; Phases 8 + 9 verified 2026-04-25; Phase 9.1 verified 2026-04-26)
-Phase: 9.1 Bench Follow-up Fixes — 5/5 plans complete; verifier `passed` (5/5 must-haves)
-Plan: 09.1-05 complete (code-level loop-injection). W1 32B gate CLOSED (4→3 PASS). W2 32B gate PASS (preserved). T1 canary CANARY-OK (1 step, 1024). All SC4 gates closed.
-Status: 242 tests passing (1 ignored); Fix 1 (dispatcher) + Fix 2 (truncated hint) + Fix 3 W1/W2 all closed. v1.2 milestone ready for `/gsd:complete-milestone`.
-Last activity: 2026-04-26 — Phase 9.1 verifier returned `passed`. Loop-injection Option A: lastEditPath threaded through runLoop; buildMessages appends [POST-EDIT CONSTRAINT] System message after user turn; model skips write_file call. Step-3 thought changed from "Now, I will save the corrected version" to "The bug has been fixed and the change is confirmed. No further action is needed on this file." 16 atomic commits since `5fbb940`.
+Milestone: v1.2 archived. Three milestones shipped to date: v1.0 MVP (2026-04-23), v1.1 Refinement (2026-04-24), v1.2 Tool Expansion (2026-04-26).
+Phase: None active — `/gsd:new-milestone` will scope v1.3 (questioning → research → requirements → roadmap).
+Plan: None.
+Status: Ready to plan v1.3. Daily-driver use of blueCode ongoing as primary Mac coding agent.
+Last activity: 2026-04-26 — v1.2 milestone complete and archived. Tag `milestone-v1.2` cut. 8 plans across 3 phases (8, 9, 9.1) shipped; 242 tests passing; 43 commits since `c4f087e` (v1.1 close).
 
-Progress: v1.2 [████████████████████] 100% — all REQs complete, all SC4 bench gates closed (W1 via loop-injection, W2 via directive wording). Phase 9.1 ready for /gsd:verify-work 9.1.
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (next, TBD)
 
-### Roadmap Evolution
-
-- **2026-04-25** — Phase 9.1 (Bench Follow-up Fixes) inserted after Phase 9 via `/gsd:insert-phase`. URGENT — closes three tech-debt items from `.planning/v1.2-MILESTONE-AUDIT.md` discovered in same-day live re-bench (Part 3 of `documentation/benchmark-32b-vs-72b.md`, 36 runs). Reason: spec-vs-implementation contract was clean (audit `passed` initially), but T6 32B failure trace (`start_line` only, no `end_line`) never reaches the new out-of-range branch because `AgentLoop.dispatchTool` collapses partial bounds to `None`; and 72B's `truncated` semantics regressed v1.1 baseline 4/4 → 0/4. Implementation framing: Option A from `documentation/v1.2-bench-followup.md` §6 — ship v1.2 with the actual T6 fix landed rather than carrying the regression into v1.3.
-
-## Performance Metrics (v1.0 + v1.1 — cumulative, frozen)
+## Performance Metrics (cumulative, frozen)
 
 **v1.0 totals:**
 - 5 phases, 17 plans (16 autonomous + 1 human-gated), 208 tests
@@ -34,46 +30,40 @@ Progress: v1.2 [████████████████████] 10
 - 23 commits, +315 / -124 LOC F# delta
 - ~19 hours (2026-04-23 17:32 → 2026-04-24 12:21)
 
-Detailed per-plan history archived in `.planning/milestones/v1.0-phases/` and `.planning/milestones/v1.1-phases/`.
+**v1.2 totals:**
+- 3 phases, 8 plans (2 in Phase 8 + 1 in Phase 9 + 5 in inserted Phase 9.1 across two gap-closure rounds)
+- 242 tests (218 v1.1 baseline + 18 from Phase 8 + 4 from Phase 9 + 1 from 09.1-02 + 1 from 09.1-05); 1 ignored
+- 43 commits since v1.1 close
+- ~3 days wall-clock (2026-04-24 → 2026-04-26)
+- Source delta: `src/BlueCode.Core/{AgentLoop.fs, Domain.fs}`, `src/BlueCode.Cli/{CompositionRoot.fs, Adapters/Json.fs, Adapters/FsToolExecutor.fs}`, `tests/BlueCode.Tests/{ToolExpansionTests.fs (new), FileToolsTests.fs, AgentLoopTests.fs}`
+
+Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2}-phases/`.
 
 ## Accumulated Context
 
 ### Decisions
 
-Rolled up into PROJECT.md Key Decisions table at v1.0 + v1.1 milestone completions. See `.planning/PROJECT.md` for cumulative log with outcomes.
+Rolled up into PROJECT.md Key Decisions table at v1.0/v1.1/v1.2 milestone completions. See `.planning/PROJECT.md` for cumulative log with outcomes.
 
-Notable items marked `⚠ Revisit` carried into v1.2:
-- Expecto `[<Tests>]` auto-discovery disabled — multiple executors hit rootTests registration pitfall; document in each new test module
-- `makeMockResponse` helper duplicated in AgentLoopTests.fs + ReplTests.fs — v1.2 test infra pass candidate (TST-01, deferred)
+### Pending Todos (v1.3+ candidates)
 
-New decisions from Phase 9.1 plan 04 (rolled up at v1.2 close):
-- W1 user-prompt/system-prompt conflict: user prompt explicitly naming a tool ("using write_file") overrides system-prompt NEVER directive; code-level enforcement (loop-injection or schema rejection) required; wording-only class exhausted
-- W2 Fix 3 confirmed closed by directive no-verify-read clause (4→3 PASS); W2 prompt does not name a specific tool
+Strongest signals from v1.2 audit + Phase 9.1 discoveries:
 
-New decisions from Phase 9 plan 01 (rolled up at v1.2 close):
-- read_file metadata header uses input `path` (relative), never `resolved` (absolute) — preserves CLAUDE.md no-absolute-paths invariant
-- Out-of-range branch preserves the RAW requested `endLine` (no clamp to totalLines) so the bounds-violation signal is unambiguous to the LLM
-- Unified `readFileImpl` on `File.ReadAllLines` (eager array) replacing the prior mix of `ReadAllText` + `ReadLines`
-- Test substring assertions for line content must anchor with `\n` to avoid collision with header words (e.g. `truncated` contains `a`, `lines` contains `e`) — generalizable pattern for any future tool that prepends a fixed-format header
-- `dotnet test` does NOT run Expecto tests in this project — `dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj` is the canonical runner. Plan-supplied `dotnet test --filter` lines are non-functional with the explicit `rootTests` + `[<EntryPoint>]` pattern
-
-### Pending Todos
-
-v1.3+ seed candidates (not v1.2 scope):
-- Per-port `MaxModelLen` visibility (OBS-06)
-- Shared `makeMockResponse` test helper (TST-01)
-- SSE streaming output (STM-01)
-- Session persistence + `--resume` (SES-01)
-- Auto-escalation on MaxLoopsExceeded (ROU-05)
-- System prompt length reduction (PERF-01, needs research)
-- Prompt cache hygiene / launchd kickstart (OPS-01)
+- **Bench harness formalization** — move `/tmp/bench-v1.2/run.sh` and `bench-fixtures/` to repo-tracked `bench/` with `--gate` mode. v1.2 ran two audit-rebench cycles; locks the 16-log baseline as a regression suite.
+- **PERF-01** system prompt shrink (~1500 → ~700 chars) — B2 regression provides concrete signal; could leverage 9.1-05 loop-injection primitive to move contextual hints to post-tool injections instead of base prompt
+- **STM-01** SSE streaming output — UX win, no measured pain
+- **SES-01** session persistence + `--resume` — XL, no measured pain
+- **ROU-05** auto-escalation on MaxLoopsExceeded — less urgent post-9.1
+- **OPS-01** prompt cache kickstart schedule — 9.1-05 needed zero kickstarts
+- **OBS-06** per-port `MaxModelLen` visibility
+- **TST-01** shared `makeMockResponse` test helper
 
 ### Blockers/Concerns
 
-None. Phase 9.1 complete. All three tech-debt items closed: Fix 1 (TOOL-08 dispatcher), Fix 2 (72B truncated hint), Fix 3 (edit_file+write_file redundancy — W1 via loop-injection, W2 via directive wording). 242 tests passing. Core purity intact.
+None. v1.2 ships clean: 242 tests passing, Core diff confined, all 4 v1.2 REQs Validated, all 3 audit tech-debt items closed by Phase 9.1.
 
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Phase 9.1 verifier returned `passed` (5/5). Phase-completion edits applied to ROADMAP/STATE; VERIFICATION.md staged for milestone-close commit.
-Resume file: None — run `/gsd:complete-milestone` to archive v1.2 + tag, then `/gsd:new-milestone` to scope v1.3.
+Stopped at: v1.2 milestone archived. PROJECT/MILESTONES updated; ROADMAP and REQUIREMENTS deleted; phase directories moved to `.planning/milestones/v1.2-phases/`. Tag `milestone-v1.2` cut.
+Resume file: None — run `/gsd:new-milestone` to scope v1.3.

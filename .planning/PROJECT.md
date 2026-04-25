@@ -4,19 +4,16 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current Milestone: v1.2 Tool Expansion
+## Current State (post-v1.2)
 
-**Goal:** Agent 의 일상 코딩 워크플로 병목 제거 — 전체파일 rewrite 대신 surgical edit, shell 을 우회한 native search, 그리고 read_file 의 bounds metadata 제공.
+v1.2 Tool Expansion shipped 2026-04-26. blueCode now has 7 first-class agent tools (`read_file` with metadata header, `write_file`, `list_dir`, `run_shell`, `edit_file`, `glob_search`, `grep_search`), an 8-value action schema enum, and a code-level loop-injection primitive (`lastEditPath` threaded through `runLoop` + post-user `[POST-EDIT CONSTRAINT]` System message) that enforces tool-terminality independent of system-prompt wording. Three milestones shipped: v1.0 MVP, v1.1 Refinement, v1.2 Tool Expansion. Daily-driver use ongoing as the user's primary Mac coding agent (Python `claw-code-agent` retired post-v1.0).
 
-**Target requirements (4개, 오늘 벤치마크 실측 근거):**
-- **TLX-01**: `edit_file` — exact-string find-and-replace (write_file 의 full-file rewrite 비용 회피; 벤치마크 W2 에서 72B write 29s 의 대부분이 content 재생성)
-- **TLX-02**: `glob_search` — 파일 패턴 찾기 (file-finding 을 `run_shell find` 게이트 우회)
-- **TLX-03**: `grep_search` — content 패턴 찾기 (구조화된 `(file, line, content)` 반환; `run_shell grep` 게이트 우회)
-- **TOOL-08**: `read_file` 응답에 `total_lines`/`returned_range` 메타데이터 — T6 실패 (32B 가 out-of-range `start_line` 반복) 근본 해결
+**Next milestone TBD.** Run `/gsd:new-milestone` to scope v1.3. Strongest candidates from the v1.2 audit + Phase 9.1 discoveries:
+- **Bench harness formalization** — move `/tmp/bench-v1.2/run.sh` and `bench-fixtures/` to repo-tracked `bench/` with `--gate` mode for regression detection
+- **PERF-01** system prompt shrink (~1500 → ~700 chars) using 09.1-05's loop-injection primitive to move contextual hints out of the base prompt; B2 regression provides concrete validation signal
+- **STM-01** SSE streaming output (deferred from v1.0/v1.1; no measured pain but a UX win)
 
-**Scope:** 실측 pain signal 있는 4개만. 제외: Streaming (재설계 큰 대신 pain 없음), Session 영속화 (XL, pain 없음), System prompt 단축 (pre-research 필요), Auto-escalation (TOOL-08 이 대체), test helper 통합 (minor), multi-platform (Windows OOS).
-
-**v1.1 Refinement** 완료 (2026-04-24). 자세한 기록: `.planning/MILESTONES.md` + `.planning/milestones/v1.1-ROADMAP.md`.
+Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2}-ROADMAP.md`.
 
 ## Core Value
 
@@ -39,25 +36,29 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ CLI polish — Argu + 단일/멀티-turn REPL + `--verbose`/`--trace` + Spectre spinner + `/v1/models` 80% 경고 — v1.0 (CLI-01..07, OBS-03)
 - ✓ Dynamic `/v1/models` 모델 id 조회 + lazy per-port probe + local-path preference heuristic — v1.1 (REF-01, REF-02)
 - ✓ Real LLM thought 캡처 — `LlmResponse` Core 레코드로 `ILlmClient.CompleteAsync` 확장, `--verbose` 에 실제 reasoning 표시 — v1.1 (OBS-05)
+- ✓ Surgical `edit_file` — exact-string find-and-replace, 0/1/N match handling — v1.2 (TLX-01, behaviorally hardened in 9.1 via directive wording + code-level `[POST-EDIT CONSTRAINT]` injection)
+- ✓ Native `glob_search` — project-rooted pattern finder (replaces `run_shell find`) — v1.2 (TLX-02)
+- ✓ Native `grep_search` — regex content search with ReDoS guard, structured `(path, line, content)` output (replaces `run_shell grep`) — v1.2 (TLX-03)
+- ✓ `read_file` metadata header `[file:..., lines X-Y of Z, not-truncated|truncated|out-of-range]` with dispatcher default-window for partial bounds — v1.2 (TOOL-08, behaviorally completed in 9.1)
+- ✓ Code-level loop-injection primitive — `lastEditPath` threaded through `runLoop`; post-user-prompt System-role message enforces tool-terminality at conversation-history layer (overrides user-prompt explicit tool naming) — v1.2 (Phase 9.1, reusable for future post-tool constraints)
 
-### Active (v1.2 Tool Expansion)
+### Active (next milestone — TBD)
 
-<!-- v1.2 scope confirmed 2026-04-24. 4 requirements, all backed by measured pain signals in today's benchmark. -->
+<!-- Cleared after v1.2 close. Run /gsd:new-milestone to scope v1.3 requirements. -->
 
-- [ ] **TLX-01**: `edit_file` — exact-string surgical edit (avoid full-file rewrite cost)
-- [ ] **TLX-02**: `glob_search` — native file finder (pattern-based, project-root scoped)
-- [ ] **TLX-03**: `grep_search` — native content search (structured `file:line:content` output)
-- [ ] **TOOL-08**: `read_file` 응답에 file bounds 메타데이터 포함 (total_lines 등) — T6 multi-step 탐색 실패 방지
+(none — v1.3 scope pending)
 
-### Deferred to v1.3+ (from v1.2 scoping)
+### Deferred (v1.3+ candidates from v1.2 close)
 
-- Streaming output (STM-01) — big redesign, 현재 pain 없음
-- Session persistence + `--resume` (SES-01) — XL, pain 없음
-- Auto-escalation on MaxLoopsExceeded — TOOL-08 root-cause fix 로 우선 대체
-- System prompt 단축 (1200→600자) — 별도 pre-research + experimental validation 필요
-- Ctrl+C UX polish — minor
-- Per-port `MaxModelLen` visibility — 실측 문제 없음
-- Shared `makeMockResponse` helper — minor code hygiene
+- Bench harness formalization — `/tmp/bench-v1.2/run.sh` → repo-tracked `bench/` with `--gate` regression mode (newly motivated by v1.2's two audit-rebench cycles)
+- System prompt shrink (PERF-01, ~1500 → ~700 chars) — pre-research + experimental validation; B2 regression provides concrete signal; could leverage 9.1-05 loop-injection to move contextual hints to post-tool injections
+- Streaming output (STM-01) — big redesign, no measured pain
+- Session persistence + `--resume` (SES-01) — XL, no measured pain
+- Auto-escalation on MaxLoopsExceeded (ROU-05) — TOOL-08 + 9.1 closure makes this less urgent
+- Ctrl+C UX polish (CLI-08) — minor
+- Per-port `MaxModelLen` visibility (OBS-06) — minor
+- Prompt cache hygiene / launchd kickstart (OPS-01) — 9.1-05 bench needed zero kickstarts
+- Shared `makeMockResponse` helper (TST-01) — minor code hygiene
 - Multi-platform `tryParseModelId` — Windows OOS
 
 ### Out of Scope
@@ -145,7 +146,14 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 | v1.1: Option B (Core에서 modelToName 삭제, adapter가 wire id 소유) | 기존 `AgentConfig.ForcedModel` precedent 동일 패턴 | ✓ Good — Core purity 유지, 06-03 gap closure 로 `StartsWith('/')` heuristic 추가 |
 | v1.1: Option C (new Core record `LlmResponse`) | 대안 A/B (LlmStep/tuple)보다 named 필드 + Core 포함 안전 | ✓ Good — F# big-bang 컴파일 캐스케이드로 단일 atomic commit 가능 |
 | v1.1: `tryParseModelId` local-path preference heuristic | mlx_lm.server의 HF Hub fallback 이 Instruct tokenizer 를 Base 로 덮어쓰는 regression 우회 | ✓ Good — live 검증 통과. 단점: Windows 지원 시 path 감지 로직 재설계 필요 (v1 Mac-only라 무관) |
-| v1.1: `makeMockResponse` 테스트 헬퍼 중복 (shared 모듈 아님) | scope 관리; shared 모듈 추출은 별도 test infra 작업 | ⚠ Revisit — v1.2 test infrastructure 패스에서 통합 고려 |
+| v1.1: `makeMockResponse` 테스트 헬퍼 중복 (shared 모듈 아님) | scope 관리; shared 모듈 추출은 별도 test infra 작업 | ⚠ Revisit — v1.3+ test infrastructure 패스에서 통합 고려 (TST-01) |
+| v1.2: 8-action schema enum + executor stubs in same plan (08-01 shared seam) | DU/schema/dispatcher coupling; shared seam pattern | ✓ Good — single atomic commit landed Domain + Cli + system-prompt changes coherently |
+| v1.2: TOOL-08 metadata header preserves RAW endLine (no clamp) | unambiguous bounds-violation signal to LLM | ✓ Good — 32B self-corrects on out-of-range header |
+| v1.2: read_file header words anchor with `\n` in test substring assertions | `truncated` contains `a`, `lines` contains `e` — collision with body text | ✓ Good — pattern generalizable for any tool prepending fixed-format headers |
+| v1.2: `dotnet test` documented as NOT running Expecto in this project | 4-executor pitfall; explicit `rootTests` + `[<EntryPoint>]` pattern | ✓ Good — STATE decisions log; canonical runner is `dotnet run --project tests/...` |
+| v1.2 (9.1-04 discovery): User-prompt explicit tool naming overrides system-prompt directive wording | bench fixture "using write_file" exposed wording-only intervention class limit | ✓ Good — drove 9.1-05 to code-level enforcement, more robust |
+| v1.2 (9.1-05): Loop-injection primitive — `lastEditPath` threaded through `runLoop`; post-user `[POST-EDIT CONSTRAINT]` System-role message overrides user-prompt priority via conversation-history position | Reusable mechanism for tool-terminality enforcement at a layer below LLM's view of "user said X, system said Y" | ✓ Good — closes W1 (`4→3 steps`); reusable primitive for future post-tool constraints; could let PERF-01 move contextual hints out of base prompt |
+| v1.2: Mid-milestone audit (`/gsd:audit-milestone`) caught structural-vs-behavioral gap | Audit checked spec contract (intact), missed behavioral effectiveness; live re-bench was the truth source | ⚠ Revisit — v1.3+ phase verifiers should require probe-style behavioral tests for any spec citing a specific failure trace |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -158,4 +166,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-24 after starting v1.2 milestone*
+*Last updated: 2026-04-26 after v1.2 milestone complete*
