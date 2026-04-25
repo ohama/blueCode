@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-26 after starting v1.3 milestone)
 ## Current Position
 
 Milestone: v1.3 Bench-Driven Quality Gates (started 2026-04-26)
-Phase: 10 — Bench Formalization ✓ COMPLETE + VERIFIED (5/5 must-haves PASS, 2026-04-26)
-Plan: All 3 plans shipped; Phase 11 (System Prompt Shrink) is next
-Status: Phase 10 verifier returned `passed`. `bench/run.sh --gate` runs in ~115s producing `GATE PASS (8/8)` exit 0; tightened-baseline negative test exits 1 round-trip clean. BENCH-01..05 all marked Complete in REQUIREMENTS traceability.
-Last activity: 2026-04-26 — Phase 10 verifier passed. 9 commits since `c51ab8c` (Phase 10 cleanup): 4 Wave-1 + 3 Wave-2 + 2 Wave-3. Test count 242/1/0 unchanged across all of Phase 10. Zero source-code drift (`git diff HEAD~9..HEAD -- src/ tests/` empty).
+Phase: 11 — System Prompt Shrink (in progress: 1/3 plans complete)
+Plan: 11-01 shipped (Wave 1 complete); Wave 2 (11-02 prompt shrink) next
+Status: Plan 11-01 complete. `lastReadHint` injection in place; test count 242 → 243 (243/1/0). PERF-02 architectural lever deployed — Wave 2 can now safely shrink defaultSystemPrompt without regressing T6 or read-heavy fixtures.
+Last activity: 2026-04-26 — Completed 11-01-PLAN.md. +50/-12 lines AgentLoop.fs (lastReadHint threading + [POST-READ HINT] injection), +49 lines AgentLoopTests.fs (new testCaseAsync). Domain.fs untouched. Core purity clean.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10 ✓ · Phase 11 next: ░░░ 0/TBD plans)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10 ✓ · Phase 11: █░░ 1/3 plans)
 
 ## Performance Metrics (v1.0 + v1.1 + v1.2 — cumulative, frozen)
 
@@ -55,6 +55,12 @@ New v1.3 architectural input from v1.2 close:
 - 09.1-05 loop-injection primitive (`lastEditPath` + post-user `[POST-EDIT CONSTRAINT]` System message) is reusable; PERF-02 extends it to post-`read_file`-truncated and optionally post-`write_file` to move contextual hints out of base prompt
 - B2 regression (divide-by-zero misdiagnosis on both 32B + 72B) hypothesized as prompt-length attention shift; PERF-03 validates by re-running B2 after PERF-01 shrink
 
+Plan 11-01 decisions (2026-04-26):
+
+- `(string * string) option` shape chosen over a new DU for `lastReadHint` — keeps Domain.fs untouched, mirrors 09.1-05 `string option` discipline for `lastEditPath`
+- Two-arm hint logic (truncated vs out-of-range) chosen over single generic message — corrective actions differ and specificity matters for T6 behavioral quality
+- First-line-only substring match (`", truncated]"` / `", out-of-range]"`) used for header detection — FsToolExecutor format is fixed, leading `, ` + trailing `]` prevents false positives from file content
+
 ### Pending Todos
 
 v1.4+ seed candidates (not v1.3 scope):
@@ -74,5 +80,5 @@ None at v1.3 start. Daily-driver use of blueCode ongoing; v1.3 work should not b
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Completed 10-03-PLAN.md. documentation/bench.md (190 lines, 11 sections, all 5 BENCH-05 topics) committed. Phase 10 final gate: GATE PASS 8/8 exit=0 (~115s). Source-code invariant clean: zero src/tests drift across all Phase 10 commits. All 5 ROADMAP Phase 10 SCs verified. Phase 10 READY FOR UAT. Next: `/gsd:verify-work 10` then Phase 11 (System Prompt Shrink).
+Stopped at: Completed 11-01-PLAN.md. [POST-READ HINT] injection (PERF-02 lever) shipped. Test count 242 → 243 (243/1/0). Core purity clean. Wave 1 complete. Next: Plan 11-02 (Wave 2) — iteratively shrink defaultSystemPrompt to ≤800 chars, gate-validated.
 Resume file: None
