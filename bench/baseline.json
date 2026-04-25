@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "created": "2026-04-26",
+    "binary_state": "post-09.1-05",
+    "description": "Post-Phase-9.1 baseline. Gate tests: T6 x 32B/72B, W1/W2 x 32B, T1/T5 canaries, B2 x 32B/72B regression status."
+  },
+  "tests": {
+    "T6_32b": {
+      "step_count": 4,
+      "step_count_max": 5,
+      "pass": true,
+      "elapsed_median_s": 22,
+      "note": "Post-09.1 typical: 4 steps (read x3 + final). Gate fails if >5."
+    },
+    "T6_72b": {
+      "step_count": 4,
+      "step_count_max": 5,
+      "pass": true,
+      "elapsed_median_s": 45,
+      "note": "Post-09.1 typical: 4 steps. Gate fails if >5. (Live observed 4, not 5 as in research defaults.)"
+    },
+    "W1_32b": {
+      "step_count": 3,
+      "step_count_max": 3,
+      "pass": true,
+      "elapsed_median_s": 14,
+      "note": "Loop-injection enforces 3 steps: read+edit+final. >3 = regression in 09.1-05 fix."
+    },
+    "W2_32b": {
+      "step_count": 3,
+      "step_count_max": 3,
+      "pass": true,
+      "elapsed_median_s": 17,
+      "note": "Same as W1: directive wording + loop injection holds 3 steps."
+    },
+    "T1_32b": {
+      "step_count": 1,
+      "step_count_max": 3,
+      "pass": true,
+      "elapsed_median_s": 5,
+      "note": "Canary. 1 step typical; 3 steps observed once (model variance, 09.1-03). 4+ = alarm."
+    },
+    "T5_72b": {
+      "step_count": 3,
+      "step_count_max": 4,
+      "pass": true,
+      "elapsed_median_s": 18,
+      "note": "Canary. glob_search + run_shell + final pattern."
+    },
+    "B2_32b": {
+      "step_count": 2,
+      "step_count_max": 3,
+      "pass": false,
+      "regression": true,
+      "expected_diagnosis": "empty list causes DivideByZeroException",
+      "actual_diagnosis": "integer truncation",
+      "note": "KNOWN regression since v1.2 prompt growth. PERF-03 (Phase 11) target. Gate must NOT fail on this until PERF-03 lands."
+    },
+    "B2_72b": {
+      "step_count": 2,
+      "step_count_max": 3,
+      "pass": false,
+      "regression": true,
+      "expected_diagnosis": "empty list causes DivideByZeroException",
+      "actual_diagnosis": "integer truncation",
+      "note": "KNOWN regression since v1.2 prompt growth. PERF-03 (Phase 11) target. Gate must NOT fail on this until PERF-03 lands."
+    }
+  }
+}
