@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-24 for v1.2 milestone start)
 ## Current Position
 
 Milestone: v1.2 Tool Expansion (started 2026-04-24; Phases 8 + 9 verified 2026-04-25; **9.1 inserted 2026-04-25** post-audit re-bench)
-Phase: 9.1 Bench Follow-up Fixes — 3/3 plans complete (ESCALATION: Plan 09.1-04 needed)
-Plan: 09.1-03 complete (bench validation). T6 32B/72B gates green (3/3 + 3/3 PASS). W1/W2 Fix-3 step-count gates FAILED (4→4 steps). T1 canary WARN. Plan 09.1-04 needed for Fix 3 wording iteration.
-Status: 241 tests passing (1 ignored); Fix 1 (dispatcher) + Fix 2 (truncated hint) validated — T6 fully recovered. Fix 3 (edit_file terminal hint) insufficient — W1/W2 still 4 steps. v1.2 milestone close blocked until 09.1-04 closes W1/W2 step-count gates.
-Last activity: 2026-04-25 — Completed 09.1-03-PLAN.md. Bench validation ran 10 invocations; all T6 passed; W1/W2 step-count gates failed due to Fix 3 hint not eliminating redundant write_file (W1) or triggering verify-read substitution (W2). Next: Plan 09.1-04 (Fix 3 wording iteration).
+Phase: 9.1 Bench Follow-up Fixes — 4/4 plans complete (ESCALATION: Plan 09.1-05 needed for W1)
+Plan: 09.1-04 complete (Fix 3 wording iteration). W2 32B gate CLOSED (4→3 PASS). W1 32B gate still OPEN (root cause: user-prompt "using write_file" overrides system-prompt NEVER directive; code-level intervention required). T1 canary CANARY-OK (1 step, 1024). Plan 09.1-05 needed for W1 code-level fix.
+Status: 241 tests passing (1 ignored); Fix 1 (dispatcher) + Fix 2 (truncated hint) + Fix 3 W2 validated. Fix 3 W1 still open — user-prompt/system-prompt conflict, not wording insufficiency. v1.2 milestone close blocked until 09.1-05 closes W1 gate.
+Last activity: 2026-04-25 — Completed 09.1-04-PLAN.md. Directive wording (NEVER/ONLY/do-NOT) closed W2 but not W1. Task 1 commit (42728e1) reverted (f13c476) per rollback protocol. Root cause: W1 prompt "using write_file" explicitly names the tool. Next: Plan 09.1-05 (code-level intervention — loop-injection Option A or schema-level Option B).
 
-Progress: v1.2 [██████████████████░░] structurally 100% (4/4 REQs marked Complete by spec) but **behaviorally ~85%** — T6 regression recovered; Fix 3 (W1/W2 edit_file redundancy) still open, pending Plan 09.1-04.
+Progress: v1.2 [██████████████████░░] structurally 100% (4/4 REQs marked Complete by spec) but **behaviorally ~90%** — T6 regression recovered; Fix 3 W2 closed; Fix 3 W1 still open (user-prompt conflict), pending Plan 09.1-05.
 
 ### Roadmap Evolution
 
@@ -46,6 +46,10 @@ Notable items marked `⚠ Revisit` carried into v1.2:
 - Expecto `[<Tests>]` auto-discovery disabled — multiple executors hit rootTests registration pitfall; document in each new test module
 - `makeMockResponse` helper duplicated in AgentLoopTests.fs + ReplTests.fs — v1.2 test infra pass candidate (TST-01, deferred)
 
+New decisions from Phase 9.1 plan 04 (rolled up at v1.2 close):
+- W1 user-prompt/system-prompt conflict: user prompt explicitly naming a tool ("using write_file") overrides system-prompt NEVER directive; code-level enforcement (loop-injection or schema rejection) required; wording-only class exhausted
+- W2 Fix 3 confirmed closed by directive no-verify-read clause (4→3 PASS); W2 prompt does not name a specific tool
+
 New decisions from Phase 9 plan 01 (rolled up at v1.2 close):
 - read_file metadata header uses input `path` (relative), never `resolved` (absolute) — preserves CLAUDE.md no-absolute-paths invariant
 - Out-of-range branch preserves the RAW requested `endLine` (no clamp to totalLines) so the bounds-violation signal is unambiguous to the LLM
@@ -71,5 +75,5 @@ None blocking 9.1 planning. Pre-existing structural state: 240 tests passing, Co
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Completed 09.1-03-PLAN.md (bench validation — T6 gates green, W1/W2 Fix-3 gates failed).
-Resume file: None — execute Plan 09.1-04 (Fix 3 wording iteration for edit_file terminal constraint), then `/gsd:verify-work 9.1` → `/gsd:audit-milestone` → `/gsd:complete-milestone`.
+Stopped at: Completed 09.1-04-PLAN.md (Fix 3 wording iteration — W2 closed; W1 still open; revert committed).
+Resume file: None — execute Plan 09.1-05 (code-level W1 fix: loop-injection after edit_file success), then `/gsd:verify-work 9.1` → `/gsd:audit-milestone` → `/gsd:complete-milestone`.
