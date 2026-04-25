@@ -59,12 +59,12 @@ Archived in `.planning/milestones/v1.2-ROADMAP.md`.
 4. `documentation/bench.md` exists and covers: fixture naming convention, prompt-design guidance (avoid explicit tool naming per 09.1-04), how to add a test, how to update baseline after an intentional fix, and hang-contingency for `mlx_lm.server`
 5. CLAUDE.md no longer references `/tmp/bench-v1.2/run.sh`; the canonical bench entry point is `bench/run.sh`
 
-**Plans**: 3 plans in 3 waves (sequential — each builds on prior)
+**Plans**: 3 plans in 3 waves (sequential — each builds on prior) ✓ All complete
 
 Plans:
-- [ ] 10-01-PLAN.md — Move bench harness into repo (bench/run.sh + fixtures + CLAUDE.md ## Bench)
-- [ ] 10-02-PLAN.md — Add baseline.json + --gate mode (BENCH-03, BENCH-04, SC1)
-- [ ] 10-03-PLAN.md — Write documentation/bench.md + Phase 10 final verification
+- [x] 10-01-PLAN.md — Move bench harness into repo (bench/run.sh + fixtures + CLAUDE.md ## Bench)
+- [x] 10-02-PLAN.md — Add baseline.json + --gate mode (BENCH-03, BENCH-04, SC1 verified positive + negative)
+- [x] 10-03-PLAN.md — Write documentation/bench.md + Phase 10 final verification (all 5 SCs PASS)
 
 ---
 
@@ -99,7 +99,7 @@ Plans:
 | 1-5. MVP | v1.0 | 17/17 | Complete | 2026-04-23 |
 | 6-7. Refinement | v1.1 | 5/5 | Complete | 2026-04-24 |
 | 8-9.1. Tool Expansion | v1.2 | 8/8 | Complete | 2026-04-26 |
-| 10. Bench Formalization | v1.3 | 0/TBD | Not started | - |
+| 10. Bench Formalization | v1.3 | 3/3 | Complete | 2026-04-26 |
 | 11. System Prompt Shrink | v1.3 | 0/TBD | Not started | - |
 
 ---

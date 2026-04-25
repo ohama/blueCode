@@ -90,11 +90,11 @@ v1 boundaries unchanged. v1.3 adds no new exclusions; the deferred items above a
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BENCH-01    | Phase 10 | Pending |
-| BENCH-02    | Phase 10 | Pending |
-| BENCH-03    | Phase 10 | Pending |
-| BENCH-04    | Phase 10 | Pending |
-| BENCH-05    | Phase 10 | Pending |
+| BENCH-01    | Phase 10 | Complete |
+| BENCH-02    | Phase 10 | Complete |
+| BENCH-03    | Phase 10 | Complete |
+| BENCH-04    | Phase 10 | Complete |
+| BENCH-05    | Phase 10 | Complete |
 | PERF-01     | Phase 11 | Pending |
 | PERF-02     | Phase 11 | Pending |
 | PERF-03     | Phase 11 | Pending |

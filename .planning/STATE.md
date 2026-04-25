@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-26 after starting v1.3 milestone)
 ## Current Position
 
 Milestone: v1.3 Bench-Driven Quality Gates (started 2026-04-26)
-Phase: 10 — Bench Formalization (3/3 plans complete — READY FOR UAT)
-Plan: 10-03 complete; Phase 10 ready for `/gsd:verify-work 10` before Phase 11
-Status: Phase 10 complete — all 5 SCs verified
-Last activity: 2026-04-26 — Completed 10-03-PLAN.md (documentation/bench.md + Phase 10 final verification; GATE PASS 8/8)
+Phase: 10 — Bench Formalization ✓ COMPLETE + VERIFIED (5/5 must-haves PASS, 2026-04-26)
+Plan: All 3 plans shipped; Phase 11 (System Prompt Shrink) is next
+Status: Phase 10 verifier returned `passed`. `bench/run.sh --gate` runs in ~115s producing `GATE PASS (8/8)` exit 0; tightened-baseline negative test exits 1 round-trip clean. BENCH-01..05 all marked Complete in REQUIREMENTS traceability.
+Last activity: 2026-04-26 — Phase 10 verifier passed. 9 commits since `c51ab8c` (Phase 10 cleanup): 4 Wave-1 + 3 Wave-2 + 2 Wave-3. Test count 242/1/0 unchanged across all of Phase 10. Zero source-code drift (`git diff HEAD~9..HEAD -- src/ tests/` empty).
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10: ███ 3/3 plans · Phase 11: ░░░ 0/3 plans)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10 ✓ · Phase 11 next: ░░░ 0/TBD plans)
 
 ## Performance Metrics (v1.0 + v1.1 + v1.2 — cumulative, frozen)
 
