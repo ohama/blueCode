@@ -18,7 +18,7 @@ v1.2 adds three new tools to the agent's arsenal and enhances an existing one, e
 
 ## Phases
 
-- [ ] **Phase 8: Tool Expansion** — Add `edit_file`, `glob_search`, `grep_search` to Domain DU, schema, executor, and system prompt
+- [x] **Phase 8: Tool Expansion** — Add `edit_file`, `glob_search`, `grep_search` to Domain DU, schema, executor, and system prompt
 - [ ] **Phase 9: Read File Metadata** — Prepend `[file: ..., lines X-Y of Z, truncated|not-truncated]` header to `read_file` output
 
 ---
@@ -66,11 +66,11 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details and plan histo
 4. `edit_file` with `oldString` appearing exactly once produces a modified file on disk; `edit_file` with `oldString` appearing zero times returns `Failure "oldString not found"`; `edit_file` with `oldString` appearing 2+ times returns `Failure "oldString matches N times; refine to make unique"`
 5. All 218 v1.1 tests still pass — no regression in `ReadFile`, `WriteFile`, `ListDir`, `RunShell` behavior or routing
 
-**Plans**: TBD
+**Plans**: 2 plans (complete)
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [x] 08-01-shared-seam-PLAN.md — Tool DU + dispatchTool + schema enum + system prompt + FsToolExecutor stubs
+- [x] 08-02-PLAN.md — editFileImpl + globSearchImpl + grepSearchImpl + ToolExpansionTests (18 cases)
 
 ---
 
@@ -104,5 +104,5 @@ Plans:
 | 1-5. MVP Phases | v1.0 | 17/17 | Complete | 2026-04-23 |
 | 6. Dynamic Bootstrap | v1.1 | 3/3 | Complete | 2026-04-24 |
 | 7. Thought Capture | v1.1 | 2/2 | Complete | 2026-04-24 |
-| 8. Tool Expansion | v1.2 | 0/TBD | Not started | - |
+| 8. Tool Expansion | v1.2 | 2/2 | Complete | 2026-04-25 |
 | 9. Read File Metadata | v1.2 | 0/1 | Planned (awaiting execute) | - |

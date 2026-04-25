@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-04-24 for v1.2 milestone start)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** v1.2 Tool Expansion — Phase 8 (edit_file + glob_search + grep_search) + Phase 9 (read_file metadata)
+**Current focus:** v1.2 Tool Expansion — Phase 8 ✓ complete; Phase 9 (read_file metadata) next
 
 ## Current Position
 
 Milestone: v1.2 Tool Expansion (started 2026-04-24)
-Phase: Phase 8 (in progress — Plan 01 complete; Plan 02 next)
-Plan: 08-01 complete; 08-02 is next
-Status: Shared-seam foundation wired. Tool DU has 7 cases, schema enum 8 values, system prompt describes 8 actions, FsToolExecutor has stubs. Plan 08-02 implements real edit_file/glob_search/grep_search logic.
-Last activity: 2026-04-25 — Completed 08-01-PLAN.md (shared seam foundation)
+Phase: Phase 8 complete (verified 2026-04-25, 5/5 must-haves passed); Phase 9 next
+Plan: All Phase 8 plans complete (08-01 + 08-02). Phase 9 has 09-01 PLAN.md ready (awaiting execute).
+Status: edit_file/glob_search/grep_search are first-class tools — Tool DU has 7 cases, schema enum 8 values, FsToolExecutor has 7 real impls (no stubs), 18 new ToolExpansionTests. 236 tests pass.
+Last activity: 2026-04-25 — Phase 8 verified complete; ready to execute Phase 9
 
-Progress: v1.2 [░░░░░░░░░░░░░░░░░░░░] 0% (0 of 4 REQs satisfied — stubs don't count toward TLX-01/02/03)
+Progress: v1.2 [██████████░░░░░░░░░░] 75% (3 of 4 REQs satisfied — TLX-01/02/03 ✓; TOOL-08 pending Phase 9)
 
 ## Performance Metrics (v1.0 + v1.1 — cumulative, frozen)
 
@@ -55,10 +55,10 @@ v1.3+ seed candidates (not v1.2 scope):
 
 ### Blockers/Concerns
 
-None — v1.1 shipped clean. Plan 08-01 complete. Next: execute plan 08-02 (fill stubs with real impls + add tests).
+None — Phase 8 verified passed (08-VERIFICATION.md, 5/5 must-haves). 236 tests passing (218 v1.1 baseline + 18 Phase 8 ToolExpansionTests). Next: execute Phase 9 (read_file metadata header).
 
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Completed 08-01-PLAN.md — shared-seam foundation for edit_file/glob_search/grep_search.
-Resume file: None — run `/gsd:execute-phase 8` plan 02 (or directly execute .planning/phases/08-tool-expansion/08-02-PLAN.md).
+Stopped at: Phase 8 complete + verified. ROADMAP/STATE/REQUIREMENTS updated; TLX-01/02/03 marked Complete.
+Resume file: None — run `/gsd:execute-phase 9` (PLAN.md already exists at .planning/phases/09-read-file-metadata/09-01-read-file-metadata-PLAN.md).

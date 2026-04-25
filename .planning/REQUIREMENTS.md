@@ -10,21 +10,21 @@
 
 ### Tools (Extended)
 
-- [ ] **TLX-01**: `edit_file` — exact-string find-and-replace surgical edit
+- [x] **TLX-01**: `edit_file` — exact-string find-and-replace surgical edit
   - Input: `{ path: string; oldString: string; newString: string }`
   - Behavior: 파일 읽고, `oldString` 이 정확히 1회 등장하면 `newString` 으로 치환 후 저장. 0회 또는 2회+ 등장 시 fail (`Failure "oldString not found"` 또는 `Failure "oldString matches N times; refine to make unique"`).
   - Path validation: project root scope (TOOL-02 `write_file` 와 동일)
   - Truncation: `oldString` / `newString` 길이 제한 없음 (TOOL-06 의 2000-char truncation 은 응답에만 적용, 입력 아님).
   - **근거**: 2026-04-24 벤치마크 W2 에서 `write_file` 로 4-line 파일 재작성 시 72B 14s, 32B 6.2s. 1000-line 파일에 1-line 수정하면 수초-수십초 낭비 + JSON content 필드 거대화. `edit_file` 은 1-2s.
 
-- [ ] **TLX-02**: `glob_search` — 파일 패턴 finder
+- [x] **TLX-02**: `glob_search` — 파일 패턴 finder
   - Input: `{ pattern: string; path: string option }` — pattern 예: `"src/**/*.fs"`, `"**/*.md"`
   - Behavior: project root 기준 (`path` 없으면) 또는 지정된 `path` 기준 glob 매칭 파일 경로 목록 반환. `.gitignore` 존중하지 않음 (v1.3+ 고려).
   - Output: `string list` of relative paths, 최대 100개 (초과 시 truncate marker)
   - Path validation: project root scope
   - **근거**: 현재 파일 찾기는 `run_shell "find . -name '*.fs'"` 패턴. bash_security.py 게이트 통과 부담 (T5 에서 72B 의 `find -exec \;` denied 사례). native tool 이면 deterministic.
 
-- [ ] **TLX-03**: `grep_search` — 콘텐츠 패턴 finder
+- [x] **TLX-03**: `grep_search` — 콘텐츠 패턴 finder
   - Input: `{ pattern: string; path: string option; fileGlob: string option }` — pattern 은 regex 또는 fixed string
   - Behavior: `pattern` 을 파일 내용에서 검색, 매칭된 line 을 `(relativePath, lineNumber, lineContent)` 구조로 반환. `fileGlob` 으로 검색 범위 제한 (예: `"*.fs"`).
   - Output: match list, 최대 100개 (초과 시 truncate marker). 각 lineContent 200-char truncate.
@@ -81,9 +81,9 @@ v1 정의 유지. v1.2 에서 추가 제외 없음.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TLX-01 | Phase 8 | Pending |
-| TLX-02 | Phase 8 | Pending |
-| TLX-03 | Phase 8 | Pending |
+| TLX-01 | Phase 8 | Complete |
+| TLX-02 | Phase 8 | Complete |
+| TLX-03 | Phase 8 | Complete |
 | TOOL-08 | Phase 9 | Pending |
 
 **Coverage:**
