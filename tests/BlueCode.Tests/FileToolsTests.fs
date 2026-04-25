@@ -232,6 +232,30 @@ let readFileTests =
                       // its absence; the other two body words are sufficient proof.
                   | other -> failtestf "expected Success, got %A" other
               finally
+                  cleanup root
+
+          testCase "TOOL-08-bench: dispatcher Some(s, s+99) output triggers out-of-range header (T6 production trace)"
+          <| fun () ->
+              let root = newFixture ()
+              try
+                  // Mirror T6 production fixture: 3-line file, agent receives start_line=2001 only.
+                  // After Fix 1 (AgentLoop.fs:69-72), dispatcher constructs Some(2001, 2100).
+                  // This test exercises that exact post-dispatcher tuple.
+                  File.WriteAllText(Path.Combine(root, "small.fs"), "a\nb\nc\n")
+                  let exe = create root
+                  let result = exec exe (ReadFile(FilePath "small.fs", Some(2001, 2100)))
+                  match result with
+                  | Ok(Success content) ->
+                      Expect.stringContains
+                          content
+                          "[file: small.fs, lines 2001-2100 of 3, out-of-range]"
+                          "header preserves raw 2001-2100 range and shows totalLines=3"
+                      // Body MUST be empty on out-of-range.
+                      Expect.isFalse (content.Contains("\na\n")) "no body content (line 'a')"
+                      Expect.isFalse (content.Contains("\nb\n")) "no body content (line 'b')"
+                      Expect.isFalse (content.Contains("\nc\n")) "no body content (line 'c')"
+                  | other -> failtestf "expected Success, got %A" other
+              finally
                   cleanup root ]
 
 let writeFileTests =
