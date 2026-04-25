@@ -56,6 +56,8 @@ Every response MUST be strict JSON of this shape:
 
 Action input schemas:
 - read_file:   {"path": "<rel-path>", "start_line": <int?>, "end_line": <int?>}
+               Tool output begins: [file: <path>, lines X-Y of Z, not-truncated|truncated|out-of-range]
+               If out-of-range: requested start_line > total_lines (Z); choose a start_line <= Z.
 - write_file:  {"path": "<rel-path>", "content": "<full-new-content>"}
 - list_dir:    {"path": "<rel-path>", "depth": <int?>}
 - run_shell:   {"command": "<bash>", "timeout_ms": <int?>}
