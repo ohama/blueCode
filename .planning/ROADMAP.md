@@ -19,7 +19,7 @@ v1.2 adds three new tools to the agent's arsenal and enhances an existing one, e
 ## Phases
 
 - [x] **Phase 8: Tool Expansion** — Add `edit_file`, `glob_search`, `grep_search` to Domain DU, schema, executor, and system prompt
-- [ ] **Phase 9: Read File Metadata** — Prepend `[file: ..., lines X-Y of Z, truncated|not-truncated]` header to `read_file` output
+- [x] **Phase 9: Read File Metadata** — Prepend `[file: ..., lines X-Y of Z, truncated|not-truncated]` header to `read_file` output
 
 ---
 
@@ -88,10 +88,10 @@ Plans:
 3. Normal `read_file` with no `start_line` on a file under 2000 chars returns `[file: <path>, lines 1-N of N, not-truncated]` — existing callers see header prepended but content unchanged
 4. All 218 v1.1 tests (plus any new Phase 8 tests) still pass — `FsToolExecutor.executeAsync` change is backward-compatible; no Core type changes
 
-**Plans**: 1 plan
+**Plans**: 1 plan (complete)
 
 Plans:
-- [ ] 09-01-read-file-metadata-PLAN.md — Prepend bounds/truncation header to read_file (3 tasks: impl + tests + system prompt)
+- [x] 09-01-read-file-metadata-PLAN.md — Prepend bounds/truncation header to read_file (3 tasks: impl + tests + system prompt)
 
 ---
 
@@ -105,4 +105,4 @@ Plans:
 | 6. Dynamic Bootstrap | v1.1 | 3/3 | Complete | 2026-04-24 |
 | 7. Thought Capture | v1.1 | 2/2 | Complete | 2026-04-24 |
 | 8. Tool Expansion | v1.2 | 2/2 | Complete | 2026-04-25 |
-| 9. Read File Metadata | v1.2 | 0/1 | Planned (awaiting execute) | - |
+| 9. Read File Metadata | v1.2 | 1/1 | Complete | 2026-04-25 |

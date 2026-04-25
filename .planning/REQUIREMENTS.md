@@ -33,7 +33,7 @@
 
 ### Tools (Enhancement)
 
-- [ ] **TOOL-08**: `read_file` 응답에 파일 bounds 메타데이터 포함
+- [x] **TOOL-08**: `read_file` 응답에 파일 bounds 메타데이터 포함
   - 변경: `ToolResult.Success` 의 `read_file` 분기 output 에 아래 정보 부가 (기존 text 내용 위 또는 아래에 구조화된 prefix/suffix 로 삽입):
     - `total_lines`: 파일 전체 line 수
     - `returned_range`: 반환된 line 범위 (`start_line` 없으면 `1-N`, `start_line=50, end_line=100` 이면 `50-100`)
@@ -84,7 +84,7 @@ v1 정의 유지. v1.2 에서 추가 제외 없음.
 | TLX-01 | Phase 8 | Complete |
 | TLX-02 | Phase 8 | Complete |
 | TLX-03 | Phase 8 | Complete |
-| TOOL-08 | Phase 9 | Pending |
+| TOOL-08 | Phase 9 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 4 total
