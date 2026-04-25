@@ -360,6 +360,213 @@ let private runShellImpl
                         )
     }
 
+// ── glob pattern → regex converter (used by glob_search) ─────────────────────
+//
+// Handles **, *, ?, literal chars. IgnoreCase for cross-platform compat.
+// `**` matches "any number of path segments"; `*` matches "any chars except /".
+// `?` matches single non-/ char. Source: 08-RESEARCH.md Pattern 4, verified
+// by dotnet fsi 2026-04-24.
+let private globToRegex (pattern: string) : System.Text.RegularExpressions.Regex =
+    let sb = System.Text.StringBuilder("^")
+    let mutable i = 0
+    while i < pattern.Length do
+        let c = pattern.[i]
+        if c = '*' && i + 1 < pattern.Length && pattern.[i+1] = '*' then
+            sb.Append(".*") |> ignore
+            i <- i + 2
+            if i < pattern.Length && pattern.[i] = '/' then i <- i + 1
+        elif c = '*' then sb.Append("[^/]*") |> ignore; i <- i + 1
+        elif c = '?' then sb.Append("[^/]") |> ignore;  i <- i + 1
+        elif c = '.' then sb.Append("\\.") |> ignore;   i <- i + 1
+        else sb.Append(System.Text.RegularExpressions.Regex.Escape(string c)) |> ignore; i <- i + 1
+    sb.Append("$") |> ignore
+    System.Text.RegularExpressions.Regex(
+        sb.ToString(),
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase
+        ||| System.Text.RegularExpressions.RegexOptions.Compiled)
+
+// ── edit_file (TLX-01) ───────────────────────────────────────────────────────
+//
+// Contract (REQUIREMENTS.md TLX-01):
+//   oldString appears exactly 1 time → replace with newString, write file, Success ""
+//   oldString appears 0 times        → Failure(1, "oldString not found")
+//   oldString appears N≥2 times      → Failure(1, "oldString matches N times; refine to make unique")
+//
+// Critical pitfall (08-RESEARCH.md Pitfall 1): String.Replace replaces ALL
+// occurrences silently. We count occurrences first via IndexOf loop and
+// only call Replace once count = 1 is confirmed. File encoding (UTF-8
+// default) and line endings (LF/CRLF preserved exactly) require no special
+// handling — File.ReadAllText / File.WriteAllTextAsync preserve original bytes.
+
+let private editFileImpl
+    (projectRoot: string)
+    (path: string)
+    (oldString: string)
+    (newString: string)
+    (ct: CancellationToken)
+    : Task<Result<ToolResult, AgentError>> =
+    task {
+        ct.ThrowIfCancellationRequested()
+        match validatePath projectRoot path with
+        | Error tr -> return Ok tr
+        | Ok resolved ->
+            try
+                let content = File.ReadAllText(resolved)
+                // Count occurrences (Ordinal comparison — exact bytes, not culture-dependent)
+                let mutable count = 0
+                let mutable idx = 0
+                while idx >= 0 do
+                    idx <- content.IndexOf(oldString, idx, StringComparison.Ordinal)
+                    if idx >= 0 then
+                        count <- count + 1
+                        idx <- idx + oldString.Length
+                match count with
+                | 0 ->
+                    return Ok(Failure(1, "oldString not found"))
+                | 1 ->
+                    let updated = content.Replace(oldString, newString, StringComparison.Ordinal)
+                    do! File.WriteAllTextAsync(resolved, updated, ct)
+                    return Ok(Success(truncateOutput ""))
+                | n ->
+                    return Ok(Failure(1, sprintf "oldString matches %d times; refine to make unique" n))
+            with
+            | :? FileNotFoundException as ex -> return Ok(Failure(1, ex.Message))
+            | :? UnauthorizedAccessException as ex -> return Ok(Failure(1, ex.Message))
+            | :? IOException as ex -> return Ok(Failure(1, ex.Message))
+    }
+
+// ── glob_search (TLX-02) ─────────────────────────────────────────────────────
+//
+// Contract (REQUIREMENTS.md TLX-02):
+//   Input:  { pattern: string; path: FilePath option }
+//   Output: newline-joined relative paths (from projectRoot), max 100,
+//           with "[truncated: showing first 100 matches]" marker if capped.
+//
+// Hidden file policy (08-RESEARCH.md Pitfall 7): AttributesToSkip is set to
+// FileAttributes.System only, NOT the default (Hidden | System). Agents
+// legitimately need to find `.planning/X.md`, `.gitignore`, etc.
+
+let private globSearchImpl
+    (projectRoot: string)
+    (pattern: string)
+    (searchPath: string option)
+    (ct: CancellationToken)
+    : Task<Result<ToolResult, AgentError>> =
+    task {
+        ct.ThrowIfCancellationRequested()
+        let searchRoot =
+            match searchPath with
+            | None -> Ok projectRoot
+            | Some p -> validatePath projectRoot p
+        match searchRoot with
+        | Error tr -> return Ok tr
+        | Ok root ->
+            try
+                let rx = globToRegex pattern
+                let opts = EnumerationOptions()
+                opts.RecurseSubdirectories <- true
+                opts.AttributesToSkip <- FileAttributes.System
+                let matches =
+                    Directory.EnumerateFiles(root, "*", opts)
+                    |> Seq.map (fun f -> Path.GetRelativePath(projectRoot, f).Replace('\\', '/'))
+                    |> Seq.filter (fun rel -> rx.IsMatch(rel))
+                    |> Seq.truncate 100
+                    |> Seq.toArray
+                let body =
+                    if matches.Length = 100 then
+                        String.Join("\n", matches) + "\n\n[truncated: showing first 100 matches]"
+                    else
+                        String.Join("\n", matches)
+                return Ok(Success(truncateOutput body))
+            with
+            | :? UnauthorizedAccessException as ex -> return Ok(Failure(1, ex.Message))
+            | :? IOException as ex -> return Ok(Failure(1, ex.Message))
+    }
+
+// ── grep_search (TLX-03) ─────────────────────────────────────────────────────
+//
+// Contract (REQUIREMENTS.md TLX-03):
+//   Input:  { pattern: string; path: FilePath option; fileGlob: string option }
+//   Output: newline-joined "relativePath:lineNumber:lineContent" lines, max 100.
+//           lineContent truncated at 200 chars.
+//
+// Pitfalls addressed:
+//   - 08-RESEARCH.md Pitfall 5 (catastrophic backtracking): 500ms per-line Regex timeout
+//   - 08-RESEARCH.md Pitfall 4 (fileGlob with path separators): reject with Failure
+//   - Binary files: File.ReadAllLines may throw on decoder errors; catch and skip
+
+let private grepSearchImpl
+    (projectRoot: string)
+    (pattern: string)
+    (searchPath: string option)
+    (fileGlob: string option)
+    (ct: CancellationToken)
+    : Task<Result<ToolResult, AgentError>> =
+    task {
+        ct.ThrowIfCancellationRequested()
+        // Reject fileGlob values containing path separators (see 08-RESEARCH.md Pitfall 4)
+        match fileGlob with
+        | Some g when g.Contains('/') || g.Contains('\\') ->
+            return Ok(Failure(1, "file_glob must be a filename pattern without path separators"))
+        | _ ->
+            let searchRoot =
+                match searchPath with
+                | None -> Ok projectRoot
+                | Some p -> validatePath projectRoot p
+            match searchRoot with
+            | Error tr -> return Ok tr
+            | Ok root ->
+                try
+                    let globPattern = fileGlob |> Option.defaultValue "*"
+                    let opts = EnumerationOptions()
+                    opts.RecurseSubdirectories <- true
+                    opts.AttributesToSkip <- FileAttributes.System
+
+                    let rxOpt =
+                        try
+                            Some(System.Text.RegularExpressions.Regex(
+                                pattern,
+                                System.Text.RegularExpressions.RegexOptions.None,
+                                TimeSpan.FromMilliseconds(500.0)))
+                        with :? System.ArgumentException -> None
+
+                    match rxOpt with
+                    | None -> return Ok(Failure(1, sprintf "Invalid regex pattern: %s" pattern))
+                    | Some regex ->
+                        let results = System.Collections.Generic.List<string>()
+                        let mutable hitCap = false
+
+                        for file in Directory.EnumerateFiles(root, globPattern, opts) do
+                            if not hitCap then
+                                ct.ThrowIfCancellationRequested()
+                                try
+                                    let lines = File.ReadAllLines(file)
+                                    for i in 0 .. lines.Length - 1 do
+                                        if not hitCap then
+                                            let line = lines.[i]
+                                            let matched =
+                                                try regex.IsMatch(line)
+                                                with :? System.Text.RegularExpressions.RegexMatchTimeoutException -> false
+                                            if matched then
+                                                let relPath = Path.GetRelativePath(projectRoot, file).Replace('\\', '/')
+                                                let truncLine =
+                                                    if line.Length > 200 then line.Substring(0, 200)
+                                                    else line
+                                                results.Add(sprintf "%s:%d:%s" relPath (i + 1) truncLine)
+                                                if results.Count >= 100 then hitCap <- true
+                                with _ -> ()  // skip unreadable/binary files
+
+                        let body =
+                            if hitCap then
+                                String.Join("\n", results) + "\n\n[truncated: showing first 100 matches]"
+                            else
+                                String.Join("\n", results)
+                        return Ok(Success(truncateOutput body))
+                with
+                | :? UnauthorizedAccessException as ex -> return Ok(Failure(1, ex.Message))
+                | :? IOException as ex -> return Ok(Failure(1, ex.Message))
+    }
+
 // ── Public factory ────────────────────────────────────────────────────────────
 
 /// Create an IToolExecutor bound to projectRoot. All path validation runs
@@ -378,9 +585,8 @@ let create (projectRoot: string) : IToolExecutor =
             | WriteFile(FilePath path, content) -> writeFileImpl rootNormalized path content ct
             | ListDir(FilePath path, depth) -> listDirImpl rootNormalized path depth ct
             | RunShell(Command cmd, BlueCode.Core.Domain.Timeout _timeoutMs) -> runShellImpl rootNormalized cmd ct
-            | EditFile(FilePath _, _, _) ->
-                task { return failwith "EditFile impl not yet wired (plan 08-02)" }
-            | GlobSearch(_, _) ->
-                task { return failwith "GlobSearch impl not yet wired (plan 08-02)" }
-            | GrepSearch(_, _, _) ->
-                task { return failwith "GrepSearch impl not yet wired (plan 08-02)" } }
+            | EditFile(FilePath path, oldStr, newStr) -> editFileImpl rootNormalized path oldStr newStr ct
+            | GlobSearch(pattern, searchPath) ->
+                globSearchImpl rootNormalized pattern (searchPath |> Option.map (fun (FilePath p) -> p)) ct
+            | GrepSearch(pattern, searchPath, fileGlob) ->
+                grepSearchImpl rootNormalized pattern (searchPath |> Option.map (fun (FilePath p) -> p)) fileGlob ct }
