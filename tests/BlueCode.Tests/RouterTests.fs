@@ -95,6 +95,7 @@ let rootTests =
           BlueCode.Tests.ToLlmOutputTests.toLlmOutputTests
           BlueCode.Tests.SmokeTests.smokeTests
           BlueCode.Tests.FileToolsTests.fileToolsTests
+          BlueCode.Tests.ToolExpansionTests.tests
           BlueCode.Tests.BashSecurityTests.bashSecurityTests
           BlueCode.Tests.RunShellTests.runShellTests
           BlueCode.Tests.AgentLoopTests.agentLoopTests
