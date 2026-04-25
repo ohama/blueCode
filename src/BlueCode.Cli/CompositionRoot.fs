@@ -63,7 +63,8 @@ Action input schemas:
 - list_dir:    {"path": "<rel-path>", "depth": <int?>}
 - run_shell:   {"command": "<bash>", "timeout_ms": <int?>}
 - edit_file:   {"path": "<rel-path>", "old_string": "<exact-unique-match>", "new_string": "<replacement>"}
-               edit_file persists the change. After a successful edit_file, do NOT call write_file with the same path.
+               edit_file is the ONLY action needed to save changes. NEVER call write_file after edit_file.
+               edit_file's success result already confirms the change; do NOT verify with a follow-up read_file.
 - glob_search: {"pattern": "<glob like src/**/*.fs>", "path": "<rel-path?>"}
 - grep_search: {"pattern": "<regex or fixed-string>", "path": "<rel-path?>", "file_glob": "<*.ext?>"}
 - final:       {"answer": "<your final answer to the user>"}
