@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-04-24 for v1.2 milestone start)
 ## Current Position
 
 Milestone: v1.2 Tool Expansion (started 2026-04-24; Phases 8 + 9 verified 2026-04-25; **9.1 inserted 2026-04-25** post-audit re-bench)
-Phase: 9.1 Bench Follow-up Fixes — 1/3 plans complete
-Plan: 09.1-01 complete (system prompt clarifications — Fix 2 truncated hint + Fix 3 edit_file terminal hint). Ready for Wave 2: Plan 09.1-02 (dispatcher fix + production-trace test).
-Status: 240 tests passing; two atomic commits landed (6eb0892, d251489). Wave 1 (lowest-risk system-prompt edits) done. v1.2 milestone close still blocked on 9.1 completion.
-Last activity: 2026-04-25 — Completed 09.1-01-PLAN.md. Added Fix 2 + Fix 3 verbatim hints to defaultSystemPrompt in CompositionRoot.fs (+2 lines, 0 deletions). Next: execute Plan 09.1-02 (dispatcher partial-bounds fix + production-trace test).
+Phase: 9.1 Bench Follow-up Fixes — 2/3 plans complete
+Plan: 09.1-02 complete (dispatcher partial-bounds fix + production-trace test). Ready for Wave 3: Plan 09.1-03 (benchmark re-run, ~3-4 min wall-clock).
+Status: 241 tests passing (1 ignored); Fix 1 landed — dispatcher now emits Some(2001, 2100) for start_line-only inputs; TOOL-08-bench fixture validates T6 scenario end-to-end. v1.2 milestone close still blocked on 9.1 completion.
+Last activity: 2026-04-25 — Completed 09.1-02-PLAN.md. Extended AgentLoop.dispatchTool lineRange match with two new arms (Some(s, s+99) and Some(1, e)); added TOOL-08-bench testCase inside readFileTests. Next: execute Plan 09.1-03 (bench validation).
 
 Progress: v1.2 [██████████████████░░] structurally 100% (4/4 REQs marked Complete by spec) but **behaviorally ~75%** until Phase 9.1 closes TOOL-08's dispatcher bridge and recovers the 72B T6 baseline.
 
@@ -71,5 +71,5 @@ None blocking 9.1 planning. Pre-existing structural state: 240 tests passing, Co
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Completed 09.1-01-PLAN.md (system prompt clarifications — Fix 2 + Fix 3).
-Resume file: None — execute Plan 09.1-02 (dispatcher partial-bounds fix + production-trace test), then 09.1-03 (benchmark re-run), then `/gsd:verify-work 9.1` → `/gsd:audit-milestone` → `/gsd:complete-milestone`.
+Stopped at: Completed 09.1-02-PLAN.md (dispatcher partial-bounds fix + TOOL-08-bench production-trace test).
+Resume file: None — execute Plan 09.1-03 (benchmark re-run, ~3-4 min wall-clock), then `/gsd:verify-work 9.1` → `/gsd:audit-milestone` → `/gsd:complete-milestone`.
