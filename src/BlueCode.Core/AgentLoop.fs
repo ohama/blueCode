@@ -90,6 +90,26 @@ let private dispatchTool (actionName: string) (input: ToolInput) : Result<Tool, 
                 let timeoutMs = tryInt "timeout_ms" |> Option.defaultValue 30000
                 return RunShell(Command cmd, BlueCode.Core.Domain.Timeout timeoutMs)
             }
+        | "edit_file" ->
+            result {
+                let! path   = requireStr "path"
+                let! oldStr = requireStr "old_string"
+                let! newStr = requireStr "new_string"
+                return EditFile(FilePath path, oldStr, newStr)
+            }
+        | "glob_search" ->
+            result {
+                let! pattern = requireStr "pattern"
+                let searchPath = tryStr "path" |> Option.map FilePath
+                return GlobSearch(pattern, searchPath)
+            }
+        | "grep_search" ->
+            result {
+                let! pattern = requireStr "pattern"
+                let searchPath = tryStr "path" |> Option.map FilePath
+                let fileGlob   = tryStr "file_glob"
+                return GrepSearch(pattern, searchPath, fileGlob)
+            }
         | other -> Error(UnknownTool(ToolName other))
     with ex ->
         Error(SchemaViolation(sprintf "Tool input parse failed for '%s': %s" actionName ex.Message))

@@ -57,6 +57,9 @@ type Tool =
     | WriteFile of FilePath * content: string
     | ListDir of FilePath * depth: int option
     | RunShell of Command * Timeout
+    | EditFile of FilePath * oldString: string * newString: string
+    | GlobSearch of pattern: string * searchPath: FilePath option
+    | GrepSearch of pattern: string * searchPath: FilePath option * fileGlob: string option
 
 /// Raw text produced by a successful tool execution.
 type ToolOutput = ToolOutput of string

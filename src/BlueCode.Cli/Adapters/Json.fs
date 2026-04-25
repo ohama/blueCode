@@ -201,7 +201,7 @@ let llmStepSchema: JsonSchema =
         "thought": { "type": "string", "minLength": 1 },
         "action": {
           "type": "string",
-          "enum": ["read_file", "write_file", "list_dir", "run_shell", "final"]
+          "enum": ["read_file", "write_file", "list_dir", "run_shell", "edit_file", "glob_search", "grep_search", "final"]
         },
         "input": { "type": "object" }
       },
