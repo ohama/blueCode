@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-26 after starting v1.3 milestone)
 ## Current Position
 
 Milestone: v1.3 Bench-Driven Quality Gates (started 2026-04-26)
-Phase: 10 — Bench Formalization (2/3 plans complete)
-Plan: 10-02 complete; ready for 10-03
-Status: In progress — wave 2 done
-Last activity: 2026-04-26 — Completed 10-02-PLAN.md (baseline.json + --gate mode; SC1 verified positive + negative)
+Phase: 10 — Bench Formalization (3/3 plans complete — READY FOR UAT)
+Plan: 10-03 complete; Phase 10 ready for `/gsd:verify-work 10` before Phase 11
+Status: Phase 10 complete — all 5 SCs verified
+Last activity: 2026-04-26 — Completed 10-03-PLAN.md (documentation/bench.md + Phase 10 final verification; GATE PASS 8/8)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10: ██░ 2/3 plans · Phase 11: ░░░ 0/3 plans)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10: ███ 3/3 plans · Phase 11: ░░░ 0/3 plans)
 
 ## Performance Metrics (v1.0 + v1.1 + v1.2 — cumulative, frozen)
 
@@ -45,6 +45,11 @@ Plan 10-02 decisions (2026-04-26):
 - 3-branch verdict logic only (no 4th "regression recovery" branch); clean, testable, no false positives
 - Gate output is console-only; no JSON report in Phase 10
 
+Plan 10-03 decisions (2026-04-26):
+
+- SC5 historical reference: CLAUDE.md `## Bench` section contains `/tmp/bench-v1.2/run.sh` in a provenance sentence ("repo-tracked replacement for v1.2's ephemeral...") — intentional context, not a stale operational reference; no modification needed
+- W1 prompt exception documented in bench.md: deliberate "using write_file" wording validates 09.1-05 loop-injection regression; must not be removed from W1 prompt
+
 New v1.3 architectural input from v1.2 close:
 
 - 09.1-05 loop-injection primitive (`lastEditPath` + post-user `[POST-EDIT CONSTRAINT]` System message) is reusable; PERF-02 extends it to post-`read_file`-truncated and optionally post-`write_file` to move contextual hints out of base prompt
@@ -69,5 +74,5 @@ None at v1.3 start. Daily-driver use of blueCode ongoing; v1.3 work should not b
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Completed 10-02-PLAN.md. bench/baseline.json (8 entries) + bench/run.sh --gate committed (2 task commits + metadata). SC1 positive: GATE PASS 8/8 exit=0 (~116s). SC1 negative: tightened T6_32b.step_count_max=0 → GATE FAIL exit=1; restored → GATE PASS exit=0 round-trip clean. Next: Plan 10-03 (documentation/bench.md + Phase 10 final verification).
+Stopped at: Completed 10-03-PLAN.md. documentation/bench.md (190 lines, 11 sections, all 5 BENCH-05 topics) committed. Phase 10 final gate: GATE PASS 8/8 exit=0 (~115s). Source-code invariant clean: zero src/tests drift across all Phase 10 commits. All 5 ROADMAP Phase 10 SCs verified. Phase 10 READY FOR UAT. Next: `/gsd:verify-work 10` then Phase 11 (System Prompt Shrink).
 Resume file: None
