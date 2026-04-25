@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-04-24 for v1.2 milestone start)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** v1.2 Tool Expansion — Phase 9.1 inserted to close audit tech-debt (TOOL-08 dispatcher gap, 72B `truncated` regression, 32B edit_file+write_file redundancy) before milestone archive.
+**Current focus:** v1.2 Tool Expansion — all phases complete and verified (Phases 8 + 9 ✓, Phase 9.1 ✓ 5/5 plans, verifier `passed` 5/5 must-haves on 2026-04-26). Ready for milestone archive.
 
 ## Current Position
 
-Milestone: v1.2 Tool Expansion (started 2026-04-24; Phases 8 + 9 verified 2026-04-25; **9.1 inserted 2026-04-25** post-audit re-bench)
-Phase: 9.1 Bench Follow-up Fixes — 5/5 plans complete
+Milestone: v1.2 Tool Expansion (started 2026-04-24; Phases 8 + 9 verified 2026-04-25; Phase 9.1 verified 2026-04-26)
+Phase: 9.1 Bench Follow-up Fixes — 5/5 plans complete; verifier `passed` (5/5 must-haves)
 Plan: 09.1-05 complete (code-level loop-injection). W1 32B gate CLOSED (4→3 PASS). W2 32B gate PASS (preserved). T1 canary CANARY-OK (1 step, 1024). All SC4 gates closed.
-Status: 242 tests passing (1 ignored); Fix 1 (dispatcher) + Fix 2 (truncated hint) + Fix 3 W1/W2 all closed. Phase 9.1 complete; W1 gap closed via code-level loop-injection; ready for /gsd:verify-work 9.1 re-verification.
-Last activity: 2026-04-26 — Completed 09.1-05-PLAN.md. Loop-injection Option A: lastEditPath threaded through runLoop; buildMessages appends [POST-EDIT CONSTRAINT] System message after user turn; model skips write_file call. Step-3 thought: "The bug has been fixed and the change is confirmed. No further action is needed on this file."
+Status: 242 tests passing (1 ignored); Fix 1 (dispatcher) + Fix 2 (truncated hint) + Fix 3 W1/W2 all closed. v1.2 milestone ready for `/gsd:complete-milestone`.
+Last activity: 2026-04-26 — Phase 9.1 verifier returned `passed`. Loop-injection Option A: lastEditPath threaded through runLoop; buildMessages appends [POST-EDIT CONSTRAINT] System message after user turn; model skips write_file call. Step-3 thought changed from "Now, I will save the corrected version" to "The bug has been fixed and the change is confirmed. No further action is needed on this file." 16 atomic commits since `5fbb940`.
 
 Progress: v1.2 [████████████████████] 100% — all REQs complete, all SC4 bench gates closed (W1 via loop-injection, W2 via directive wording). Phase 9.1 ready for /gsd:verify-work 9.1.
 
@@ -75,5 +75,5 @@ None. Phase 9.1 complete. All three tech-debt items closed: Fix 1 (TOOL-08 dispa
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Completed 09.1-05-PLAN.md (code-level loop-injection — W1 SC4 gate closed; all gates green).
-Resume file: None — run `/gsd:verify-work 9.1` → `/gsd:audit-milestone` → `/gsd:complete-milestone`.
+Stopped at: Phase 9.1 verifier returned `passed` (5/5). Phase-completion edits applied to ROADMAP/STATE; VERIFICATION.md staged for milestone-close commit.
+Resume file: None — run `/gsd:complete-milestone` to archive v1.2 + tag, then `/gsd:new-milestone` to scope v1.3.
