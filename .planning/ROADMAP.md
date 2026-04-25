@@ -59,11 +59,12 @@ Archived in `.planning/milestones/v1.2-ROADMAP.md`.
 4. `documentation/bench.md` exists and covers: fixture naming convention, prompt-design guidance (avoid explicit tool naming per 09.1-04), how to add a test, how to update baseline after an intentional fix, and hang-contingency for `mlx_lm.server`
 5. CLAUDE.md no longer references `/tmp/bench-v1.2/run.sh`; the canonical bench entry point is `bench/run.sh`
 
-**Plans**: TBD (planning via `/gsd:plan-phase 10`)
+**Plans**: 3 plans in 3 waves (sequential — each builds on prior)
 
 Plans:
-- [ ] 10-01: TBD
-- [ ] 10-02: TBD
+- [ ] 10-01-PLAN.md — Move bench harness into repo (bench/run.sh + fixtures + CLAUDE.md ## Bench)
+- [ ] 10-02-PLAN.md — Add baseline.json + --gate mode (BENCH-03, BENCH-04, SC1)
+- [ ] 10-03-PLAN.md — Write documentation/bench.md + Phase 10 final verification
 
 ---
 
