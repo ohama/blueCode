@@ -69,6 +69,8 @@ let private dispatchTool (actionName: string) (input: ToolInput) : Result<Tool, 
                 let lineRange =
                     match startL, endL with
                     | Some s, Some e when s > 0 && e >= s -> Some(s, e)
+                    | Some s, None when s > 0 -> Some(s, s + 99)   // 100-line default window; Int32 overflow falls through readFileImpl invalid-range guard (RESEARCH.md F#-note 3)
+                    | None, Some e when e > 0 -> Some(1, e)        // bounded read from start
                     | _ -> None
 
                 return ReadFile(FilePath path, lineRange)
