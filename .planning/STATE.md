@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 of 3 (Domain Extensions) — not started
-Plan: —
-Status: Roadmap defined; ready for `/gsd:plan-phase 14`
-Last activity: 2026-04-26 — ROADMAP.md created; REQUIREMENTS.md traceability filled; STATE.md updated
+Phase: Phase 14 of 3 (Domain Extensions) — in progress (1/2 plans complete)
+Plan: 14-01 complete; 14-02 next
+Status: 14-01 committed (3 task commits + metadata); ready for Plan 14-02 (PlanValidator)
+Last activity: 2026-04-26 — Completed 14-01-PLAN.md (Domain.fs + Ports.fs atomic shift)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ (roadmap ready)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 (1/2) ░░░
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -42,6 +42,7 @@ Items relevant to v2.0 (architectural touch points):
 - **v1.2 loop-injection primitive** — Pattern reusable for plan-rejection hint injection (post-plan-rejection `[PLAN REJECTED]` System message follows same position discipline as `lastEditPath`/`lastReadHint`).
 - **v1.3 bench gate** — `bench/run.sh --gate` is regression authority. Phase 16 extends baseline.json 8 → ~12 entries (multi-turn fixture + plan-mode fixture).
 - **v1.4 MockHelpers.fs** — `makeMockResponse` is the canonical helper. Phase 14 adds sibling `makePlanResponse` in same module.
+- **v2.0 Phase 14-01 compile cascade** — SessionId (line 91) → PlannedStep + Plan (lines 100-121) → LlmOutput.Plan of Plan (line 121) → Session (line 206). Type ordering constraint: Plan must precede LlmOutput; Session must follow Step. Transitional `| Plan _ -> Error(PlanInvalid ...)` in runLoop is intentional — Phase 16 replaces it.
 
 ### Pending Todos
 
@@ -60,6 +61,6 @@ v2.1+ candidates (after v2.0 ships):
 
 ## Session Continuity
 
-Last session: 2026-04-26
-Stopped at: Roadmap created (ROADMAP.md + REQUIREMENTS.md traceability + STATE.md). Ready to plan Phase 14.
-Resume file: None
+Last session: 2026-04-26T23:06Z
+Stopped at: Completed 14-01-PLAN.md (Domain.fs + Ports.fs atomic shift, 243/1/0 preserved)
+Resume file: None — next task is `/gsd:execute-phase 14` for Plan 14-02 (PlanValidator)
