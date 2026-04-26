@@ -12,25 +12,25 @@ Each requirement is user-centric, atomic, and testable. Success criteria for eac
 
 State outlives a single `runSession`. The REPL gains memory; sessions can resume across process restarts.
 
-- [ ] **PERSIST-01**: Multi-turn REPL maintains conversation history within a single session.
+- [x] **PERSIST-01**: Multi-turn REPL maintains conversation history within a single session. ✓ (Phase 15, 2026-04-27)
   - **Goal:** When the user asks two consecutive questions in one REPL session, the second turn sees the first turn's `Step list` as prior context.
   - **Behavior:** REPL state extends from `unit` to `Session = { Id; Steps; CreatedAt; LastActivityAt }`. `runSession` accepts prior steps and appends new ones. New session = empty step list.
   - **Validation:** Multi-turn REPL test: turn 1 reads a file; turn 2 asks "what did I just read?" — agent answers correctly without re-reading. Mocked-LLM test mirrors the canonical flow.
   - **Out of scope:** Cross-process memory (covered by PERSIST-02/03). Compaction (v2.1 candidate).
 
-- [ ] **PERSIST-02**: Session state persists to `~/.bluecode/sessions/<id>.jsonl` between turns.
+- [x] **PERSIST-02**: Session state persists to `~/.bluecode/sessions/<id>.jsonl` between turns. ✓ (Phase 15, 2026-04-27)
   - **Goal:** After every completed turn (regardless of exit code), the full session state is on disk so a future `--resume <id>` can reconstruct it.
   - **Behavior:** Existing `~/.bluecode/session_<ts>.jsonl` (per-step crash log) is renamed/upgraded to `~/.bluecode/sessions/<id>.jsonl` with a `version: 2` header line. Each turn appends a `TurnComplete { steps; userPrompt; finalAnswer }` envelope. Session id is a stable ULID/UUID generated at session start.
   - **Validation:** Run `blueCode "..."`, verify `~/.bluecode/sessions/<id>.jsonl` contains version header + at least one turn envelope. Round-trip serialization test in `tests/BlueCode.Tests/SessionStoreTests.fs`.
   - **Out of scope:** Compaction (v2.1). Pruning old sessions (manual `rm -rf`).
 
-- [ ] **PERSIST-03**: `--resume <id>` flag loads a prior session and continues from its last step.
+- [x] **PERSIST-03**: `--resume <id>` flag loads a prior session and continues from its last step. ✓ (Phase 15, 2026-04-27)
   - **Goal:** `blueCode --resume 01J... "follow-up question"` reads `~/.bluecode/sessions/01J...jsonl`, reconstructs the `Session` record, and runs the new turn with prior context loaded.
   - **Behavior:** Argu accepts `--resume <ID>`. CompositionRoot wires `ISessionStore.Load` before invoking `runSession`. Unknown id → typed error (`AgentError.SessionNotFound id`) → exit 1 with stderr message. Corrupt JSONL → typed error → exit 1.
   - **Validation:** Live run: turn 1 with id captured, turn 2 with `--resume <id>` references turn 1 correctly. Test: load corrupt JSONL → returns `SessionNotFound` or `SessionCorrupt`, no exception.
   - **Out of scope:** Branching/forking sessions (v2.1+). Multi-resume merging.
 
-- [ ] **PERSIST-04**: New sessions get a fresh id automatically; `--new-session` forces a new session even when a resume might be implied.
+- [x] **PERSIST-04**: New sessions get a fresh id automatically; `--new-session` forces a new session even when a resume might be implied. ✓ (Phase 15, 2026-04-27)
   - **Goal:** Every `blueCode` invocation without `--resume` starts a new session with a fresh id; `--new-session` is the explicit form for users who want guaranteed-fresh state.
   - **Behavior:** Argu accepts `--new-session` (boolean, default false). Without `--resume`, a new id is always generated. With both `--resume X --new-session`, error: "conflicting flags". Session id printed to stderr at startup so the user can grab it for later `--resume`.
   - **Validation:** Argu rejects conflicting `--resume X --new-session` at parse time. Sessionid line on stderr is grep-able. New-session flag covered by REPL test.
@@ -96,10 +96,10 @@ Tracked for awareness; not pulled into v2.0 roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERSIST-01  | Phase 14 (shape) + Phase 15 (wiring) | Phase 14 ✓ shape; Phase 15 wiring pending |
-| PERSIST-02  | Phase 15 | Pending |
-| PERSIST-03  | Phase 15 | Pending |
-| PERSIST-04  | Phase 15 | Pending |
+| PERSIST-01  | Phase 14 (shape) + Phase 15 (wiring) | ✓ Complete (Phase 15, 2026-04-27) |
+| PERSIST-02  | Phase 15 | ✓ Complete (Phase 15, 2026-04-27) |
+| PERSIST-03  | Phase 15 | ✓ Complete (Phase 15, 2026-04-27) |
+| PERSIST-04  | Phase 15 | ✓ Complete (Phase 15, 2026-04-27) |
 | PLAN-01     | Phase 14 | ✓ Complete (Phase 14, 2026-04-26) |
 | PLAN-02     | Phase 16 | Pending |
 | PLAN-03     | Phase 16 | Pending |
