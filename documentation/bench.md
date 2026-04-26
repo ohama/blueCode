@@ -57,6 +57,27 @@ context. Fixtures are committed to git in their broken baseline state. The W1/W2
 mutate them in-place, then `bench/run.sh` restores via `cat <<'EOF'` heredoc before
 each run.
 
+## Auto-Reset of Write Fixtures
+
+`bench/run.sh` installs a bash `trap` on `EXIT` (set near the top of the script,
+right after `set -u`) that runs `git checkout -- bench/fixtures/bug_lastchar.fs
+bench/fixtures/bug_average.fs` on every exit path — success, failure, or Ctrl-C.
+This means **`git status` is always clean for those two fixtures after any
+`bench/run.sh` invocation**, regardless of what the LLM wrote during the run.
+
+The trap fires for every mode (`--gate`, `--regression`, `--canary`, `--all`,
+`--b2`, `--help`). For modes that do not mutate the W1/W2 fixtures (`--canary`,
+`--b2`, `--help`), the `git checkout` is a harmless no-op. The trap deliberately
+does NOT touch `bench/fixtures/bug_divide_zero.fs` — that fixture is read-only
+by every test that uses it (B2 diagnose), so resetting it would be a wasted
+syscall at best and a footgun at worst.
+
+The existing in-line heredoc-restore blocks (`cat <<'EOF' > bench/fixtures/...`
+before each W1/W2 invocation in `gate()` and `phase_write()`) are preserved as
+defense-in-depth: heredoc handles between-invocation reset within a single run;
+the trap handles exit-time cleanup. Either alone is sufficient; together they
+guarantee a clean working tree under every reasonable failure mode.
+
 ## Prompt Design Guidance
 
 **General rule:** Do NOT name a specific tool in fixture prompts. Phrases like "using
