@@ -13,6 +13,7 @@
     <Compile Include="Adapters/FsToolExecutor.fs" />
     <Compile Include="Adapters/Logging.fs" />
     <Compile Include="Adapters/JsonlSink.fs" />
+    <Compile Include="Adapters/FileSessionStore.fs" />
     <Compile Include="Rendering.fs" />
     <Compile Include="CompositionRoot.fs" />
     <Compile Include="Repl.fs" />
