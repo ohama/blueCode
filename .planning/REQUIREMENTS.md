@@ -10,7 +10,7 @@ Path B from the v1.3 close discussion: ship-from-cited-pain only. Both requireme
 
 ### Test Infrastructure
 
-- [ ] **TST-01**: Shared `makeMockResponse` test helper module
+- [x] **TST-01**: Shared `makeMockResponse` test helper module ✓ (Phase 12, 2026-04-26)
   - **Goal:** Consolidate 3 in-repo duplications of the `makeMockResponse` helper into a single shared module so future test additions don't fork the implementation.
   - **Current state (citations):**
     - `tests/BlueCode.Tests/AgentLoopTests.fs` — 2 instances (added in v1.2 Phase 9.1-05 and v1.3 Phase 11-01 mocked-LLM tests)
@@ -72,7 +72,7 @@ v1 boundaries unchanged. v1.4 adds no new exclusions; deferred items are "v1.5+ 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TST-01      | 12    | Pending |
+| TST-01      | 12    | Complete |
 | BENCH-06    | 13    | Pending |
 
 **Coverage:**

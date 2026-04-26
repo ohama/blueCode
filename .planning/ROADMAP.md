@@ -58,7 +58,7 @@ v1.4 clears two pieces of cited tech debt that accumulated across the prior thre
 
 | Phase | Name | Requirements | Plans | Status |
 |-------|------|--------------|-------|--------|
-| 12 | Test Helper Consolidation | TST-01 | 1 | Not started |
+| 12 | Test Helper Consolidation | TST-01 | 1 | ✓ Complete |
 | 13 | Bench Fixture Cleanup | BENCH-06 | 1 | Not started |
 
 **Requirement coverage:** 2/2 (TST-01 → Phase 12, BENCH-06 → Phase 13)
