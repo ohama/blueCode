@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 15 in progress (Plans 15-01 ✓ 15-02 ✓ complete)
-Plan: 15-02 complete; 15-03 next
-Status: 248/1/0 tests; bench gate 8/8 PASS; `--resume`/`--new-session` flags live
-Last activity: 2026-04-27 — Completed 15-02-PLAN.md (Argu flags + FileSessionStore.Load + CompositionRoot wiring + Program.fs dispatch)
+Phase: Phase 15 COMPLETE (15-01 ✓ 15-02 ✓ 15-03 ✓)
+Plan: 15-03 complete; Phase 16 next
+Status: 254/1/0 tests; bench gate 8/8 PASS; all Phase 15 SCs verified
+Last activity: 2026-04-26 — Completed 15-03-PLAN.md (SessionStoreTests + ReplTests multi-turn + live smoke + bench gate)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 ✓ Phase 15 ◆ (15-01 ✓ 15-02 ✓ 15-03 ░) Phase 16 ░
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 ✓ Phase 15 ✓ Phase 16 ░
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -68,6 +68,10 @@ v2.1+ candidates (after v2.0 ships):
 
 ## Session Continuity
 
-Last session: 2026-04-27T05:11Z
-Stopped at: Completed 15-02-PLAN.md (Argu flags + FileSessionStore.Load + CompositionRoot wiring + Program.fs dispatch, 248/1/0 preserved, bench 8/8)
-Resume file: None — run 15-03 next (SessionStoreTests + round-trip tests + Program integration tests)
+Last session: 2026-04-26T20:25Z
+Stopped at: Completed 15-03-PLAN.md (SessionStoreTests 5 testCases + ReplTests multi-turn SC1 + live smoke SC2/SC3/SC4 + bench gate SC5, 254/1/0, bench 8/8)
+Resume file: None — Phase 15 complete; run Phase 16 (Planning wiring + bench extension) next
+
+### New Decision (15-03)
+
+- **v2.0 Phase 15-03 test isolation** — `withTempHome` / `$HOME` redirect does NOT work for `FileSessionStore` tests on macOS .NET because `Environment.GetFolderPath(SpecialFolder.UserProfile)` reads native OS APIs, not `$HOME` env var (setting `$HOME` to temp returns empty string). Use unique GUID-prefixed session IDs in real `~/.bluecode/sessions/` with `finally`-block cleanup + `testSequenced` instead.
