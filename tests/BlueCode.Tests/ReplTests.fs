@@ -83,8 +83,8 @@ let tests =
               Console.SetOut(sw)
 
               try
-                  let exitCode =
-                      BlueCode.Cli.Repl.runSingleTurn "stub prompt" components Compact
+                  let (exitCode, _) =
+                      BlueCode.Cli.Repl.runSingleTurn "stub prompt" [] components Compact
                       |> fun t -> t.GetAwaiter().GetResult()
 
                   Console.Out.Flush()
@@ -203,8 +203,8 @@ let tests =
               Console.SetOut(sw)
 
               try
-                  let exitCode =
-                      BlueCode.Cli.Repl.runSingleTurn "stub prompt" components Verbose
+                  let (exitCode, _) =
+                      BlueCode.Cli.Repl.runSingleTurn "stub prompt" [] components Verbose
                       |> fun t -> t.GetAwaiter().GetResult()
 
                   Console.Out.Flush()
@@ -263,8 +263,8 @@ let tests =
               Console.SetOut(sw)
 
               try
-                  let exitCode =
-                      BlueCode.Cli.Repl.runSingleTurn "stub prompt" components Compact
+                  let (exitCode, _) =
+                      BlueCode.Cli.Repl.runSingleTurn "stub prompt" [] components Compact
                       |> fun t -> t.GetAwaiter().GetResult()
 
                   Console.Out.Flush()
@@ -331,8 +331,8 @@ let tests =
               Console.SetOut(sw)
 
               try
-                  let exitCode =
-                      BlueCode.Cli.Repl.runSingleTurn "stub prompt" components Compact
+                  let (exitCode, _) =
+                      BlueCode.Cli.Repl.runSingleTurn "stub prompt" [] components Compact
                       |> fun t -> t.GetAwaiter().GetResult()
 
                   Console.Out.Flush()

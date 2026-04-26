@@ -71,7 +71,8 @@ let main (argv: string array) : int =
             | [] -> (Repl.runMultiTurn components renderMode).GetAwaiter().GetResult()
             | words ->
                 let prompt = String.concat " " words
-                (Repl.runSingleTurn prompt components renderMode).GetAwaiter().GetResult()
+                let (code, _) = (Repl.runSingleTurn prompt [] components renderMode).GetAwaiter().GetResult()
+                code
 
         Log.CloseAndFlush()
         exitCode

@@ -6,6 +6,7 @@ open System.Threading.Tasks
 open Serilog
 open Spectre.Console
 open BlueCode.Core.Domain
+open BlueCode.Core.Ports
 open BlueCode.Core.AgentLoop
 open BlueCode.Cli.Rendering
 open BlueCode.Cli.CompositionRoot
@@ -46,7 +47,15 @@ let shouldWarnContextWindow (totalChars: int) (maxModelLen: int) (alreadyWarned:
 ///   0   - successful turn
 ///   1   - agent error (MaxLoopsExceeded, LoopGuardTripped, Llm*, Tool*, etc.)
 ///   130 - user-cancelled (SIGINT, Ctrl+C - POSIX 128+2)
-let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: RenderMode) : Task<int> =
+///
+/// priorSteps: steps accumulated from prior turns in this session ([] for first turn).
+/// Returns (exitCode, stepsProducedThisTurn) so callers can accumulate session steps.
+let runSingleTurn
+    (prompt: string)
+    (priorSteps: Step list)
+    (components: AppComponents)
+    (renderMode: RenderMode)
+    : Task<int * Step list> =
     task {
         use cts = new CancellationTokenSource()
 
@@ -69,9 +78,11 @@ let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: Rend
             // fresh each iteration). Cross-turn accumulation is POST-V1.
             let mutable totalChars = 0
             let mutable warnedThisTurn = false
+            let mutable thisTurnSteps : Step list = []
 
             let onStep (step: Step) =
                 components.JsonlSink.WriteStep step
+                thisTurnSteps <- step :: thisTurnSteps
                 printfn "%s" (renderStep renderMode step)
 
                 // Accumulate char count of action + result representations.
@@ -110,12 +121,14 @@ let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: Rend
 
             let! result =
                 try
-                    runSession components.Config components.LlmClient components.ToolExecutor onStep prompt cts.Token
+                    runSession components.Config components.LlmClient components.ToolExecutor onStep priorSteps prompt cts.Token
                 with :? OperationCanceledException ->
                     // Defensive fallback. QwenHttpClient and FsToolExecutor already
                     // map cancellation to Error UserCancelled; this `with` is a
                     // belt-and-suspenders safety net (research § Pattern 7, Pitfall 2).
                     Task.FromResult(Error UserCancelled)
+
+            let stepsProduced = List.rev thisTurnSteps
 
             match result with
             | Ok agentResult ->
@@ -128,46 +141,87 @@ let runSingleTurn (prompt: string) (components: AppComponents) (renderMode: Rend
                     components.LogPath
                 )
 
-                return 0
+                return (0, stepsProduced)
             | Error UserCancelled ->
                 printfn "%s" (renderError UserCancelled)
                 Log.Information("Session cancelled by user")
-                return 130
+                return (130, stepsProduced)
             | Error e ->
                 printfn "%s" (renderError e)
                 Log.Warning("Session error: {Error}", sprintf "%A" e)
-                return 1
+                return (1, stepsProduced)
         finally
             Console.CancelKeyPress.RemoveHandler(cancelHandler)
     }
 
-/// Multi-turn REPL loop (CLI-02). Reads lines from stdin and dispatches each
-/// to runSingleTurn. Ctrl+D (ReadLine() = null) and "/exit" both terminate.
-/// Per-turn Ctrl+C (SIGINT) cancels the current turn via the existing
-/// CancelKeyPress handler in runSingleTurn — after a 130 exit, the loop
-/// continues. No cross-turn message history (explicit POST-V1 scope).
+/// Multi-turn REPL loop with explicit Session accumulation and persistence.
+/// Accumulates steps from each turn into currentSession, calls sessionStore.Save
+/// after every completed turn, and threads priorSteps into runSession so the LLM
+/// sees conversation history from earlier turns.
 ///
-/// renderMode: threaded from Program.fs CLI flag (Compact or Verbose).
-let runMultiTurn (components: AppComponents) (renderMode: RenderMode) : Task<int> =
+/// This is the new entry point for 15-02's Program.fs (--resume / --new-session paths).
+/// Legacy runMultiTurn delegates to this with a fresh Session + FileSessionStore.
+let runMultiTurnWithSession
+    (components: AppComponents)
+    (renderMode: RenderMode)
+    (initialSession: Session)
+    (sessionStore: ISessionStore)
+    : Task<int> =
     task {
-        printfn "blueCode — multi-turn mode. Type /exit or press Ctrl+D to quit."
+        let (SessionId idStr) = initialSession.Id
+        printfn "blueCode — multi-turn mode. Session: %s. Type /exit or press Ctrl+D to quit." idStr
+        // Print session id to stderr so it's grep-able from shell scripts after process exit.
+        eprintfn "Session: %s" idStr
+        let mutable currentSession : Session = initialSession
         let mutable lastCode = 0
         let mutable running = true
 
         while running do
             printf "\nblueCode> "
-            let line = Console.ReadLine() // null on Ctrl+D / EOF
+            let line = Console.ReadLine()  // null on Ctrl+D / EOF
 
             match line with
             | null -> running <- false
             | "/exit" -> running <- false
             | s when s.Trim() = "" -> ()
             | prompt ->
-                let! code = runSingleTurn prompt components renderMode
-                // SIGINT cancels the current turn but keeps the REPL alive.
-                // Translate 130 back to 0 for the running tally so the
-                // final process exit uses the last "real" completion code.
+                let! (code, newSteps) =
+                    runSingleTurn prompt currentSession.Steps components renderMode
+                // Always update Session.Steps with newSteps (even on failure — partial progress is informative).
+                let updated =
+                    { currentSession with
+                        Steps = currentSession.Steps @ newSteps
+                        LastActivityAt = DateTimeOffset.UtcNow }
+                currentSession <- updated
+                // Save AFTER each turn (whether success or error) so a crash mid-session is recoverable.
+                let! saveRes = sessionStore.Save updated CancellationToken.None
+                match saveRes with
+                | Ok () -> ()
+                | Error e ->
+                    Log.Warning("Session save failed: {Error}", sprintf "%A" e)
+                    eprintfn "WARNING: session save failed: %A" e
                 lastCode <- if code = 130 then 0 else code
 
         return lastCode
     }
+
+/// Multi-turn REPL loop (CLI-02). Reads lines from stdin and dispatches each
+/// to runSingleTurn. Ctrl+D (ReadLine() = null) and "/exit" both terminate.
+/// Per-turn Ctrl+C (SIGINT) cancels the current turn via the existing
+/// CancelKeyPress handler in runSingleTurn — after a 130 exit, the loop
+/// continues. Session steps are threaded across turns for cross-turn LLM context.
+///
+/// Legacy entry point — creates a fresh Session + FileSessionStore then delegates
+/// to runMultiTurnWithSession. 15-02 will change Program.fs to call
+/// runMultiTurnWithSession directly with a session loaded from --resume.
+///
+/// renderMode: threaded from Program.fs CLI flag (Compact or Verbose).
+let runMultiTurn (components: AppComponents) (renderMode: RenderMode) : Task<int> =
+    let now = DateTimeOffset.UtcNow
+    let session : Session =
+        { Id = BlueCode.Cli.Adapters.FileSessionStore.newSessionId ()
+          Steps = []
+          CreatedAt = now
+          LastActivityAt = now }
+    let store = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> ISessionStore
+    runMultiTurnWithSession components renderMode session store

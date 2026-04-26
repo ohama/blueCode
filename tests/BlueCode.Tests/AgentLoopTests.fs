@@ -59,7 +59,7 @@ let agentLoopTests =
               let llm = mockLlm [ makeMockResponse "finalizing" (FinalAnswer "done") ]
 
               let! result =
-                  runSession testConfig llm mockToolsOk discardStep "hello" CancellationToken.None
+                  runSession testConfig llm mockToolsOk discardStep [] "hello" CancellationToken.None
                   |> Async.AwaitTask
 
               match result with
@@ -83,7 +83,7 @@ let agentLoopTests =
               let llm = mockLlm calls
 
               let! result =
-                  runSession testConfig llm mockToolsOk discardStep "list files" CancellationToken.None
+                  runSession testConfig llm mockToolsOk discardStep [] "list files" CancellationToken.None
                   |> Async.AwaitTask
 
               Expect.equal result (Error MaxLoopsExceeded) "should hit MaxLoopsExceeded after 5 ToolCalls"
@@ -96,7 +96,7 @@ let agentLoopTests =
               let llm = mockLlm calls
 
               let! result =
-                  runSession testConfig llm mockToolsOk discardStep "read same file" CancellationToken.None
+                  runSession testConfig llm mockToolsOk discardStep [] "read same file" CancellationToken.None
                   |> Async.AwaitTask
 
               match result with
@@ -111,7 +111,7 @@ let agentLoopTests =
                   mockLlm [ Error(InvalidJsonOutput "garbage"); makeMockResponse "correcting format" (FinalAnswer "recovered") ]
 
               let! result =
-                  runSession testConfig llm mockToolsOk discardStep "hello" CancellationToken.None
+                  runSession testConfig llm mockToolsOk discardStep [] "hello" CancellationToken.None
                   |> Async.AwaitTask
 
               match result with
@@ -128,7 +128,7 @@ let agentLoopTests =
                   mockLlm [ Error(InvalidJsonOutput "garbage-1"); Error(InvalidJsonOutput "garbage-2") ]
 
               let! result =
-                  runSession testConfig llm mockToolsOk discardStep "hello" CancellationToken.None
+                  runSession testConfig llm mockToolsOk discardStep [] "hello" CancellationToken.None
                   |> Async.AwaitTask
 
               match result with
@@ -142,7 +142,7 @@ let agentLoopTests =
               let sink, captured = captureSteps ()
 
               let! result =
-                  runSession testConfig llm mockToolsOk sink "hello" CancellationToken.None
+                  runSession testConfig llm mockToolsOk sink [] "hello" CancellationToken.None
                   |> Async.AwaitTask
 
               match result with
@@ -174,7 +174,7 @@ let agentLoopTests =
                           Task.FromResult(queue.Dequeue()) }
 
               let! result =
-                  runSession testConfig recordingLlm mockToolsOk discardStep "edit foo.fs" CancellationToken.None
+                  runSession testConfig recordingLlm mockToolsOk discardStep [] "edit foo.fs" CancellationToken.None
                   |> Async.AwaitTask
 
               match result with
@@ -223,7 +223,7 @@ let agentLoopTests =
                           Task.FromResult(Ok (Success payload)) }
 
               let! result =
-                  runSession testConfig recordingLlm truncatedTools discardStep "read big.fs" CancellationToken.None
+                  runSession testConfig recordingLlm truncatedTools discardStep [] "read big.fs" CancellationToken.None
                   |> Async.AwaitTask
 
               match result with

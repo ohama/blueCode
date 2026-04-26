@@ -38,7 +38,7 @@ let private smokeTest () =
             use cts = new CancellationTokenSource(TimeSpan.FromMinutes(3.0))
 
             let! result =
-                runSession c.Config c.LlmClient c.ToolExecutor onStep "list files in the current directory" cts.Token
+                runSession c.Config c.LlmClient c.ToolExecutor onStep [] "list files in the current directory" cts.Token
                 |> Async.AwaitTask
 
             match result with
