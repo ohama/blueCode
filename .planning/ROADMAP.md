@@ -73,7 +73,7 @@ Plans:
 
 ### Phase 16: Planning Wiring + Bench
 
-**Goal:** `blueCode --plan "..."` triggers plan-then-execute mode — the LLM emits a typed plan, the plan validator runs before the user sees it, the user chooses accept/reject/edit/quit, and the agent executes (or retries) accordingly. New bench fixtures cover multi-turn and plan-mode scenarios; `bench/baseline.json` grows from 8 to ~12 entries.
+**Goal:** `blueCode --plan "..."` triggers plan-then-execute mode — the LLM emits a typed plan, the plan validator runs before the user sees it, the user chooses accept/reject/edit/quit, and the agent executes (or retries) accordingly. New bench fixtures cover multi-turn scenarios; `bench/baseline.json` grows from 8 to 10 entries (plan-mode bench fixture deferred to v2.1+ — keystroke-driven UX is intractable for a regression gate; unit-test coverage in PlanParseTests + PlanGateTests substitutes).
 
 **Depends on:** Phase 15 (REPL session threading must be stable; plan validator from Phase 14 used here for retry wiring)
 
@@ -87,14 +87,14 @@ Plans:
 2. Typing `a` executes the plan steps in order; typing `r` sends a `[PLAN REJECTED]` message back to the LLM and re-prompts for a new plan; typing `q` exits with code 0 and no tool execution; typing `e` prompts for a comment that is appended to the next LLM message.
 3. A malformed plan (unknown tool name, schema-invalid input, > 5 steps, or duplicate adjacent steps) never reaches the user's approval prompt — it is rejected silently, the LLM is asked to retry, and only a valid plan is shown; after 2 retries the error is surfaced to the user.
 4. `--plan --resume <id>` is a valid combination — the agent loads prior context and enters plan mode for the next turn.
-5. `bench/run.sh --gate` exits 0 with the extended baseline (~12 entries including multi-turn fixture and plan-mode fixture); no regression on the original 8 T1-T7/W1/W2/B2 entries.
+5. `bench/run.sh --gate` exits 0 with the extended baseline (10 entries: 8 original T1-T7/W1/W2/B2 + 2 multi-turn MT_32b/MT_72b); no regression on the original 8.
 
 **Plans:** 3 plans expected
 
 Plans:
-- [ ] 16-01: Plan-mode system-prompt suffix wired via `--plan` flag; `AgentLoop` dispatches `LlmOutput.Plan` to approval gate; plan validator retry path (2 retries, then surface error)
-- [ ] 16-02: `PlanGate.fs` (or `Repl.fs` extension) — Spectre-rendered plan table, keystroke dispatch (a/r/e/q), reject re-prompt injection, edit comment capture
-- [ ] 16-03: New bench fixtures (multi-turn fixture, plan-mode fixture); `bench/baseline.json` updated to ~12 entries; `bench/run.sh --gate` verified 12/12 PASS; documentation/bench.md updated
+- [ ] 16-01-PLAN.md — Plan JSON parse wiring (`llmStepSchema` "plan" enum + `toLlmOutput` Plan branch handling all 4 PlanInvalid failure modes); `runPlanTurn` plan-mode entry point in AgentLoop with 2-retry validator-or-parse-failure path; PlanParseTests (≥6 cases) covering happy path + each PlanInvalid mode + retry behavior
+- [ ] 16-02-PLAN.md — `PlanGate.fs` (Spectre-rendered numbered plan table + keystroke dispatch a/r/e/q via Console.ReadKey); `--plan` flag in CliArgs/CliOptions/Program.fs dispatch; reject re-prompt injection (`[PLAN REJECTED]`) and edit comment capture (`[PLAN EDIT NOTE: ...]`) mirror 09.1-05 loop-injection primitive; `--plan --resume <id>` valid combo; PlanGateTests (≥4 cases); live smoke for SC1/SC2/SC4
+- [ ] 16-03-PLAN.md — Multi-turn bench fixtures (MT_32b + MT_72b validate PERSIST-01 end-to-end); `bench/baseline.json` 8→10 entries (originals byte-for-byte preserved); `bench/run.sh --gate` extended + verified 10/10 PASS; `documentation/bench.md` updated; AgentLoopTests gains one mocked plan-mode end-to-end test; plan-mode bench DEFERRED to v2.1+ (keystroke UX intractable for gate, documented rationale)
 
 ---
 
@@ -109,4 +109,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-26*
-*Last updated: 2026-04-26 — initial roadmap for v2.0 Persistence + Planning*
+*Last updated: 2026-04-27 — Phase 16 plans created (16-01 / 16-02 / 16-03); plan-mode bench deferred to v2.1+*
