@@ -50,20 +50,18 @@
     "B2_32b": {
       "step_count": 2,
       "step_count_max": 3,
-      "pass": false,
-      "regression": true,
+      "pass": true,
       "expected_diagnosis": "empty list causes DivideByZeroException",
-      "actual_diagnosis": "integer truncation",
-      "note": "KNOWN regression since v1.2 prompt growth. PERF-03 (Phase 11) target. Gate must NOT fail on this until PERF-03 lands."
+      "actual_diagnosis": "empty list causes DivideByZeroException",
+      "note": "Recovered post-PERF-01 prompt shrink (Plan 11-02, 1689→783 chars). Validates v1.2 audit's prompt-length attention-shift hypothesis. Thought: 'The bug is identified. It occurs when the function average is called with an empty list, leading to a division by zero error.' Updated by Plan 11-03 on 2026-04-26."
     },
     "B2_72b": {
       "step_count": 2,
       "step_count_max": 3,
-      "pass": false,
-      "regression": true,
+      "pass": true,
       "expected_diagnosis": "empty list causes DivideByZeroException",
-      "actual_diagnosis": "integer truncation",
-      "note": "KNOWN regression since v1.2 prompt growth. PERF-03 (Phase 11) target. Gate must NOT fail on this until PERF-03 lands."
+      "actual_diagnosis": "empty list causes DivideByZeroException",
+      "note": "Recovered post-PERF-01 prompt shrink (Plan 11-02, 1689→783 chars). Validates v1.2 audit's prompt-length attention-shift hypothesis. Thought: 'The bug is triggered when the function average is called with an empty list. This causes a division by zero because List.length xs returns 0 for an empty list.' Updated by Plan 11-03 on 2026-04-26."
     }
   }
 }
