@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Complete (verified passed 5/5 in iteration 2); Phase 15 ready for planning
-Plan: —
-Status: 248/1/0 tests; bench gate 8/8 PASS; ready for `/gsd:plan-phase 15`
-Last activity: 2026-04-26 — Phase 14 closed; ROADMAP SC3+SC4+Phase16 note revised mid-verification to align with the orchestrator's pre-planning architectural decision (validator owns 3 structural rules; JSON parse + schema-invalid input deferred to Phase 16's Cli adapter layer)
+Phase: Phase 15 in progress (Plan 15-01 ✓ complete)
+Plan: 15-01 complete; 15-02 next
+Status: 248/1/0 tests; bench gate green by construction (unchanged LLM path); ready for 15-02
+Last activity: 2026-04-27 — Completed 15-01-PLAN.md (runSession priorSteps + FileSessionStore.Save + Repl threading)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 ✓ (Phase 15 next) ░░░
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 ✓ Phase 15 ◆ (15-01 ✓ 15-02 ░ 15-03 ░) Phase 16 ░
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -44,6 +44,9 @@ Items relevant to v2.0 (architectural touch points):
 - **v1.4 MockHelpers.fs** — `makeMockResponse` is the canonical helper. Phase 14 adds sibling `makePlanResponse` in same module.
 - **v2.0 Phase 14-01 compile cascade** — SessionId (line 91) → PlannedStep + Plan (lines 100-121) → LlmOutput.Plan of Plan (line 121) → Session (line 206). Type ordering constraint: Plan must precede LlmOutput; Session must follow Step. Transitional `| Plan _ -> Error(PlanInvalid ...)` in runLoop is intentional — Phase 16 replaces it.
 - **v2.0 Phase 14-02 PlanValidator** — Pure `validatePlan : Plan -> Result<Plan, AgentError>` in Core. MaxPlanSteps=5 hardcoded (not AgentConfig-aware); knownTools set mirrors AgentLoop.dispatchTool. Priority order: length → tool registry → adjacent dups. Schema validation deferred to Phase 16 Cli adapter JSON parse layer.
+- **v2.0 Phase 15-01 priorSteps** — `runSession` extended with `priorSteps: Step list` parameter (position: after `onStep`, before `userInput`). Steps replayed into ContextBuffer via `List.fold` before `runLoop`; `runLoop.steps` accumulator stays current-turn-only. Repl concatenates on each turn.
+- **v2.0 Phase 15-01 JSONL format** — v2 header `{"version":2,"sessionId":"...","createdAt":"..."}` + per-turn `TurnComplete` envelope with cumulative `steps`. Last-envelope-wins on Load. Path: `~/.bluecode/sessions/<id>.jsonl` (distinct from existing per-step `session_<ts>.jsonl`).
+- **v2.0 Phase 15-01 runMultiTurnWithSession** — New entry point in Repl.fs with explicit `Session` + `ISessionStore` params. Legacy `runMultiTurn` delegates to it with fresh Session + FileSessionStore. 15-02 will call `runMultiTurnWithSession` directly with loaded/fresh Session.
 
 ### Pending Todos
 
@@ -62,6 +65,6 @@ v2.1+ candidates (after v2.0 ships):
 
 ## Session Continuity
 
-Last session: 2026-04-26T23:25Z
-Stopped at: Completed 14-02-PLAN.md (PlanValidator + 5 tests, 243→248/1/0)
-Resume file: None — Phase 14 complete; run `/gsd:verify-phase 14` then start Phase 15
+Last session: 2026-04-27T05:00Z
+Stopped at: Completed 15-01-PLAN.md (runSession priorSteps + FileSessionStore.Save + Repl threading, 248/1/0 preserved)
+Resume file: None — run 15-02 next (`--resume`/`--new-session` Argu flags + CompositionRoot wiring + full Load impl)
