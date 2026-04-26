@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-26 after starting v1.3 milestone)
 ## Current Position
 
 Milestone: v1.3 Bench-Driven Quality Gates (started 2026-04-26)
-Phase: 11 — System Prompt Shrink (in progress: 1/3 plans complete)
-Plan: 11-01 shipped (Wave 1 complete); Wave 2 (11-02 prompt shrink) next
-Status: Plan 11-01 complete. `lastReadHint` injection in place; test count 242 → 243 (243/1/0). PERF-02 architectural lever deployed — Wave 2 can now safely shrink defaultSystemPrompt without regressing T6 or read-heavy fixtures.
-Last activity: 2026-04-26 — Completed 11-01-PLAN.md. +50/-12 lines AgentLoop.fs (lastReadHint threading + [POST-READ HINT] injection), +49 lines AgentLoopTests.fs (new testCaseAsync). Domain.fs untouched. Core purity clean.
+Phase: 11 — System Prompt Shrink (in progress: 2/3 plans complete)
+Plan: 11-02 shipped (Wave 2 complete); Wave 3 (11-03 B2 recovery validation) next
+Status: Plan 11-02 complete. defaultSystemPrompt shrunk 1689→783 chars (54% reduction, Path C ≤800 achieved). Two FsToolExecutor bugs fixed (empty old_string infinite loop; grep_search file-path support). Gate: GATE PASS (8/8). Test count 243/1/0 unchanged.
+Last activity: 2026-04-26 — Completed 11-02-PLAN.md. +24/-25 lines across CompositionRoot.fs + FsToolExecutor.fs (prompt shrink + 2 Rule 3 auto-fixes). Core purity clean. Bench fixtures unaffected (gate-restored).
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10 ✓ · Phase 11: █░░ 1/3 plans)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10 ✓ · Phase 11: ██░ 2/3 plans)
 
 ## Performance Metrics (v1.0 + v1.1 + v1.2 — cumulative, frozen)
 
@@ -61,6 +61,15 @@ Plan 11-01 decisions (2026-04-26):
 - Two-arm hint logic (truncated vs out-of-range) chosen over single generic message — corrective actions differ and specificity matters for T6 behavioral quality
 - First-line-only substring match (`", truncated]"` / `", out-of-range]"`) used for header detection — FsToolExecutor format is fixed, leading `, ` + trailing `]` prevents false positives from file content
 
+Plan 11-02 decisions (2026-04-26):
+
+- Path C achieved: defaultSystemPrompt 1689→783 chars (54% reduction), ≤800 target met
+- Two Rule 3 auto-fixes in FsToolExecutor.fs: (1) edit_file empty old_string guard prevents infinite IndexOf loop; (2) grep_search accepts file paths, not just directories
+- edit_file annotation `(non-empty exact file content)` critical wording — variants without `file content` failed to prevent empty old_string behavior in 32B model
+- grep_search file-path support: 72B model's strong prior of using file path from user prompt cannot be overridden by schema annotations alone; tool change was required
+- awk measurement script in plan was incorrect for inline-closing triple-quotes; Python regex used instead (actual baseline 1689 chars, not 2660 as plan stated)
+- T6_32b/72B now deterministically use grep_search in 3 steps (previously flaky: sometimes 4 steps, sometimes 5 with MaxLoops); new pattern is more reliable
+
 ### Pending Todos
 
 v1.4+ seed candidates (not v1.3 scope):
@@ -80,5 +89,5 @@ None at v1.3 start. Daily-driver use of blueCode ongoing; v1.3 work should not b
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Completed 11-01-PLAN.md. [POST-READ HINT] injection (PERF-02 lever) shipped. Test count 242 → 243 (243/1/0). Core purity clean. Wave 1 complete. Next: Plan 11-02 (Wave 2) — iteratively shrink defaultSystemPrompt to ≤800 chars, gate-validated.
+Stopped at: Completed 11-02-PLAN.md. defaultSystemPrompt 783 chars (Path C). FsToolExecutor: empty old_string guard + grep_search file-path fix. GATE PASS (8/8). Wave 2 complete. Next: Plan 11-03 (Wave 3) — run --b2, verify B2 diagnosis improves, update baseline.json B2 entries.
 Resume file: None
