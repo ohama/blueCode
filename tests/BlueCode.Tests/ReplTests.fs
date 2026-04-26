@@ -10,14 +10,7 @@ open BlueCode.Core.Ports
 open BlueCode.Core.AgentLoop
 open BlueCode.Cli.Rendering
 open BlueCode.Cli.CompositionRoot
-
-// ── Stub helpers ─────────────────────────────────────────────────────────────
-
-/// Phase 7: wraps an LlmOutput with a non-empty Thought into the new LlmResponse
-/// success-payload expected by ILlmClient.CompleteAsync. Duplicated from AgentLoopTests
-/// per research decision (no shared helper module in Phase 7 scope).
-let private makeMockResponse (thought: string) (output: LlmOutput) : Result<LlmResponse, AgentError> =
-    Ok { Thought = Thought thought; Output = output }
+open BlueCode.Tests.MockHelpers
 
 /// Build a fake ILlmClient that returns scripted responses per call (FIFO queue).
 let private stubLlm (responses: Result<LlmResponse, AgentError> list) : ILlmClient =

@@ -7,14 +7,7 @@ open Expecto
 open BlueCode.Core.Domain
 open BlueCode.Core.Ports
 open BlueCode.Core.AgentLoop
-
-// ── Mock helpers ──────────────────────────────────────────────────────────────
-
-/// Phase 7: wraps an LlmOutput with a non-empty Thought into the new LlmResponse
-/// success-payload expected by ILlmClient.CompleteAsync. Use for every mock reply
-/// that previously wrote `Ok(FinalAnswer ...)` or `Ok(ToolCall(...))`.
-let private makeMockResponse (thought: string) (output: LlmOutput) : Result<LlmResponse, AgentError> =
-    Ok { Thought = Thought thought; Output = output }
+open BlueCode.Tests.MockHelpers
 
 /// Build a fake ILlmClient that returns scripted responses per call.
 /// Responses are dequeued FIFO; exhausted queue throws (test bug).
