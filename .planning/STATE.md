@@ -9,13 +9,13 @@ See: .planning/PROJECT.md (updated 2026-04-26 after starting v1.3 milestone)
 
 ## Current Position
 
-Milestone: v1.3 Bench-Driven Quality Gates (started 2026-04-26)
-Phase: 11 — System Prompt Shrink (COMPLETE: 3/3 plans)
-Plan: 11-03 shipped (Wave 3 complete); Phase 11 fully done
-Status: Plan 11-03 complete. Both 32B and 72B RECOVERED correct B2 diagnosis post-shrink. B2 baseline entries flipped to pass=true. GATE PASS (8/8) on updated baseline. Phase 11 SC4 fully satisfied. Phase 11 ready for /gsd:verify-work 11.
-Last activity: 2026-04-26 — Completed 11-03-PLAN.md. bench/baseline.json: B2_32b + B2_72b flipped pass=true (regression removed). 32B thought: "The bug is identified. It occurs when the function average is called with an empty list, leading to a division by zero error." 72B thought: "The bug is triggered when the function average is called with an empty list. This causes a division by zero because List.length xs returns 0 for an empty list." Audit hypothesis CONFIRMED: 54% prompt reduction was sufficient for both models.
+Milestone: v1.3 Bench-Driven Quality Gates ✓ COMPLETE (Phase 10 ✓ + Phase 11 ✓; both verifier-passed)
+Phase: 11 — System Prompt Shrink ✓ VERIFIED (4/4 must-haves PASS, 2026-04-26)
+Plan: All 6 v1.3 plans (3 in Phase 10, 3 in Phase 11) shipped + verifier-passed
+Status: Phase 11 verifier returned `passed`. PERF-01..03 marked Complete in REQUIREMENTS traceability. v1.3 milestone READY for `/gsd:complete-milestone`.
+Last activity: 2026-04-26 — Phase 11 verified. The audit's prompt-length attention-shift hypothesis is empirically CONFIRMED: 54% prompt reduction (1689→783 chars) recovered B2 diagnosis on BOTH 32B and 72B. Plus 2 Rule 3 FsToolExecutor bugs fixed in flight (`edit_file` empty-old_string guard + `grep_search` file-path support). Test count 243/1/0 (242 + 1 from 11-01).
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10 ✓ · Phase 11: ███ 3/3 plans ✓)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ COMPLETE (Phase 10 ✓ + Phase 11 ✓)
 
 ## Performance Metrics (v1.0 + v1.1 + v1.2 — cumulative, frozen)
 

@@ -95,9 +95,9 @@ v1 boundaries unchanged. v1.3 adds no new exclusions; the deferred items above a
 | BENCH-03    | Phase 10 | Complete |
 | BENCH-04    | Phase 10 | Complete |
 | BENCH-05    | Phase 10 | Complete |
-| PERF-01     | Phase 11 | Pending |
-| PERF-02     | Phase 11 | Pending |
-| PERF-03     | Phase 11 | Pending |
+| PERF-01     | Phase 11 | Complete |
+| PERF-02     | Phase 11 | Complete |
+| PERF-03     | Phase 11 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 8 total

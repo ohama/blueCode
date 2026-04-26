@@ -82,11 +82,12 @@ Plans:
 3. `AgentLoop.fs` contains a post-`read_file`-truncated injection path: when the last tool result was a truncated `read_file`, `buildMessages` appends a System-role hint message; no `async {}` literals introduced, no Serilog/Spectre/Argu references added to Core
 4. B2 fixture run (divide-by-zero prompt) returns at least one model correctly identifying "empty list" as the failure cause rather than "integer truncation"; `bench/baseline.json` updated to reflect the post-fix state
 
-**Plans**: TBD (planning via `/gsd:plan-phase 11`)
+**Plans**: 3 plans in 3 waves ✓ All complete + verified (4/4 SCs PASS, 2026-04-26)
 
 Plans:
-- [ ] 11-01: TBD
-- [ ] 11-02: TBD
+- [x] 11-01-PLAN.md — Post-read_file [POST-READ HINT] injection extending 09.1-05's lastEditPath primitive (PERF-02) — 242→243 tests
+- [x] 11-02-PLAN.md — Shrink defaultSystemPrompt 1689→783 chars (54% reduction, ≤800 Path C achieved) + 2 Rule 3 FsToolExecutor fixes (PERF-01)
+- [x] 11-03-PLAN.md — B2 recovery validated: BOTH 32B and 72B identify "empty list"; baseline.json B2 entries flipped to pass=true (PERF-03)
 
 ---
 
@@ -100,8 +101,8 @@ Plans:
 | 6-7. Refinement | v1.1 | 5/5 | Complete | 2026-04-24 |
 | 8-9.1. Tool Expansion | v1.2 | 8/8 | Complete | 2026-04-26 |
 | 10. Bench Formalization | v1.3 | 3/3 | Complete | 2026-04-26 |
-| 11. System Prompt Shrink | v1.3 | 0/TBD | Not started | - |
+| 11. System Prompt Shrink | v1.3 | 3/3 | Complete | 2026-04-26 |
 
 ---
 
-*Last updated: 2026-04-26 — v1.3 roadmap created*
+*Last updated: 2026-04-26 — Phase 11 plans created (3 plans in 3 sequential waves)*
