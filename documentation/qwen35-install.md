@@ -545,6 +545,72 @@ except Exception as e:
 
 `JSON parse: OK; action= final` 이면 통과. 122B (포트 8001, model `qwen122b`)도 동일하게 반복한다.
 
+### 5.5 Load-test 측정값 수집 (17-02 LOAD-TEST.md 산출물)
+
+§5.1–§5.4 가 모두 PASS 한 직후 — 첫 inference 가 끝나 prompt cache 가 워밍된 상태에서
+다음 측정값들을 캡처한다. 이 값들은 17-02 의 `17-02-LOAD-TEST.md` 와
+17-03 의 `documentation/benchmark-qwen35-eval.md` 에서 32B/72B 베이스라인과 비교된다.
+
+#### 5.5.1 Resident set size (RSS) 스냅샷
+
+`launchctl` 가 띄운 mlx_lm.server 프로세스의 PID 를 찾아 RSS 를 샘플링한다.
+
+```bash
+# 35B 프로세스 RSS (KB 단위 → 1024 로 나누면 MB)
+ps -o pid,rss,command -p $(pgrep -f qwen35b) 2>/dev/null | awk 'NR==1 || /qwen35b/'
+
+# 122B 프로세스 RSS
+ps -o pid,rss,command -p $(pgrep -f qwen122b) 2>/dev/null | awk 'NR==1 || /qwen122b/'
+```
+
+기대 범위 (워밍 직후, 첫 inference 1회 완료 시점):
+
+| 모델 | 기대 RSS | 비고 |
+|------|----------|------|
+| qwen35b | ~19-21 GB | weights 19.5 GB + tokenizer + python overhead |
+| qwen122b | ~70-74 GB | weights 69.6 GB + KV cache + python overhead |
+| **합계** | **~89-95 GB** | 128 GB Mac 에서 OS / 다른 앱용 ~33-39 GB 잔여 |
+
+값이 **합계 95 GB 초과** 면 §7.3 의 OOM 옵션 검토 필요.
+
+#### 5.5.2 시스템 메모리 압박 확인
+
+```bash
+# 전체 메모리 상태 — used/free, swap, compressor 압축율
+vm_stat | head -15
+top -l 1 -s 0 -n 0 | grep -E "PhysMem|Compressor"
+```
+
+`Compressor` 가 100 MB 미만 = 정상; 1 GB 초과 = 메모리 부족 압박 — 페어 다운그레이드 고려.
+
+#### 5.5.3 Canary bench (17-03 본 bench 의 사전 sanity floor)
+
+본 `bench/run.sh --all` (~25분) 실행 전에 4-invocation canary 로 실패 패턴 사전 차단.
+
+```bash
+cd ~/projs/blueCode
+bench/run.sh --canary
+# 약 1.5분 소요. exit 0 이면 통과.
+```
+
+`LlmUnreachable` / `InvalidJsonOutput` 가 storm 으로 나오면 §5.3/§5.4 재검증 + 로그 점검 후 재실행.
+
+#### 5.5.4 측정 결과 기록 형식 (LOAD-TEST.md 에 복사)
+
+```markdown
+## Load-Test Snapshot (2026-MM-DD HH:MM)
+
+| Metric | 35B (port 8000) | 122B (port 8001) |
+|--------|------------------|-------------------|
+| PID | <pid> | <pid> |
+| RSS (post first-inference) | <GB> | <GB> |
+| Cold-start wall-clock | ~30-60s | ~120-240s |
+| Compressor (system) | <MB> | (same) |
+| §5.3 thinking-mode test | PASS / FAIL | PASS / FAIL |
+| §5.4 JSON-schema test | PASS / FAIL | PASS / FAIL |
+| Canary bench exit code | 0 / non-zero | 0 / non-zero |
+```
+
 ---
 
 ## 6. Path B fallback: F# QwenHttpClient.fs 패치 (Path A 불가 시에만)
