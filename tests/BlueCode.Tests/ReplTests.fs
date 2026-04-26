@@ -294,6 +294,88 @@ let tests =
               finally
                   Console.SetOut(originalOut)
 
+          testCase "multi-turn: turn 2 sees turn 1 Steps as prior context (Phase 15 SC1)"
+          <| fun () ->
+              // Capture messages passed to each LLM call.
+              let capturedMessageBatches = System.Collections.Generic.List<Message list>()
+
+              let scriptedResponses =
+                  System.Collections.Generic.Queue<Result<LlmResponse, AgentError>>(
+                      [ // Turn 1: ToolCall list_dir then FinalAnswer "turn1 done"
+                        makeMockResponse "listing" (toolCall "list_dir" "{\"path\":\".\"}");
+                        makeMockResponse "finishing turn 1" (FinalAnswer "turn1 done");
+                        // Turn 2: directly FinalAnswer (no tool call).
+                        makeMockResponse "finishing turn 2" (FinalAnswer "turn2 done") ])
+
+              let capturingLlm =
+                  { new ILlmClient with
+                      member _.CompleteAsync messages _model _ct =
+                          capturedMessageBatches.Add(messages)
+                          if scriptedResponses.Count = 0 then
+                              failwith "capturingLlm: queue exhausted"
+                          Task.FromResult(scriptedResponses.Dequeue()) }
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bc-mtt-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let logPath = Path.Combine(tempRoot, "session.jsonl")
+
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(logPath)
+
+              let components: AppComponents =
+                  { LlmClient = capturingLlm
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5
+                        ContextCapacity = 3
+                        SystemPrompt = "test system prompt"
+                        ForcedModel = Some Qwen32B }
+                    ProjectRoot = tempRoot
+                    LogPath = logPath
+                    MaxModelLen = 8192 }
+
+              try
+                  // Turn 1: priorSteps = []
+                  let (code1, stepsTurn1) =
+                      BlueCode.Cli.Repl.runSingleTurn "first prompt" [] components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Expect.equal code1 0 "turn 1 should exit 0"
+                  Expect.isGreaterThan stepsTurn1.Length 0 "turn 1 must produce at least 1 step"
+
+                  // Turn 2: priorSteps = stepsTurn1 — this is the wiring under test.
+                  let (code2, _) =
+                      BlueCode.Cli.Repl.runSingleTurn "second prompt" stepsTurn1 components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Expect.equal code2 0 "turn 2 should exit 0"
+
+                  // Turn 1 made TWO LLM calls (ToolCall response, then FinalAnswer response).
+                  // Turn 2 made ONE LLM call (FinalAnswer response).
+                  // So capturedMessageBatches has 3 entries.
+                  Expect.equal capturedMessageBatches.Count 3 "expected 3 LLM calls across both turns"
+
+                  // The 3rd call is turn 2's first (and only) LLM call.
+                  let turn2Messages = capturedMessageBatches.[2]
+                  // turn2Messages MUST include an assistant message containing "list_dir"
+                  // (echoing turn 1's tool action) AND a user/observation message containing
+                  // "stub-output" (turn 1's tool result via stubToolsOk).
+                  let turn2Concat =
+                      turn2Messages
+                      |> List.map (fun m -> m.Content)
+                      |> String.concat "\n"
+
+                  Expect.stringContains turn2Concat "list_dir"
+                      "turn 2 messages must contain turn 1's tool name (priorSteps replay)"
+                  Expect.stringContains turn2Concat "stub-output"
+                      "turn 2 messages must contain turn 1's tool result (priorSteps replay)"
+                  Expect.stringContains turn2Concat "second prompt"
+                      "turn 2 messages contain the new user prompt"
+              finally
+                  try
+                      if Directory.Exists tempRoot then Directory.Delete(tempRoot, true)
+                  with _ -> ()
+
           testCase "runSingleTurn: 80% context warning fires exactly once per turn when threshold crossed"
           <| fun () ->
               // Setup: MaxModelLen = 10 -> 80% threshold = 10 * 4 * 0.80 = 32 chars.
