@@ -10,9 +10,25 @@ v1.4 Test Hygiene + Bench Polish shipped 2026-04-26 (Path B). Two pieces of cite
 
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4}-ROADMAP.md`.
 
-## Next Milestone Goals
+## Current Milestone: v2.0 Persistence + Planning
 
-**2-week observation window now open (started 2026-04-26).** v1.5 scope will be derived from `/gsd:add-todo` entries captured during daily-driver use — NOT from the deferred-list backlog. Path B's exit criterion is the load-bearing element: observation has zero structural cost (bench gate catches regressions automatically), so shipping more deferred items "just because they're available" is the wrong move. STM-01 (streaming) has been deferred 6 times; if observation surfaces no measured complaint, the defer-pattern itself is the answer.
+**Goal:** Break the process-lifetime constraint that v1 deliberately accepted — bundle cross-turn memory (multi-turn REPL keeps context, `--resume <id>`) with plan-then-execute mode (agent emits a typed plan, user approves, agent executes). The two features share an architectural root (state outside a single `runSession`) and shouldn't ship separately: memory without planning gives long-context drift; planning without memory gives brilliant single-turn agents that forget yesterday.
+
+**Target features (2 categories):**
+
+- **Persistence** — Multi-turn REPL retains conversation history within a session; session state persists to `~/.bluecode/sessions/<id>.jsonl` between turns; `--resume <id>` loads and continues a prior session.
+- **Planning** — Agent can produce a plan DU before executing; `--plan` flag enables plan-then-execute mode; user approval/reject gate between plan emission and execution; plan validation (tool names + inputs schema-checked) before user sees approval prompt.
+
+**Why now (over observation):** The v1.4 close opened a 2-week observation window for v1.5; v2.0 is the longer-horizon answer to "what's the architectural ceiling of v1?" Per discussion, the ceiling is the 5-step max + process-lifetime statelessness — both load-bearing for stability with Qwen, both capping what blueCode can take on. v2.0 invests in deliberate state management to unlock longer-horizon work; observation continues in parallel and will inform v2.1+ scope.
+
+**Phase numbering:** continues at 14+ (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13).
+
+**Excluded** with explicit rationale (deferred to v2.1+ unless observation surfaces them):
+- Sub-agent delegation — only useful once memory + planning land; without them, sub-agents repeat v1's stateless pain
+- Slash commands (`/sessions`, `/plan`) — UX layer, not architectural; can layer on after CLI flags work
+- Streaming (STM-01) — deferred 7th time; UX win but not architectural
+- LLM-aware context compaction — natural follow-up to persistence; risk-isolate as v2.1
+- MCP / LSP integration — breaks local-only ethos; v2 keeps Mac-local boundary
 
 ## Core Value
 
@@ -47,11 +63,21 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ Shared `BlueCode.Tests.MockHelpers` module with single canonical `makeMockResponse` — consolidates 3-milestone-old duplication; 243/1/0 preserved; zero `src/` diff — v1.4 (TST-01)
 - ✓ `bench/run.sh` EXIT trap auto-resets W1/W2 write-task fixtures (`bug_lastchar.fs`, `bug_average.fs`) — `bug_divide_zero.fs` excluded; defense-in-depth with existing heredoc-restore blocks; bash 3.2 compatible, exit-code preserving — v1.4 (BENCH-06)
 
-### Active
+### Active (v2.0 Persistence + Planning)
 
-<!-- 2-week observation window opened 2026-04-26 after v1.4 close. v1.5 scope will be derived from /gsd:add-todo entries captured during daily-driver use, NOT from the deferred list below. -->
+<!-- v2.0 scope confirmed 2026-04-26 — major version step (architectural shift, breaks process-lifetime constraint). Bundle of memory + planning is intentional; see Current Milestone section. -->
 
-(None — observation window in progress. Next milestone scoping starts when `/gsd:add-todo` entries surface measurable pain signals.)
+#### Persistence
+- [ ] **PERSIST-01**: Multi-turn REPL maintains conversation history within a single session (currently each turn calls `runSession` independently, losing context).
+- [ ] **PERSIST-02**: Session state persisted to `~/.bluecode/sessions/<id>.jsonl` between turns (extends existing JSONL log into a resumable format).
+- [ ] **PERSIST-03**: `--resume <id>` flag loads a prior session and continues from its last step.
+- [ ] **PERSIST-04**: Sessions get a fresh id automatically; `--new-session` flag explicitly forces a new session even mid-REPL.
+
+#### Planning
+- [ ] **PLAN-01**: Agent loop supports a Plan DU (`Plan = { Steps: PlannedStep list; Rationale: string }`) — extension of `LlmOutput`, validated against tool schema.
+- [ ] **PLAN-02**: `--plan` CLI flag enables plan-then-execute mode for the next turn.
+- [ ] **PLAN-03**: User approval gate between plan emission and execution — accept / reject / edit-and-retry.
+- [ ] **PLAN-04**: Plan validation: tool names exist in registry, inputs match schema, declared step count ≤ MaxLoops (5). Validation runs BEFORE the user is shown the approval prompt.
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -67,16 +93,16 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 
 <!-- v1 OOS 유지. v1.1도 동일 경계. -->
 
-- **세션 영속화 / 히스토리 / 재개** — v2+. 일단은 process 수명 내에서만
-- **서브에이전트 / 위임** — v2+. 단일 에이전트 루프만
-- **Slash commands** (`/context`, `/compact`, `/agents`) — v2+
-- **Context compaction / auto-snip** — v2+. 지금은 단순 ring-buffer + 80% 경고
-- **MCP / LSP / Plugin / Hook / Remote / Worktree** — Python 버전 runtime 전체 이식 안 함
+- **세션 영속화 / 히스토리 / 재개** — v2.0 IN SCOPE (PERSIST-01..04). Was v1 OOS.
+- **Cross-turn memory** in multi-turn REPL — v2.0 IN SCOPE (PERSIST-01). Was v1 OOS.
+- **서브에이전트 / 위임** — Still v2.1+. Useful only after memory + planning land.
+- **Slash commands** (`/context`, `/compact`, `/agents`) — Still v2.1+. UX layer over the CLI flags.
+- **Context compaction / auto-snip** — Still v2.1+. Natural follow-up to PERSIST-02 once we have real session lengths to compact against.
+- **MCP / LSP / Plugin / Hook / Remote / Worktree** — Permanent OOS. Local-only ethos preserved across v1.x and v2.0.
 - **GUI (웹/TUI)** — CLI stdout만
 - **Windows / Linux** — Mac only
 - **AOT / 단일 바이너리 배포** — `dotnet run` 개발 모드만
 - **Claude Code 프롬프트 직접 이식** — Qwen에서 format error 유발
-- **Cross-turn memory** in multi-turn REPL — v1 스코프 밖, 각 turn은 독립 `runSession`
 
 ## Context
 
@@ -179,4 +205,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-26 after v1.4 milestone complete (Path B shipped — TST-01 + BENCH-06 closed; 2-week observation window opens)*
+*Last updated: 2026-04-26 after starting v2.0 milestone (Persistence + Planning — major version, architectural shift breaking v1's process-lifetime constraint)*
