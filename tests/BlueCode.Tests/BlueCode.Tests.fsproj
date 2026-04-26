@@ -13,6 +13,7 @@
     <Compile Include="BashSecurityTests.fs" />
     <Compile Include="RunShellTests.fs" />
     <Compile Include="MockHelpers.fs" />
+    <Compile Include="PlanValidatorTests.fs" />
     <Compile Include="AgentLoopTests.fs" />
     <Compile Include="JsonlSinkTests.fs" />
     <Compile Include="RenderingTests.fs" />

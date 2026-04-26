@@ -99,6 +99,7 @@ let rootTests =
           BlueCode.Tests.BashSecurityTests.bashSecurityTests
           BlueCode.Tests.RunShellTests.runShellTests
           BlueCode.Tests.AgentLoopTests.agentLoopTests
+          BlueCode.Tests.PlanValidatorTests.tests
           BlueCode.Tests.JsonlSinkTests.tests
           BlueCode.Tests.RenderingTests.tests
           BlueCode.Tests.CompositionRootTests.tests
