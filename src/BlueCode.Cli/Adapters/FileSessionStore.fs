@@ -82,5 +82,65 @@ type FileSessionStore() =
             }
 
         member _.Load (id: SessionId) (ct: CancellationToken) : Task<Result<Session, AgentError>> =
-            // Stub for 15-01. Plan 15-02 implements full Load.
-            Task.FromResult (Error (SessionCorrupt "Load not yet implemented in 15-01"))
+            task {
+                try
+                    ct.ThrowIfCancellationRequested()
+                    let path = buildSessionPath id
+
+                    if not (File.Exists path) then
+                        return Error (SessionNotFound id)
+                    else
+                        let! lines = File.ReadAllLinesAsync(path, ct)
+                        if lines.Length = 0 then
+                            return Error (SessionCorrupt "empty session file")
+                        else
+                            // Line 1 MUST be the version header.
+                            let headerLine = lines.[0]
+                            let header =
+                                try
+                                    JsonSerializer.Deserialize<SessionHeader>(headerLine, jsonOptions)
+                                with ex ->
+                                    failwithf "header parse failed: %s" ex.Message
+
+                            if header.version <> 2 then
+                                return Error (SessionCorrupt (sprintf "unsupported version %d (expected 2)" header.version))
+                            else
+                                let (SessionId expectedId) = id
+                                if header.sessionId <> expectedId then
+                                    return Error (SessionCorrupt (sprintf "header sessionId '%s' does not match requested '%s'" header.sessionId expectedId))
+                                else
+                                    // Lines 2..N are TurnComplete envelopes. Last envelope wins.
+                                    let envelopeLines =
+                                        lines
+                                        |> Array.skip 1
+                                        |> Array.filter (fun s -> not (String.IsNullOrWhiteSpace s))
+
+                                    if envelopeLines.Length = 0 then
+                                        // Header but no completed turns yet — valid state (crash-after-header-before-first-turn).
+                                        return Ok
+                                            { Id = id
+                                              Steps = []
+                                              CreatedAt = header.createdAt
+                                              LastActivityAt = header.createdAt }
+                                    else
+                                        let lastLine = envelopeLines.[envelopeLines.Length - 1]
+                                        let envelope =
+                                            try
+                                                JsonSerializer.Deserialize<TurnEnvelope>(lastLine, jsonOptions)
+                                            with ex ->
+                                                failwithf "envelope parse failed: %s" ex.Message
+
+                                        if envelope.``type`` <> "TurnComplete" then
+                                            return Error (SessionCorrupt (sprintf "unexpected envelope type '%s'" envelope.``type``))
+                                        else
+                                            return Ok
+                                                { Id = id
+                                                  Steps = envelope.steps
+                                                  CreatedAt = header.createdAt
+                                                  LastActivityAt = envelope.writtenAt }
+                with
+                | :? OperationCanceledException -> return Error UserCancelled
+                | ex ->
+                    // Defensive catch — surface as SessionCorrupt with detail (SC3: no stack traces).
+                    return Error (SessionCorrupt (sprintf "Load failed: %s" ex.Message))
+            }
