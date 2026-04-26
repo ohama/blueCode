@@ -27,7 +27,7 @@ Path B from the v1.3 close discussion: ship-from-cited-pain only. Both requireme
 
 ### Bench Hygiene
 
-- [ ] **BENCH-06**: `bench/run.sh` auto-resets write-task fixtures on exit
+- [x] **BENCH-06**: `bench/run.sh` auto-resets write-task fixtures on exit ✓ (Phase 13, 2026-04-26)
   - **Goal:** `git status` is clean after `bash bench/run.sh --gate` (and `--canary`, `--all`, `--b2`) regardless of what the LLM did to the fixtures during the run.
   - **Current state (citation):** v1.3 Part 4 §23 ("Discoveries") in `documentation/benchmark-32b-vs-72b.md`:
     > **bench fixture 의 working tree drift** — `--gate` 실행 후 W1/W2 fixture 들이 LLM 의 수정 결과로 left-on-disk 상태가 됨. 다음 실행에서 자동으로 heredoc-restore 되지만, `git status` 가 더러워 보임. 향후 cleanup 자동화 후보
@@ -73,7 +73,7 @@ v1 boundaries unchanged. v1.4 adds no new exclusions; deferred items are "v1.5+ 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TST-01      | 12    | Complete |
-| BENCH-06    | 13    | Pending |
+| BENCH-06    | 13    | Complete |
 
 **Coverage:**
 - v1.4 requirements: 2 total
