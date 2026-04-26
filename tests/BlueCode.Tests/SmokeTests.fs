@@ -50,6 +50,8 @@ let smokeTests =
                               answer
                               (answer.Length)
                               (sprintf "Got FinalAnswer (%d chars) — adapter round-trip succeeded" answer.Length)
+                      | Plan _ ->
+                          failtest "Smoke test received unexpected Plan output (Phase 14: Plan only emitted with --plan flag in Phase 16)"
                   | Error(LlmUnreachable(endpoint, detail)) ->
                       failtestf
                           "Endpoint unreachable (gate was on): %s — %s. Is vLLM 32B serving on localhost:8000?"
