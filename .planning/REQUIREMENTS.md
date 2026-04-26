@@ -94,24 +94,37 @@ Tracked for awareness; not pulled into v2.0 roadmap.
 
 ## Traceability
 
-Filled by roadmap. Each requirement maps to exactly one phase.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERSIST-01  | TBD   | Pending |
-| PERSIST-02  | TBD   | Pending |
-| PERSIST-03  | TBD   | Pending |
-| PERSIST-04  | TBD   | Pending |
-| PLAN-01     | TBD   | Pending |
-| PLAN-02     | TBD   | Pending |
-| PLAN-03     | TBD   | Pending |
-| PLAN-04     | TBD   | Pending |
+| PERSIST-01  | Phase 14 (shape) + Phase 15 (wiring) | Pending |
+| PERSIST-02  | Phase 15 | Pending |
+| PERSIST-03  | Phase 15 | Pending |
+| PERSIST-04  | Phase 15 | Pending |
+| PLAN-01     | Phase 14 | Pending |
+| PLAN-02     | Phase 16 | Pending |
+| PLAN-03     | Phase 16 | Pending |
+| PLAN-04     | Phase 14 (validator) + Phase 16 (wiring) | Pending |
 
 **Coverage:**
 - v2.0 requirements: 8 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 8 ⚠
+- Mapped to phases: 8/8 ✓
+- Unmapped: 0
+
+**Phase assignment (canonical — each req owns exactly one delivery phase):**
+
+| Requirement | Delivery Phase |
+|-------------|----------------|
+| PERSIST-01  | Phase 15 |
+| PERSIST-02  | Phase 15 |
+| PERSIST-03  | Phase 15 |
+| PERSIST-04  | Phase 15 |
+| PLAN-01     | Phase 14 |
+| PLAN-02     | Phase 16 |
+| PLAN-03     | Phase 16 |
+| PLAN-04     | Phase 14 |
+
+*Note: PERSIST-01's `Session` shape and PLAN-04's validator logic land in Phase 14 (Domain types), but behavioral delivery (user-observable) completes in Phase 15 and Phase 16 respectively.*
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 — initial draft, traceability pending roadmap creation*
+*Last updated: 2026-04-26 — traceability filled after roadmap creation*

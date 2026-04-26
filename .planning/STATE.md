@@ -5,17 +5,17 @@
 See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** v2.0 Persistence + Planning — major version step. Bundle of cross-turn REPL memory + `--resume <id>` (PERSIST-01..04) and plan-then-execute mode with user approval gate (PLAN-01..04). Architectural shift: state lives outside a single `runSession`.
+**Current focus:** v2.0 Persistence + Planning — major version step. Domain extensions (Phase 14) → Persistence wiring (Phase 15) → Planning wiring + bench (Phase 16).
 
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Not started (defining requirements)
+Phase: Phase 14 of 3 (Domain Extensions) — not started
 Plan: —
-Status: Defining requirements; roadmap creation pending
-Last activity: 2026-04-26 — v2.0 milestone started; PROJECT.md updated with Active reqs
+Status: Roadmap defined; ready for `/gsd:plan-phase 14`
+Last activity: 2026-04-26 — ROADMAP.md created; REQUIREMENTS.md traceability filled; STATE.md updated
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ (in progress)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ (roadmap ready)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -35,14 +35,13 @@ Cumulative log in PROJECT.md Key Decisions table. See PROJECT.md for outcomes th
 
 Items relevant to v2.0 (architectural touch points):
 
-- **v1.0 ports-and-adapters** — Core has no Console/Serilog/Spectre/Argu. v2.0 must keep this: persistence adapters (file I/O for session JSONL) live in `BlueCode.Cli/Adapters/`, NOT in Core. New port likely needed: `ISessionStore` with Save/Load/List operations.
-- **v1.0 single `runSession`** — Each REPL turn calls `runSession` independently with no carry. v2.0 PERSIST-01 changes this. Likely shape: `runSession` accepts prior `Step list` as input (additive, no mutation), REPL threads it through.
-- **v1.0 5-step max + `(action, input_hash)` loop guard** — Stay. v2.0 PLAN-04 keeps `Plan.Steps.Length ≤ 5`. Plan validation runs BEFORE user approval, not at runtime.
-- **v1.1 `LlmResponse` Core record** — v2.0 likely extends `LlmOutput` DU with new variant (e.g., `LlmOutput.Plan of Plan`) or adds `Plan` as separate output mode. Domain.fs touch is unavoidable.
-- **v1.2 loop-injection primitive** (`lastEditPath`, `lastReadHint`) — Pattern reusable for plan-mode if needed (e.g., post-plan-rejection hint to LLM).
-- **v1.3 bench gate** — `bench/run.sh --gate` is the structural answer for regression detection. New v2.0 fixtures likely needed: a multi-turn test, a `--resume` test, a plan-mode test. Baseline grows from 8 → ~12.
-- **v1.4 BENCH-06 EXIT trap** — Bench fixtures auto-reset; new v2.0 fixtures should follow same pattern.
-- **Canonical test runner**: `dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj` (NOT `dotnet test`). Test discovery: explicit `rootTests` list in `RouterTests.fs` + ordered `<Compile Include>` in fsproj.
+- **v1.0 ports-and-adapters** — Core has no Console/Serilog/Spectre/Argu. Persistence adapters (file I/O for session JSONL) live in `BlueCode.Cli/Adapters/`, NOT in Core. New port: `ISessionStore` with Save/Load operations.
+- **v1.0 single `runSession`** — Each REPL turn calls `runSession` independently with no carry. v2.0 PERSIST-01 changes this. Shape: `runSession` accepts prior `Session option` as input (additive, no mutation), REPL threads it through.
+- **v1.0 5-step max + loop guard** — Stay. v2.0 PLAN-04 keeps `Plan.Steps.Length ≤ 5`. Plan validation runs BEFORE user approval.
+- **v1.1 `LlmResponse` Core record** — v2.0 extends `LlmOutput` DU with `LlmOutput.Plan of Plan` variant. Domain.fs touch is unavoidable; Phase 14 does it atomically (mirrors v1.1 "big-bang compile cascade" pattern).
+- **v1.2 loop-injection primitive** — Pattern reusable for plan-rejection hint injection (post-plan-rejection `[PLAN REJECTED]` System message follows same position discipline as `lastEditPath`/`lastReadHint`).
+- **v1.3 bench gate** — `bench/run.sh --gate` is regression authority. Phase 16 extends baseline.json 8 → ~12 entries (multi-turn fixture + plan-mode fixture).
+- **v1.4 MockHelpers.fs** — `makeMockResponse` is the canonical helper. Phase 14 adds sibling `makePlanResponse` in same module.
 
 ### Pending Todos
 
@@ -56,11 +55,11 @@ v2.1+ candidates (after v2.0 ships):
 ### Blockers/Concerns
 
 - **Compaction risk**: PERSIST-02 saves the full session JSONL but does not yet compact. Long sessions will hit the 80% context warning faster. v2.0 ships without compaction; v2.1 candidate.
-- **Plan-mode + REPL interaction**: PLAN-02's `--plan` flag is per-invocation, not REPL-mode-toggle. If user wants plan mode every turn, they pass it every turn (or a new `/plan` slash command in v2.1).
-- **Backwards compat**: v1.x JSONL session log format may need a versioned schema upgrade. PERSIST-02 should write a `version: 2` header so old logs are recognizable.
+- **Plan-mode + REPL interaction**: PLAN-02's `--plan` flag is per-invocation. If user wants plan mode every turn, they pass it every turn (or `/plan` slash command in v2.1).
+- **Backwards compat**: v1.x JSONL session log format needs versioned schema upgrade. PERSIST-02 writes a `version: 2` header so old logs are recognizable.
 
 ## Session Continuity
 
-Last session: 2026-04-26 (v2.0 milestone start)
-Stopped at: PROJECT.md updated with v2.0 Active reqs (PERSIST-01..04 + PLAN-01..04). Next: write REQUIREMENTS.md, spawn roadmapper.
-Resume file: None — milestone is mid-setup, REQUIREMENTS.md and ROADMAP.md pending.
+Last session: 2026-04-26
+Stopped at: Roadmap created (ROADMAP.md + REQUIREMENTS.md traceability + STATE.md). Ready to plan Phase 14.
+Resume file: None
