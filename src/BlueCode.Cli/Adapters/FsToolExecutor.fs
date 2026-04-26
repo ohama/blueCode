@@ -450,6 +450,8 @@ let private editFileImpl
         ct.ThrowIfCancellationRequested()
         match validatePath projectRoot path with
         | Error tr -> return Ok tr
+        | Ok _ when oldString.Length = 0 ->
+            return Ok(Failure(1, "oldString must be non-empty"))
         | Ok resolved ->
             try
                 let content = File.ReadAllText(resolved)
@@ -558,10 +560,16 @@ let private grepSearchImpl
             | Error tr -> return Ok tr
             | Ok root ->
                 try
-                    let globPattern = fileGlob |> Option.defaultValue "*"
-                    let opts = EnumerationOptions()
-                    opts.RecurseSubdirectories <- true
-                    opts.AttributesToSkip <- FileAttributes.System
+                    // If path points to a file (not a dir), search that file only.
+                    let filesToSearch =
+                        if File.Exists(root) then
+                            seq { root }
+                        else
+                            let globPattern = fileGlob |> Option.defaultValue "*"
+                            let opts = EnumerationOptions()
+                            opts.RecurseSubdirectories <- true
+                            opts.AttributesToSkip <- FileAttributes.System
+                            Directory.EnumerateFiles(root, globPattern, opts)
 
                     let rxOpt =
                         try
@@ -577,7 +585,7 @@ let private grepSearchImpl
                         let results = System.Collections.Generic.List<string>()
                         let mutable hitCap = false
 
-                        for file in Directory.EnumerateFiles(root, globPattern, opts) do
+                        for file in filesToSearch do
                             if not hitCap then
                                 ct.ThrowIfCancellationRequested()
                                 try
