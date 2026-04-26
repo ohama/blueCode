@@ -4,30 +4,15 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current Milestone: v1.4 Test Hygiene + Bench Polish
+## Current State (post-v1.4)
 
-**Goal:** Clear two pieces of cited tech debt from prior milestones (3-milestone-old shared `makeMockResponse` test helper + bench fixture working-tree drift surfaced in v1.3 Part 4), then enter a 2-week observation window to capture real-use pain signals via `/gsd:add-todo` for v1.5 scoping. Path B from the v1.3 close discussion — discipline over momentum.
+v1.4 Test Hygiene + Bench Polish shipped 2026-04-26 (Path B). Two pieces of cited tech debt cleared: TST-01 (shared `MockHelpers.fs` consolidates the 3-milestone-old `makeMockResponse` duplication) + BENCH-06 (EXIT trap in `bench/run.sh` auto-resets W1/W2 fixtures so `git status` stays clean). Zero `src/` diff. 243/1/0 tests preserved. Bench gate 8/8 PASS. Five milestones shipped: v1.0 MVP, v1.1 Refinement, v1.2 Tool Expansion, v1.3 Bench-Driven Quality Gates, v1.4 Test Hygiene + Bench Polish. Daily-driver use ongoing as the user's primary Mac coding agent.
 
-**Target features (2 requirements, 2 phases, ~3 days):**
+Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4}-ROADMAP.md`.
 
-- **TST-01**: Shared `makeMockResponse` test helper consolidates 3 in-repo duplications (2 in `AgentLoopTests.fs` + 1 in `ReplTests.fs`) into a single shared `MockHelpers.fs` module. Cited as `⚠ Revisit` in PROJECT.md Key Decisions since v1.1; flagged by 4 executors hitting related test-discovery pitfalls.
-- **BENCH-06**: `bench/run.sh` resets `bench/fixtures/{bug_lastchar,bug_average}.fs` to their broken-baseline state on exit (success or failure) so `git status` no longer shows fixtures as dirty after `--gate` / `--all` / `--canary` / `--b2` runs. Surfaced in v1.3 Part 4 §23 ("Discoveries") as benign but accumulated-cognitive-overhead drift.
+## Next Milestone Goals
 
-**Scope:** Maintenance + observation. **Excluded** with explicit rationale:
-- STM-01 (streaming) — deferred 5x; defer 6x. UX win but no measured complaint after 5 milestones. Re-evaluate from observation window.
-- SES-01, sub-agents, slash commands — v2+ per project scope. Don't open the door without measured pain.
-- ROU-05 — TOOL-08 + 9.1 closure made this less urgent; pain didn't materialize.
-- OPS-01, OBS-06, CLI-08 — minor; no measured signal in 4 milestones.
-
-**Phase numbering:** continues at 12, 13 (v1.0 used 1-5; v1.1 used 6-7; v1.2 used 8 + 9 + 9.1 inserted; v1.3 used 10-11).
-
-**Exit criterion (load-bearing for v1.5 scoping):** After v1.4 ships, daily-drive blueCode for ~2 weeks. Use `/gsd:add-todo` from real coding sessions to capture pain signals. v1.5 scope is built from those todos — not from the deferred-list backlog. The bench gate now catches structural regressions automatically, so observation has zero structural cost.
-
-## Current State (post-v1.3)
-
-v1.3 Bench-Driven Quality Gates shipped 2026-04-26. blueCode now has a repo-tracked regression bench harness (`bench/run.sh --gate`, ~115s for 8-test detection), a system prompt shrunk 54% (1689 → 783 chars), an extended loop-injection primitive (`lastEditPath` + `lastReadHint`) that moves contextual hints out of the base prompt, and demonstrated B2 divide-by-zero recovery on both 32B and 72B confirming the v1.2 audit's prompt-length attention-shift hypothesis. Four milestones shipped: v1.0 MVP, v1.1 Refinement, v1.2 Tool Expansion, v1.3 Bench-Driven Quality Gates. Daily-driver use ongoing as the user's primary Mac coding agent.
-
-Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3}-ROADMAP.md`.
+**2-week observation window now open (started 2026-04-26).** v1.5 scope will be derived from `/gsd:add-todo` entries captured during daily-driver use — NOT from the deferred-list backlog. Path B's exit criterion is the load-bearing element: observation has zero structural cost (bench gate catches regressions automatically), so shipping more deferred items "just because they're available" is the wrong move. STM-01 (streaming) has been deferred 6 times; if observation surfaces no measured complaint, the defer-pattern itself is the answer.
 
 ## Core Value
 
@@ -59,13 +44,14 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ System prompt shrunk 54% (1689 → 783 chars, Path C ≤800 achieved) without regressing any gate test — v1.3 (PERF-01)
 - ✓ Loop-injection extended to post-`read_file`-truncated/out-of-range — `lastReadHint: (string * string) option` parameter mirrors 09.1-05's `lastEditPath` discipline; `[POST-READ HINT]` System message fires only when relevant — v1.3 (PERF-02)
 - ✓ B2 divide-by-zero diagnosis recovered on both 32B and 72B post-shrink — v1.2 audit's prompt-length attention-shift hypothesis empirically confirmed — v1.3 (PERF-03)
+- ✓ Shared `BlueCode.Tests.MockHelpers` module with single canonical `makeMockResponse` — consolidates 3-milestone-old duplication; 243/1/0 preserved; zero `src/` diff — v1.4 (TST-01)
+- ✓ `bench/run.sh` EXIT trap auto-resets W1/W2 write-task fixtures (`bug_lastchar.fs`, `bug_average.fs`) — `bug_divide_zero.fs` excluded; defense-in-depth with existing heredoc-restore blocks; bash 3.2 compatible, exit-code preserving — v1.4 (BENCH-06)
 
-### Active (v1.4 Test Hygiene + Bench Polish)
+### Active
 
-<!-- v1.4 scope confirmed 2026-04-26 (Path B from v1.3 close). 2 requirements across 2 phases. -->
+<!-- 2-week observation window opened 2026-04-26 after v1.4 close. v1.5 scope will be derived from /gsd:add-todo entries captured during daily-driver use, NOT from the deferred list below. -->
 
-- [ ] **TST-01**: Shared `makeMockResponse` test helper module — consolidate 3 in-repo duplications into `tests/BlueCode.Tests/MockHelpers.fs`; update `AgentLoopTests.fs` + `ReplTests.fs` consumers; preserve 243/1/0 test count.
-- [ ] **BENCH-06**: `bench/run.sh` auto-resets `bench/fixtures/{bug_lastchar,bug_average}.fs` to broken-baseline on exit (success or failure) so `git status` is clean post-gate.
+(None — observation window in progress. Next milestone scoping starts when `/gsd:add-todo` entries surface measurable pain signals.)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -162,7 +148,7 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 | v1.1: Option B (Core에서 modelToName 삭제, adapter가 wire id 소유) | 기존 `AgentConfig.ForcedModel` precedent 동일 패턴 | ✓ Good — Core purity 유지, 06-03 gap closure 로 `StartsWith('/')` heuristic 추가 |
 | v1.1: Option C (new Core record `LlmResponse`) | 대안 A/B (LlmStep/tuple)보다 named 필드 + Core 포함 안전 | ✓ Good — F# big-bang 컴파일 캐스케이드로 단일 atomic commit 가능 |
 | v1.1: `tryParseModelId` local-path preference heuristic | mlx_lm.server의 HF Hub fallback 이 Instruct tokenizer 를 Base 로 덮어쓰는 regression 우회 | ✓ Good — live 검증 통과. 단점: Windows 지원 시 path 감지 로직 재설계 필요 (v1 Mac-only라 무관) |
-| v1.1: `makeMockResponse` 테스트 헬퍼 중복 (shared 모듈 아님) | scope 관리; shared 모듈 추출은 별도 test infra 작업 | ⚠ Revisit — v1.3+ test infrastructure 패스에서 통합 고려 (TST-01) |
+| v1.1: `makeMockResponse` 테스트 헬퍼 중복 (shared 모듈 아님) | scope 관리; shared 모듈 추출은 별도 test infra 작업 | ✓ Resolved by v1.4 (TST-01) — `tests/BlueCode.Tests/MockHelpers.fs` is single canonical home |
 | v1.2: 8-action schema enum + executor stubs in same plan (08-01 shared seam) | DU/schema/dispatcher coupling; shared seam pattern | ✓ Good — single atomic commit landed Domain + Cli + system-prompt changes coherently |
 | v1.2: TOOL-08 metadata header preserves RAW endLine (no clamp) | unambiguous bounds-violation signal to LLM | ✓ Good — 32B self-corrects on out-of-range header |
 | v1.2: read_file header words anchor with `\n` in test substring assertions | `truncated` contains `a`, `lines` contains `e` — collision with body text | ✓ Good — pattern generalizable for any tool prepending fixed-format headers |
@@ -176,6 +162,11 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 | v1.3 (PERF-03): Audit hypothesis empirically confirmed | 54% prompt reduction recovered correct B2 diagnosis on both models without surgical hint | ✓ Good — validates "ship-from-pain" discipline; future debugging starts with prompt-length sanity check |
 | v1.3: 2 Rule 3 auto-fixes during PERF-01 iteration (`edit_file` empty `old_string` infinite loop, `grep_search` file-path support) | Bench-blockers surfaced during prompt-shrink iteration; fixed under workflow's auto-fix-blockers discipline | ✓ Good — no silent bug accumulation; Rule 3 worked as intended |
 | v1.3: Howto pattern — capture v1.2/v1.3 reusable lessons (5 howtos) | Knowledge that previously lived in milestone-archive SUMMARYs (effectively buried) now in discoverable docs | — Pending — value depends on whether future sessions actually consult them; revisit after v1.5 |
+| v1.4 (TST-01): Shared MockHelpers.fs single combined commit | 4 mechanically-coupled file edits with no valid intermediate build state; CLAUDE.md permits atomic-per-task (not per-file) | ✓ Good — refactor commit cleaner than 4 broken-build states; 15 call sites resolved through `open` without source change |
+| v1.4 (TST-01): Scope discipline — only `makeMockResponse` factored | 3 prior milestones deferred TST-01 partly due to scope creep ("while I'm here, factor X too"); v1.4's discipline is the load-bearing closure mechanism | ✓ Good — `toolCall`, `mockLlm`/`stubLlm`, `mockToolsOk`/`stubToolsOk`, `discardStep` left duplicated by design; future test infra pass may revisit |
+| v1.4 (TST-01): REQUIREMENTS.md count discrepancy discovered | Spec said "3 instances" but actual was 2 definitions (one per file); spec conflated definition sites with use sites | — Note — no scope impact; correction documented in v1.4 archive. Lesson: count code locations, not natural-language references, when defining cleanup scope |
+| v1.4 (BENCH-06): EXIT trap with defense-in-depth | Existing heredoc-restore blocks preserved unchanged; trap is exit-time safety net, heredoc is between-invocation reset; either alone sufficient; together they cover every failure mode | ✓ Good — bash 3.2 compatible, exit-code preserving (no `exit N` in trap body); `bug_divide_zero.fs` deliberately excluded as B2 read-only diagnose fixture |
+| v1.4: Path B chosen over A (streaming) and C (observation-only) | Middle path threads "discipline preserved" with "small wins shipped"; STM-01 deferred 6th cycle; observation window is load-bearing | ✓ Good — both REQs closed in ~1 day with zero `src/` diff; v1.5 scoping will come from observation-window `/gsd:add-todo` entries, not deferred-list draining |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -188,4 +179,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-26 after starting v1.4 milestone (Path B)*
+*Last updated: 2026-04-26 after v1.4 milestone complete (Path B shipped — TST-01 + BENCH-06 closed; 2-week observation window opens)*

@@ -1,5 +1,35 @@
 # Project Milestones: blueCode
 
+## v1.4 Test Hygiene + Bench Polish (Shipped: 2026-04-26)
+
+**Delivered:** Two pieces of cited tech debt cleared (3-milestone-old shared `makeMockResponse` helper + bench fixture working-tree drift surfaced in v1.3 Part 4), then opens a 2-week observation window for v1.5 scoping. Path B from the v1.3 close — discipline preserved, small wins shipped, observation-driven scoping (not deferred-list draining).
+
+**Phases completed:** 12 - 13 (2 plans total — one per phase)
+
+**Key accomplishments:**
+
+- **TST-01 closed (Phase 12):** Consolidated `makeMockResponse` from 2 in-repo definitions (one each in `AgentLoopTests.fs` and `ReplTests.fs`) into shared `tests/BlueCode.Tests/MockHelpers.fs`. Both consumers updated with `open BlueCode.Tests.MockHelpers`; 15 call sites continue to work without source change. Test count 243/1/0 preserved (zero behavioral change). Single combined `refactor` commit for 4 mechanically-coupled file edits. Other duplicated helpers (`toolCall`, `mockLlm`/`stubLlm`, `mockToolsOk`/`stubToolsOk`, `discardStep`) deliberately NOT factored — TST-01 scope discipline closed 3 prior milestones' worth of scope-creep deferral. Discovered REQUIREMENTS.md spec count discrepancy: actual was 2 definitions, not 3 (the spec conflated definition sites with use sites).
+- **BENCH-06 closed (Phase 13):** Added EXIT trap to `bench/run.sh` line 18 (between `set -u` and `cd`). Trap body: `git checkout -- bench/fixtures/bug_lastchar.fs bench/fixtures/bug_average.fs 2>/dev/null || true`. Single-quoted, no `exit N`, exit-code preserving, bash 3.2 compatible. Targets W1/W2 write fixtures only — `bug_divide_zero.fs` (B2 read-only diagnose fixture) deliberately excluded. Defense-in-depth preserved: existing in-line heredoc-restore blocks at lines 137-153 and 278-296 (post-shift) handle between-invocation reset; trap handles exit-time cleanup. SC1 verified empirically with full `--gate` run (8/8 PASS, fixtures clean post-trap). New `## Auto-Reset of Write Fixtures` subsection in `documentation/bench.md` (lines 60-79).
+- **Patterns established for future use:** "Test helper modules: no testList, no `RouterTests.fs:rootTests` entry; only fsproj `<Compile Include>` registration needed." "EXIT trap pattern: `trap 'git checkout -- <files> 2>/dev/null || true' EXIT` — reliable, bash 3.2 compatible, exit-code preserving."
+- **Audit confirmed clean (status: passed):** No critical gaps, no cross-phase wiring issues (Phase 12 = `tests/`, Phase 13 = `bench/` + `documentation/` — fully independent), no E2E flow changes, zero `src/` diff. 1 pre-existing low-severity tech debt item deferred unchanged (other duplicated test helpers).
+
+**Stats:**
+
+- 2 phases (12, 13), 2 plans, 2 requirements (100% closure)
+- Source code delta: zero `src/` change. `tests/`: 4 files changed (1 new `MockHelpers.fs`, 3 modified). `bench/run.sh`: +4 lines. `documentation/bench.md`: +21 lines. Total: 6 files, +37/-16 LOC.
+- 243/1/0 tests passing; 1 env-gated smoke ignored (unchanged from v1.3)
+- Bench gate 8/8 PASS throughout
+- 7 commits in milestone range (v1.4 setup + execution + closes)
+- ~1 day wall-clock (2026-04-26 milestone start → 2026-04-26 Phase 13 verified)
+
+**Git range:** `48d90c9` (v1.4 milestone start) → `bd73a47` (Phase 13 complete)
+
+**What's next:**
+
+**2-week observation window opens 2026-04-26 (load-bearing exit criterion).** Daily-drive blueCode as primary Mac coding agent; use `/gsd:add-todo` from real coding sessions to capture pain signals. v1.5 scope is built from those todos — NOT from the deferred-list backlog. The bench gate now catches structural regressions automatically, so observation has zero structural cost. STM-01 (streaming) deferred 6th cycle; defer-pattern is itself the load-bearing signal.
+
+---
+
 ## v1.3 Bench-Driven Quality Gates (Shipped: 2026-04-26)
 
 **Delivered:** v1.2's behavioral wins formalized as a repo-tracked regression suite (`bench/run.sh --gate`), then a 54% system-prompt shrink (1689 → 783 chars) validated by that suite — recovering correct B2 divide-by-zero diagnosis on both 32B and 72B and empirically confirming the v1.2 audit's prompt-length attention-shift hypothesis.
