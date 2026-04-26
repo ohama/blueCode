@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-26 after starting v1.3 milestone)
 ## Current Position
 
 Milestone: v1.3 Bench-Driven Quality Gates (started 2026-04-26)
-Phase: 11 — System Prompt Shrink (in progress: 2/3 plans complete)
-Plan: 11-02 shipped (Wave 2 complete); Wave 3 (11-03 B2 recovery validation) next
-Status: Plan 11-02 complete. defaultSystemPrompt shrunk 1689→783 chars (54% reduction, Path C ≤800 achieved). Two FsToolExecutor bugs fixed (empty old_string infinite loop; grep_search file-path support). Gate: GATE PASS (8/8). Test count 243/1/0 unchanged.
-Last activity: 2026-04-26 — Completed 11-02-PLAN.md. +24/-25 lines across CompositionRoot.fs + FsToolExecutor.fs (prompt shrink + 2 Rule 3 auto-fixes). Core purity clean. Bench fixtures unaffected (gate-restored).
+Phase: 11 — System Prompt Shrink (COMPLETE: 3/3 plans)
+Plan: 11-03 shipped (Wave 3 complete); Phase 11 fully done
+Status: Plan 11-03 complete. Both 32B and 72B RECOVERED correct B2 diagnosis post-shrink. B2 baseline entries flipped to pass=true. GATE PASS (8/8) on updated baseline. Phase 11 SC4 fully satisfied. Phase 11 ready for /gsd:verify-work 11.
+Last activity: 2026-04-26 — Completed 11-03-PLAN.md. bench/baseline.json: B2_32b + B2_72b flipped pass=true (regression removed). 32B thought: "The bug is identified. It occurs when the function average is called with an empty list, leading to a division by zero error." 72B thought: "The bug is triggered when the function average is called with an empty list. This causes a division by zero because List.length xs returns 0 for an empty list." Audit hypothesis CONFIRMED: 54% prompt reduction was sufficient for both models.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10 ✓ · Phase 11: ██░ 2/3 plans)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 (Phase 10 ✓ · Phase 11: ███ 3/3 plans ✓)
 
 ## Performance Metrics (v1.0 + v1.1 + v1.2 — cumulative, frozen)
 
@@ -61,6 +61,12 @@ Plan 11-01 decisions (2026-04-26):
 - Two-arm hint logic (truncated vs out-of-range) chosen over single generic message — corrective actions differ and specificity matters for T6 behavioral quality
 - First-line-only substring match (`", truncated]"` / `", out-of-range]"`) used for header detection — FsToolExecutor format is fixed, leading `, ` + trailing `]` prevents false positives from file content
 
+Plan 11-03 decisions (2026-04-26):
+
+- Both B2 entries flipped to pass=true (regression removed): both 32B and 72B correctly diagnosed empty-list cause post-shrink; no surgical B2 hint needed for v1.4
+- step_count_max=3 preserved for both B2 entries (observed 2 + 1 slack); no additional slack required
+- Audit hypothesis CONFIRMED: prompt-length attention shift was the sole cause of B2 misdiagnosis; 54% reduction (1689→783 chars) sufficient for full recovery on both models
+
 Plan 11-02 decisions (2026-04-26):
 
 - Path C achieved: defaultSystemPrompt 1689→783 chars (54% reduction), ≤800 target met
@@ -89,5 +95,5 @@ None at v1.3 start. Daily-driver use of blueCode ongoing; v1.3 work should not b
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Completed 11-02-PLAN.md. defaultSystemPrompt 783 chars (Path C). FsToolExecutor: empty old_string guard + grep_search file-path fix. GATE PASS (8/8). Wave 2 complete. Next: Plan 11-03 (Wave 3) — run --b2, verify B2 diagnosis improves, update baseline.json B2 entries.
+Stopped at: Completed 11-03-PLAN.md. B2 recovery validated (both models RECOVERED). bench/baseline.json B2 entries flipped to pass=true. GATE PASS (8/8). Phase 11 complete. Ready for /gsd:verify-work 11 and /gsd:complete-milestone v1.3.
 Resume file: None
