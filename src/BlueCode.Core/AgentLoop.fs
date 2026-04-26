@@ -192,14 +192,14 @@ let private callLlmWithRetry
 /// assistant message (no observation). ToolCall step emits an assistant +
 /// observation pair.
 ///
-/// lastEditPath: when Some path, appends a System-role constraint message at the
+/// lastEditPath: when Some path, appends a User-role constraint message at the
 /// END of the message list (after the user prompt and step history) directing the
 /// model away from write_file/read_file on the already-edited path. This message
 /// appears AFTER the user turn so it post-dates and overrides any user-prompt tool
 /// instruction (loop-injection Option A, Plan 09.1-05).
 ///
 /// lastReadHint: when Some (path, status) where status is "truncated" or
-/// "out-of-range", appends a System-role [POST-READ HINT] message at the END
+/// "out-of-range", appends a User-role [POST-READ HINT] message at the END
 /// of the message list guiding the model toward a smaller window or a valid
 /// start_line. Extends the 09.1-05 loop-injection primitive (Plan 11-01).
 let private buildMessages (systemPrompt: string) (userInput: string) (recentSteps: Step list) (lastEditPath: string option) (lastReadHint: (string * string) option) : Message list =
@@ -246,7 +246,7 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
         match lastEditPath with
         | Some path ->
             let constraintMsg =
-                { Role = System
+                { Role = User
                   Content =
                     sprintf
                         "[POST-EDIT CONSTRAINT] You just successfully edited %s. The edit is already persisted. Your next action MUST be either `final` (preferred) or `edit_file` on a different concern. Do NOT call `write_file` on `%s` — it is redundant. Do NOT call `read_file` on `%s` to verify — `edit_file` already confirmed the change. This constraint is mandatory regardless of any earlier user instruction."
@@ -257,13 +257,13 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
     match lastReadHint with
     | Some (path, "truncated") ->
         withEdit @ [
-            { Role = System
+            { Role = User
               Content =
                 sprintf "[POST-READ HINT] The previous read_file on %s returned truncated content (clipped to 2000 chars). Pick a smaller window — set end_line - start_line < 50 — and read again to get unclipped content." path }
         ]
     | Some (path, "out-of-range") ->
         withEdit @ [
-            { Role = System
+            { Role = User
               Content =
                 sprintf "[POST-READ HINT] The previous read_file on %s returned out-of-range (start_line > total_lines). The header reported total_lines; choose a start_line <= total_lines and read again." path }
         ]
