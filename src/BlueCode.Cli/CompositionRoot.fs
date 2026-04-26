@@ -11,6 +11,7 @@ open BlueCode.Cli.Adapters.JsonlSink
 type AppComponents =
     { LlmClient: BlueCode.Core.Ports.ILlmClient
       ToolExecutor: BlueCode.Core.Ports.IToolExecutor
+      SessionStore: BlueCode.Core.Ports.ISessionStore  // NEW (15-02): JSONL session persistence
       JsonlSink: JsonlSink
       Config: AgentConfig
       ProjectRoot: string
@@ -24,13 +25,17 @@ type AppComponents =
 type CliOptions =
     { ForcedModel: BlueCode.Core.Domain.Model option
       Verbose: bool
-      Trace: bool }
+      Trace: bool
+      ResumeSessionId: BlueCode.Core.Domain.SessionId option  // NEW (15-02): Some when --resume <ID> set
+      NewSession: bool }                                       // NEW (15-02): true when --new-session set
 
 /// Default options — equivalent to old single-turn invocation with no flags.
 let defaultCliOptions: CliOptions =
     { ForcedModel = None
       Verbose = false
-      Trace = false }
+      Trace = false
+      ResumeSessionId = None
+      NewSession = false }
 
 /// Convert the CLI string ("32b"|"72b") to a Model. Raises on invalid input
 /// so Argu-level catch in Program.fs can surface it as a usage error (exit 2).
@@ -74,6 +79,7 @@ let bootstrap (projectRoot: string) (opts: CliOptions) : AppComponents =
 
     { LlmClient = Adapters.QwenHttpClient.create ()
       ToolExecutor = Adapters.FsToolExecutor.create projectRoot
+      SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
       JsonlSink = new JsonlSink(logPath)
       Config =
         { MaxLoops = 5
