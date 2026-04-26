@@ -108,7 +108,8 @@ let rootTests =
           BlueCode.Tests.CliArgsTests.tests
           BlueCode.Tests.LoggingTests.tests
           BlueCode.Tests.ModelsProbeTests.tests
-          BlueCode.Tests.ContextWarningTests.tests ]
+          BlueCode.Tests.ContextWarningTests.tests
+          BlueCode.Tests.SessionStoreTests.tests ]         // NEW (15-03)
 
 [<EntryPoint>]
 let main args = runTestsWithCLIArgs [] args rootTests
