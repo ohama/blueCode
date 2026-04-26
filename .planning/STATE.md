@@ -2,47 +2,27 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-26 after v1.3 milestone complete)
+See: .planning/PROJECT.md (updated 2026-04-26 after starting v1.4 milestone)
 
 **Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
-**Current focus:** Between milestones — v1.3 archived 2026-04-26; v1.4 scope pending (Path B candidate: TST-01 + bench fixture cleanup automation)
+**Current focus:** v1.4 Test Hygiene + Bench Polish — small tactical milestone (Path B from v1.3 close); 2 phases (TST-01 shared mock helper + BENCH-06 fixture cleanup automation); exit criterion is a 2-week observation window for v1.5 scoping
 
 ## Current Position
 
-Milestone: v1.3 archived. Four milestones shipped: v1.0 MVP (2026-04-23), v1.1 Refinement (2026-04-24), v1.2 Tool Expansion (2026-04-26), v1.3 Bench-Driven Quality Gates (2026-04-26).
-Phase: None active — `/gsd:new-milestone` will scope v1.4.
-Plan: None.
-Status: Ready to plan v1.4 OR enter observation window. Recommendation per Path B (v1.3 close discussion): small tactical milestone (~3 days, 2 phases — TST-01 + bench fixture cleanup automation) followed by 2-week observation window using `/gsd:add-todo` to capture real-use pain signals.
-Last activity: 2026-04-26 — v1.3 milestone complete and archived. Tag `milestone-v1.3` cut. 6 plans across 2 phases (10, 11) shipped; 243 tests passing; 25 commits since `6133abc` (v1.2 close). All 8 v1.3 REQs satisfied. B2 audit hypothesis confirmed.
+Milestone: v1.4 Test Hygiene + Bench Polish (started 2026-04-26)
+Phase: Not started (defining requirements + roadmap)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-26 — v1.3 archived; v1.4 scope confirmed (Path B: 2 REQs across 2 phases — TST-01 + BENCH-06); PROJECT.md updated.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 (next, TBD)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 (◆ in progress, requirements defining)
 
 ## Performance Metrics (cumulative, frozen)
 
-**v1.0 totals:**
-- 5 phases, 17 plans (16 autonomous + 1 human-gated UAT), 208 tests
-- 85 commits, 5891 LOC F#
-- ~27 hours (2026-04-22 14:37 → 2026-04-23 17:18)
-
-**v1.1 totals:**
-- 2 phases, 5 plans (3 in Phase 6 incl. 06-03 gap closure, 2 in Phase 7)
-- 218 tests (208 v1.0 baseline + 10 v1.1 additions)
-- 23 commits, +315 / -124 LOC F# delta
-- ~19 hours (2026-04-23 17:32 → 2026-04-24 12:21)
-
-**v1.2 totals:**
-- 3 phases (8, 9, 9.1 inserted), 8 plans (2 + 1 + 5 across 9.1's two gap-closure rounds)
-- 242 tests (218 v1.1 baseline + 18 from Phase 8 + 4 from Phase 9 + 1 from 09.1-02 + 1 from 09.1-05); 1 ignored
-- 43 commits since v1.1 close
-- ~3 days wall-clock (2026-04-24 → 2026-04-26)
-
-**v1.3 totals:**
-- 2 phases (10, 11), 6 plans (3 + 3)
-- 243 tests (242 v1.2 baseline + 1 from 11-01); 1 ignored
-- 25 commits since v1.2 close
-- ~1 day wall-clock (2026-04-26)
-- Source delta: `src/BlueCode.Core/AgentLoop.fs` (+lastReadHint), `src/BlueCode.Cli/{CompositionRoot.fs (1689→783 chars prompt), Adapters/FsToolExecutor.fs (2 Rule 3 fixes)}`, 1 new testCase
-- New infrastructure: `bench/` directory tree (run.sh + 3 fixtures + baseline.json), `documentation/bench.md` (190 lines), 5 new howtos
+**v1.0:** 5 phases, 17 plans, 208 tests, 5891 LOC F#, 85 commits, ~27h
+**v1.1:** 2 phases, 5 plans, 218 tests (+10), +315/-124 LOC, 23 commits, ~19h
+**v1.2:** 3 phases, 8 plans, 242 tests (+24), Core diff confined to AgentLoop.fs/Domain.fs, 43 commits, ~3 days
+**v1.3:** 2 phases, 6 plans, 243 tests (+1), bench harness in repo + 54% prompt shrink + B2 recovery, 25 commits, ~1 day
 
 Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3}-phases/`.
 
@@ -52,29 +32,35 @@ Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3}-p
 
 Rolled up into PROJECT.md Key Decisions table at v1.0/v1.1/v1.2/v1.3 milestone completions. See `.planning/PROJECT.md` for cumulative log with outcomes.
 
-### Pending Todos (v1.4+ candidates)
+Notable items relevant to v1.4:
 
-**Path B priority candidates** (cited in v1.3 close discussion as small-tactical-milestone scope):
+- v1.0 Expecto explicit `rootTests` list — 4 executors hit registration pitfall; CLAUDE.md "Test discovery pattern" documents the pitfall but `[<Tests>]` auto-discovery transition still pending. v1.4 TST-01 may need to revalidate this discipline when adding the new MockHelpers.fs module.
+- v1.1 `makeMockResponse` test helper duplicated — TST-01 is the v1.4 closure of this 3-milestone-old debt. Now 3 instances (2 in AgentLoopTests.fs from 09.1-05 + 11-01, 1 in ReplTests.fs).
+- v1.3 bench fixture working-tree drift — `--gate`, `--canary`, `--all`, `--b2` runs leave write-task fixtures in LLM-edited state. v1.4 BENCH-06 is the closure.
 
-- **TST-01** — shared `makeMockResponse` test helper (3-milestone-old debt; now 3 instances across `AgentLoopTests.fs` and `ReplTests.fs`)
-- **bench fixture cleanup automation** — `--gate` runs leave `bug_lastchar.fs`/`bug_average.fs` in LLM-edited state; gitignore drift in `git status` after every gate run
+v1.4-specific input from v1.3 close discussion:
 
-**Other deferred items** (no measured pain — defer to v1.5+ scoped from observation window):
+- Path B chosen over Path A (streaming) and Path C (observation-only) — middle path threads "discipline preserved" with "small wins shipped"
+- Exit criterion is the load-bearing element: 2-week observation window with `/gsd:add-todo` capture for v1.5 scoping (not deferred-list draining)
 
-- **STM-01** SSE streaming output (deferred 5x; UX win but no complaint after 5 milestones)
-- **SES-01** session persistence + `--resume` (XL, v2+ per scope)
-- **ROU-05** auto-escalation on MaxLoopsExceeded (less urgent post-9.1)
-- **OPS-01** prompt cache hygiene (zero kickstarts needed in 9.1 + Phase 11)
-- **OBS-06** per-port `MaxModelLen` visibility (minor)
-- **CLI-08** Ctrl+C UX polish (minor)
-- **Multi-platform `tryParseModelId`** (Windows OOS so likely permanent)
+### Pending Todos
+
+v1.5+ candidates (scope from observation, not from this list):
+
+- Streaming output (STM-01)
+- Session persistence + `--resume` (SES-01) [v2+ per scope]
+- Auto-escalation on MaxLoopsExceeded (ROU-05)
+- Ctrl+C UX polish (CLI-08)
+- Per-port `MaxModelLen` visibility (OBS-06)
+- Prompt cache hygiene (OPS-01)
+- Multi-platform `tryParseModelId` (Windows OOS so likely permanent)
 
 ### Blockers/Concerns
 
-None. v1.3 ships clean: 243 tests passing, all 8 REQs Validated, bench gate green (8/8), audit hypothesis confirmed, daily-driver use ongoing.
+None at v1.4 start. Daily-driver use of blueCode ongoing; v1.4 work is bounded (test infrastructure + bench script polish — no Core diff expected, no new behavioral surface).
 
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: v1.3 milestone archived. PROJECT/MILESTONES updated; ROADMAP and REQUIREMENTS deleted; phase directories moved to `.planning/milestones/v1.3-phases/`. Tag `milestone-v1.3` cut.
-Resume file: None — run `/gsd:new-milestone` to scope v1.4 (Path B recommended) OR daily-drive blueCode for 2 weeks and capture pain via `/gsd:add-todo` before scoping v1.5.
+Stopped at: v1.4 milestone scoped and PROJECT.md updated. Next: write REQUIREMENTS.md, then spawn `gsd-roadmapper` for Phase 12 + 13.
+Resume file: None — milestone setup is in progress; the workflow continues with REQUIREMENTS + ROADMAP.

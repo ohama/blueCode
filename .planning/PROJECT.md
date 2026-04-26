@@ -4,19 +4,30 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
+## Current Milestone: v1.4 Test Hygiene + Bench Polish
+
+**Goal:** Clear two pieces of cited tech debt from prior milestones (3-milestone-old shared `makeMockResponse` test helper + bench fixture working-tree drift surfaced in v1.3 Part 4), then enter a 2-week observation window to capture real-use pain signals via `/gsd:add-todo` for v1.5 scoping. Path B from the v1.3 close discussion — discipline over momentum.
+
+**Target features (2 requirements, 2 phases, ~3 days):**
+
+- **TST-01**: Shared `makeMockResponse` test helper consolidates 3 in-repo duplications (2 in `AgentLoopTests.fs` + 1 in `ReplTests.fs`) into a single shared `MockHelpers.fs` module. Cited as `⚠ Revisit` in PROJECT.md Key Decisions since v1.1; flagged by 4 executors hitting related test-discovery pitfalls.
+- **BENCH-06**: `bench/run.sh` resets `bench/fixtures/{bug_lastchar,bug_average}.fs` to their broken-baseline state on exit (success or failure) so `git status` no longer shows fixtures as dirty after `--gate` / `--all` / `--canary` / `--b2` runs. Surfaced in v1.3 Part 4 §23 ("Discoveries") as benign but accumulated-cognitive-overhead drift.
+
+**Scope:** Maintenance + observation. **Excluded** with explicit rationale:
+- STM-01 (streaming) — deferred 5x; defer 6x. UX win but no measured complaint after 5 milestones. Re-evaluate from observation window.
+- SES-01, sub-agents, slash commands — v2+ per project scope. Don't open the door without measured pain.
+- ROU-05 — TOOL-08 + 9.1 closure made this less urgent; pain didn't materialize.
+- OPS-01, OBS-06, CLI-08 — minor; no measured signal in 4 milestones.
+
+**Phase numbering:** continues at 12, 13 (v1.0 used 1-5; v1.1 used 6-7; v1.2 used 8 + 9 + 9.1 inserted; v1.3 used 10-11).
+
+**Exit criterion (load-bearing for v1.5 scoping):** After v1.4 ships, daily-drive blueCode for ~2 weeks. Use `/gsd:add-todo` from real coding sessions to capture pain signals. v1.5 scope is built from those todos — not from the deferred-list backlog. The bench gate now catches structural regressions automatically, so observation has zero structural cost.
+
 ## Current State (post-v1.3)
 
 v1.3 Bench-Driven Quality Gates shipped 2026-04-26. blueCode now has a repo-tracked regression bench harness (`bench/run.sh --gate`, ~115s for 8-test detection), a system prompt shrunk 54% (1689 → 783 chars), an extended loop-injection primitive (`lastEditPath` + `lastReadHint`) that moves contextual hints out of the base prompt, and demonstrated B2 divide-by-zero recovery on both 32B and 72B confirming the v1.2 audit's prompt-length attention-shift hypothesis. Four milestones shipped: v1.0 MVP, v1.1 Refinement, v1.2 Tool Expansion, v1.3 Bench-Driven Quality Gates. Daily-driver use ongoing as the user's primary Mac coding agent.
 
-**Next milestone TBD.** Run `/gsd:new-milestone` to scope v1.4. Recommended Path B from v1.3 close discussion: a small tactical milestone (~3 days, 2 phases) — TST-01 (shared `makeMockResponse` helper, 3-milestone-old debt) + bench fixture cleanup automation (gitignore drift after `--gate` runs surfaced in v1.3 Part 4). Explicit exit criterion: 2-week observation window using `/gsd:add-todo` to capture real-use pain signals; v1.5 scoped from that signal pool rather than the existing deferred-list backlog.
-
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3}-ROADMAP.md`.
-
-## Current State (post-v1.2)
-
-v1.2 Tool Expansion shipped 2026-04-26. blueCode now has 7 first-class agent tools (`read_file` with metadata header, `write_file`, `list_dir`, `run_shell`, `edit_file`, `glob_search`, `grep_search`), an 8-value action schema enum, and a code-level loop-injection primitive (`lastEditPath` threaded through `runLoop` + post-user `[POST-EDIT CONSTRAINT]` System message) that enforces tool-terminality independent of system-prompt wording. Three milestones shipped: v1.0 MVP, v1.1 Refinement, v1.2 Tool Expansion. Daily-driver use ongoing as the user's primary Mac coding agent (Python `claw-code-agent` retired post-v1.0).
-
-Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2}-ROADMAP.md`.
 
 ## Core Value
 
@@ -49,23 +60,22 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ Loop-injection extended to post-`read_file`-truncated/out-of-range — `lastReadHint: (string * string) option` parameter mirrors 09.1-05's `lastEditPath` discipline; `[POST-READ HINT]` System message fires only when relevant — v1.3 (PERF-02)
 - ✓ B2 divide-by-zero diagnosis recovered on both 32B and 72B post-shrink — v1.2 audit's prompt-length attention-shift hypothesis empirically confirmed — v1.3 (PERF-03)
 
-### Active (next milestone — TBD)
+### Active (v1.4 Test Hygiene + Bench Polish)
 
-<!-- Cleared after v1.3 close. Run /gsd:new-milestone to scope v1.4 requirements.
-     Path B candidate: TST-01 + bench fixture cleanup automation. -->
+<!-- v1.4 scope confirmed 2026-04-26 (Path B from v1.3 close). 2 requirements across 2 phases. -->
 
-(none — v1.4 scope pending)
+- [ ] **TST-01**: Shared `makeMockResponse` test helper module — consolidate 3 in-repo duplications into `tests/BlueCode.Tests/MockHelpers.fs`; update `AgentLoopTests.fs` + `ReplTests.fs` consumers; preserve 243/1/0 test count.
+- [ ] **BENCH-06**: `bench/run.sh` auto-resets `bench/fixtures/{bug_lastchar,bug_average}.fs` to broken-baseline on exit (success or failure) so `git status` is clean post-gate.
 
-### Deferred (v1.4+ candidates)
+### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
-- Streaming output (STM-01) — big redesign, no measured pain
-- Session persistence + `--resume` (SES-01) — XL, no measured pain
-- Auto-escalation on MaxLoopsExceeded (ROU-05) — TOOL-08 + 9.1 closure makes this less urgent
+- Streaming output (STM-01) — deferred 5x; revisit only if 2-week observation surfaces complaint
+- Session persistence + `--resume` (SES-01) — v2+ per scope
+- Auto-escalation on MaxLoopsExceeded (ROU-05) — less urgent post-9.1
 - Ctrl+C UX polish (CLI-08) — minor
 - Per-port `MaxModelLen` visibility (OBS-06) — minor
-- Prompt cache hygiene / launchd kickstart (OPS-01) — 9.1-05 bench needed zero kickstarts
-- Shared `makeMockResponse` helper (TST-01) — minor; possible bundle into Phase 10 cleanup
-- Multi-platform `tryParseModelId` — Windows OOS
+- Prompt cache hygiene / launchd kickstart (OPS-01) — zero kickstarts in v1.3
+- Multi-platform `tryParseModelId` — Windows OOS so likely permanent
 
 ### Out of Scope
 
@@ -178,4 +188,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-26 after v1.3 milestone complete*
+*Last updated: 2026-04-26 after starting v1.4 milestone (Path B)*
