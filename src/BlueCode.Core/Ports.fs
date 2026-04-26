@@ -18,6 +18,16 @@ type ILlmClient =
 type IToolExecutor =
     abstract member ExecuteAsync: tool: Tool -> ct: CancellationToken -> Task<Result<ToolResult, AgentError>>
 
+/// Contract Phase 15's FileSessionStore implements (PERSIST-01).
+/// Save: write the full session to durable storage, atomically.
+/// Load: read a session by id; SessionNotFound if id is unknown,
+/// SessionCorrupt if the on-disk format is unparseable.
+/// Both operations are I/O-bound; the Cli adapter does file work,
+/// Core only depends on this interface.
+type ISessionStore =
+    abstract member Save: session: Session -> ct: CancellationToken -> Task<Result<unit, AgentError>>
+    abstract member Load: id: SessionId -> ct: CancellationToken -> Task<Result<Session, AgentError>>
+
 /// Success Criterion 5 proof: taskResult {} CE from FsToolkit.ErrorHandling
 /// compiles and runs inside BlueCode.Core. This binding is intentionally
 /// private and trivial — its only job is to force the CE through the

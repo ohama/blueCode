@@ -221,6 +221,11 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
                     sprintf "{\"thought\":\"%s\",\"action\":\"%s\",\"input\":%s}" t n raw
                 | FinalAnswer ans ->
                     sprintf "{\"thought\":\"%s\",\"action\":\"final\",\"input\":{\"answer\":\"%s\"}}" t ans
+                | Plan _ ->
+                    // Plan steps are not historicized as past assistant turns.
+                    // Phase 16 wires plan-mode display + approval gate; for now,
+                    // emit an empty assistant message so message-list shape is preserved.
+                    "{}"
 
             let observation =
                 match step.ToolResult with
@@ -383,6 +388,13 @@ let rec private runLoop
                                     else None
                                 | _ -> None
                             return! runLoop config model client tools userInput ctx' guard' (loopN + 1) steps' lastEditPath' lastReadHint' onStep ct
+            | Ok { Output = Plan _ } ->
+                // Phase 14: Plan variant exists in Domain.fs but is NOT a valid
+                // mid-loop output. Phase 16 wires plan-mode handling at the runSession
+                // entry point; the Cli adapter only emits Plan when --plan is set.
+                // Receiving Plan here means the LLM emitted plan JSON without the
+                // plan-mode flag — surface as PlanInvalid.
+                return Error(PlanInvalid "Plan output received outside plan-mode")
     }
 
 // ── Public entry point ────────────────────────────────────────────────────────

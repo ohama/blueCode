@@ -21,6 +21,7 @@ let private toolSummary (action: LlmOutput) : string =
         | "list_dir" -> "listing directory"
         | "run_shell" -> "running shell"
         | other -> other
+    | Plan _ -> "plan"
 
 let private statusSymbol: StepStatus -> string =
     function
@@ -57,6 +58,7 @@ let private renderVerbose (step: Step) : string =
         | ToolCall(ToolName n, ToolInput m) ->
             let raw = m |> Map.tryFind "_raw" |> Option.defaultValue "{}"
             sprintf "%s %s" n raw
+        | Plan p -> sprintf "plan (%d steps)" p.Steps.Length
 
     let resultLine =
         match step.ToolResult with
@@ -113,3 +115,6 @@ let renderError (err: AgentError) : string =
     | LoopGuardTripped action ->
         sprintf "Loop guard: action '%s' was called 3 times with the same input. Aborting." action
     | UserCancelled -> "Cancelled."
+    | SessionNotFound (SessionId id) -> sprintf "Session not found: %s" id
+    | SessionCorrupt detail -> sprintf "Session file corrupt: %s" detail
+    | PlanInvalid detail -> sprintf "Plan invalid: %s" detail
