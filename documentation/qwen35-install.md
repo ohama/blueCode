@@ -673,6 +673,123 @@ dotnet run --project src/BlueCode.Cli -- --model 32b "List the files in the src 
 # LlmUnreachable 아니라 tool steps + final answer가 돌아오면 완성
 ```
 
+### 9.4 기존 32B/72B 완전 제거 (irreversible — 17-03 SWITCH 결정 후에만)
+
+> ⚠ **이 절차는 되돌릴 수 없다.** 모델 파일 제거 시 `~58.8 GB` 가 사라지며,
+> 다시 32B/72B 로 돌아가려면 §3 다운로드 절차를 처음부터 재실행해야 한다.
+>
+> **실행 전 필수 조건** (4가지 모두 충족해야 함):
+> - [ ] 17-02 LOAD-TEST 통과 (35B/122B 정상 기동 + thinking-mode 검증 PASS)
+> - [ ] 17-03 bench `--all` 완료 + `--gate` 통과
+> - [ ] 17-03 §Decision 이 **SWITCH** (KEEP 또는 SHIP-BOTH 면 §9.4 실행 금지)
+> - [ ] CLAUDE.md `## Runtime Environment` 가 35B/122B 로 업데이트 완료
+>
+> KEEP 결정이라면 §9.2 롤백 으로 돌아가라. SHIP-BOTH 면 32B/72B 를 보존하고 별도 plist 로
+> 다른 포트에 띄우는 v2.1+ 작업이며 §9.4 미적용.
+
+#### 9.4.1 launchd 등록 해제 + plist 파일 삭제
+
+```bash
+# 1) 안전을 위해 unload 먼저 (이미 unload 됐으면 "Could not find" 정상)
+launchctl unload ~/Library/LaunchAgents/com.ohama.qwen32b.plist 2>/dev/null
+launchctl unload ~/Library/LaunchAgents/com.ohama.qwen72b.plist 2>/dev/null
+
+# 2) launchctl 목록에서 사라졌는지 확인
+launchctl list | grep -E "ohama.qwen(32b|72b)" && echo "STILL LISTED — abort §9.4" || echo "unload OK"
+
+# 3) plist 파일 삭제
+rm ~/Library/LaunchAgents/com.ohama.qwen32b.plist
+rm ~/Library/LaunchAgents/com.ohama.qwen72b.plist
+
+# 4) 삭제 확인 — 35B/122B plist 만 남아야 함
+ls ~/Library/LaunchAgents/ | grep ohama.qwen
+# 기대 출력: com.ohama.qwen35b.plist, com.ohama.qwen122b.plist (2개만)
+```
+
+#### 9.4.2 모델 파일 삭제 (~58.8 GB 회수)
+
+```bash
+# 1) 삭제 전 디스크 사용량 확인 (회수될 용량)
+du -sh ~/llm-system/models/qwen32b ~/llm-system/models/qwen72b
+# 기대: 32b ~17 GB, 72b ~42 GB
+
+# 2) 모델 파일 삭제 (확인 후 실행)
+rm -rf ~/llm-system/models/qwen32b
+rm -rf ~/llm-system/models/qwen72b
+
+# 3) (선택) 과거 실험용 3bit 변형이 남아있다면 함께 정리
+[ -d ~/llm-system/models/qwen72b.3bit ] && rm -rf ~/llm-system/models/qwen72b.3bit
+
+# 4) 잔여 확인 — 35B/122B 만 남아야 함
+ls -d ~/llm-system/models/*
+# 기대 출력: qwen35b/, qwen122b/
+
+# 5) 디스크 회수 확인
+df -h ~ | tail -1
+```
+
+#### 9.4.3 로그 파일 정리 (선택)
+
+```bash
+# stderr/stdout 로그는 unload 후 더 이상 쓰이지 않음 — 정리 가능
+rm ~/llm-system/services/logs/32b.{log,err}
+rm ~/llm-system/services/logs/72b.{log,err}
+
+ls ~/llm-system/services/logs/
+# 기대 출력: 35b.log, 35b.err, 122b.log, 122b.err
+```
+
+#### 9.4.4 HuggingFace 캐시 정리 (선택)
+
+다운로드 시 `huggingface_hub.snapshot_download` 가 캐시를 남길 수 있다 (~/.cache/huggingface/).
+
+```bash
+# Qwen2.5 32B/72B 캐시 흔적 확인
+du -sh ~/.cache/huggingface/hub/models--Qwen--Qwen2.5-* 2>/dev/null
+
+# 있다면 제거 (snapshot_download 가 hard link 로 모델 디렉토리에 연결한 경우 §9.4.2 가
+# 실제 데이터를 이미 회수했으므로 캐시 디렉토리는 빈 메타데이터만 남음)
+rm -rf ~/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-32B-Instruct
+rm -rf ~/.cache/huggingface/hub/models--Qwen--Qwen2.5-72B-Instruct-AWQ
+```
+
+#### 9.4.5 코드 참조 정리 (반드시 17-03 SWITCH 후)
+
+코드/문서에 남은 32B/72B 참조를 검토하고 35B/122B 로 갱신한다:
+
+```bash
+cd ~/projs/blueCode
+
+# 1) `qwen32b` / `qwen72b` 하드코딩 참조 검색 (테스트 fixture 제외)
+grep -rn "qwen32b\|qwen72b" src/ documentation/ CLAUDE.md README.md \
+  --exclude-dir=bin --exclude-dir=obj --exclude="*.fsproj" 2>/dev/null
+
+# 2) bench/baseline.json 의 32B/72B 키 (T6_32b 등) 가 17-03 에서 35B/122B 로 재키잉됐는지 확인
+jq 'keys' bench/baseline.json
+
+# 3) launchd plist 참조 (`com.ohama.qwen32b` 등) — local-llm-services.md 등에 남아있을 수 있음
+grep -rn "com.ohama.qwen32b\|com.ohama.qwen72b" documentation/
+
+# 갱신 대상 (17-03 에서 처리되지 않았다면 후속 plan 필요):
+# - documentation/local-llm-services.md (32B/72B 운영 가이드 → 35B/122B 또는 archive 처리)
+# - documentation/qwen32b-base-to-instruct.md (v1 trap doc → archive 또는 「v1 historical」 마커)
+# - bench/baseline.json (key 재명명)
+# - CLAUDE.md Runtime Environment 섹션
+```
+
+#### 9.4.6 검증 체크리스트
+
+```bash
+# 모두 통과해야 §9.4 완료
+[ ! -f ~/Library/LaunchAgents/com.ohama.qwen32b.plist ] && echo "✓ 32b plist 제거"
+[ ! -f ~/Library/LaunchAgents/com.ohama.qwen72b.plist ] && echo "✓ 72b plist 제거"
+[ ! -d ~/llm-system/models/qwen32b ] && echo "✓ 32b 모델 제거"
+[ ! -d ~/llm-system/models/qwen72b ] && echo "✓ 72b 모델 제거"
+launchctl list | grep -qE "ohama.qwen(32b|72b)" || echo "✓ launchd 미등록"
+curl -fsS http://127.0.0.1:8000/v1/models > /dev/null && echo "✓ 35B 정상"
+curl -fsS http://127.0.0.1:8001/v1/models > /dev/null && echo "✓ 122B 정상"
+```
+
 ---
 
 ## 부록 A: Gotcha 빠른 참조
