@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 15 COMPLETE (15-01 ✓ 15-02 ✓ 15-03 ✓)
-Plan: 15-03 complete; Phase 16 next
-Status: 254/1/0 tests; bench gate 8/8 PASS; all Phase 15 SCs verified
-Last activity: 2026-04-26 — Completed 15-03-PLAN.md (SessionStoreTests + ReplTests multi-turn + live smoke + bench gate)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk (revision pending) Phase 17 in progress (17-01 ✓)
+Plan: 17-01 complete
+Status: 254/1/0 tests; bench gate 8/8 PASS; Phase 17-01 complete (install runbook docs); 17-02 next (service swap, autonomous:false with checkpoint)
+Last activity: 2026-04-26 — Completed 17-01-PLAN.md (qwen35-install.md runbook, 685 lines, 0 code changes)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 ✓ Phase 15 ✓ Phase 16 ░
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ◆ (17-01 ✓)]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -51,6 +51,10 @@ Items relevant to v2.0 (architectural touch points):
 - **v2.0 Phase 15-02 exact error messages** — `session not found: <id>` (exit 1), `session corrupt: <detail>` (exit 1), `conflicting flags: --resume and --new-session cannot be used together.` (exit 2). 15-03 assertions must match exactly.
 - **v2.0 Phase 15-02 single-turn Save** — Program.fs now calls `SessionStore.Save` after single-turn completion so `--resume <id>` works across single-turn invocations too.
 
+### Roadmap Evolution
+
+- **2026-04-27**: Phase 17 (Qwen 3.5 Evaluation) added via `/gsd:add-phase`. Three deliverables: install/usage docs for 35B+122B, service swap with user help (autonomous: false, checkpoint), bench comparison vs current 32B/72B baseline. Should run BEFORE Phase 16 if model swap desired — Phase 16 bench fixtures reference current model ids.
+
 ### Pending Todos
 
 v2.1+ candidates (after v2.0 ships):
@@ -68,10 +72,18 @@ v2.1+ candidates (after v2.0 ships):
 
 ## Session Continuity
 
-Last session: 2026-04-26T20:25Z
-Stopped at: Completed 15-03-PLAN.md (SessionStoreTests 5 testCases + ReplTests multi-turn SC1 + live smoke SC2/SC3/SC4 + bench gate SC5, 254/1/0, bench 8/8)
-Resume file: None — Phase 15 complete; run Phase 16 (Planning wiring + bench extension) next
+Last session: 2026-04-26T22:55Z
+Stopped at: Completed 17-01-PLAN.md (qwen35-install.md runbook, 685 lines, pure docs, 0 code changes)
+Resume file: None — Phase 17-01 complete; run 17-02 (service swap with user checkpoint) next
 
 ### New Decision (15-03)
 
 - **v2.0 Phase 15-03 test isolation** — `withTempHome` / `$HOME` redirect does NOT work for `FileSessionStore` tests on macOS .NET because `Environment.GetFolderPath(SpecialFolder.UserProfile)` reads native OS APIs, not `$HOME` env var (setting `$HOME` to temp returns empty string). Use unique GUID-prefixed session IDs in real `~/.bluecode/sessions/` with `finally`-block cleanup + `testSequenced` instead.
+
+### New Decisions (17-01)
+
+- **v2.0 Phase 17-01 thinking-mode Path A/B** — `--chat-template-kwargs '{"enable_thinking": false}'` as mlx_lm.server flag (Path A) is preferred and baked into launchd plists. If flag is absent from installed mlx_lm version, Path B is a 1-line F# addition to `buildRequestBody` anonymous record in `QwenHttpClient.fs`: `chat_template_kwargs = {| enable_thinking = false |}`. Path A/B empirical decision happens in 17-02 at §4.4 of qwen35-install.md.
+- **v2.0 Phase 17-01 co-existence policy** — qwen32b/ and qwen72b/ model directories NOT deleted during Phase 17. They are rollback assets until 17-03 SWITCH decision + 1 week stable operation.
+- **v2.0 Phase 17-01 Qwen3.5 no -Instruct suffix** — `mlx-community/Qwen3.5-35B-A3B-4bit` IS the Instruct variant; there is no separate `-Instruct` HF repo. All Qwen3.5 non-Base variants are instruction-tuned (no Coder/General split unlike Qwen2.5).
+- **v2.0 Phase 17-01 122B cold-start mitigation** — 122B may exceed 180s HttpClient.Timeout on cold start. Documented as operational wait (`until curl /v1/models`) NOT as code change. Timeout increase to 300s is deferred to post-17-03 decision.
+- **v2.0 Phase 17-01 4-bit multi-turn degradation risk** — ml-explore/mlx-lm#1011 confirms structured JSON degradation at ~5 tool calls in 4-bit 35B. blueCode bench fixtures (max 4 steps) are within safe zone. Monitor in 17-03 bench; 8-bit variant as mitigation if degradation observed.
