@@ -16,8 +16,8 @@ type CliArgs =
     | Verbose
     | Trace
     | [<AltCommandLine("-m")>] Model of model: string
-    | Resume of id: string     // --resume <ID>; loads ~/.bluecode/sessions/<ID>.jsonl
-    | NewSession               // --new-session; forces a fresh session id
+    | Resume of id: string              // --resume <ID>; loads ~/.bluecode/sessions/<ID>.jsonl
+    | [<AltCommandLine("--new-session")>] NewSession  // --newsession / --new-session; forces a fresh session id
 
     interface IArgParserTemplate with
         member s.Usage =
