@@ -359,6 +359,62 @@ tail -f /Users/ohama/llm-system/services/logs/35b.log   # "Uvicorn running" 대�
 tail -f /Users/ohama/llm-system/services/logs/122b.log
 ```
 
+### 5.1.1 plist 수정 후 재로드 (`Load failed: 5: Input/output error` 처방)
+
+plist 를 수정하고 그대로 `launchctl load -w` 를 다시 실행하면 macOS 13+ 에서는 다음과 같이 실패한다:
+
+```
+Load failed: 5: Input/output error
+Try running `launchctl bootstrap` as root for richer errors.
+```
+
+**원인**: 같은 `Label` 의 service 가 이미 launchd 에 등록돼 있어서 중복 등록이 거부된 것.
+plist 변경사항은 등록 시점에만 읽히므로, **반드시 unload → load 순서**를 거쳐야 새 설정이 반영된다.
+
+**처방** (35B/122B 둘 다):
+
+```bash
+# 1) unload 먼저
+launchctl unload ~/Library/LaunchAgents/com.ohama.qwen35b.plist
+launchctl unload ~/Library/LaunchAgents/com.ohama.qwen122b.plist
+
+# 2) 등록 해제 확인 — 출력이 없어야 한다
+launchctl list | grep ohama
+
+# 3) 포트 해제 확인
+lsof -iTCP:8000 -sTCP:LISTEN || echo "8000 free"
+lsof -iTCP:8001 -sTCP:LISTEN || echo "8001 free"
+
+# 4) 새 설정으로 load
+launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist
+launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen122b.plist
+
+# 5) 준비 대기 (§5.1 재실행)
+until curl -fsS http://127.0.0.1:8000/v1/models > /dev/null 2>&1; do sleep 3; done && echo "35B ready"
+until curl -fsS http://127.0.0.1:8001/v1/models > /dev/null 2>&1; do sleep 3; done && echo "122B ready"
+```
+
+**`unload` 자체가 "Could not find specified service" 로 실패하는 경우** (이미 unload 됐거나 launchd domain 변경된 케이스), modern bootstrap pair 사용:
+
+```bash
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ohama.qwen35b.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ohama.qwen122b.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ohama.qwen35b.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ohama.qwen122b.plist
+```
+
+**진단 단서 — `launchctl list | grep ohama` 의 두 번째 컬럼**:
+
+| 출력 예시 | 의미 |
+|-----------|------|
+| `-       0       com.ohama.qwen35b` | 등록됐고 정상 종료 (PID 없음 = 현재 미실행, KeepAlive 가 곧 재기동) |
+| `12345   0       com.ohama.qwen35b` | 등록됐고 PID 12345 로 실행 중 |
+| `-       2       com.ohama.qwen35b` | 등록됐으나 **argparse 에러로 즉시 종료** (잘못된 플래그 의심) — 로그 확인 + plist 수정 필요 |
+| `-       137     com.ohama.qwen35b` | 등록됐으나 **OOM-kill** — §7.3 메모리 옵션 참조 |
+| (출력 없음) | 미등록 — `load -w` 정상 실행 가능 |
+
+> **2026-04-27 사례**: `--chat-template-kwargs` (잘못된 이름) 로 plist 작성 → service 가 exit status `2` 로 즉시 종료 → 사용자가 plist 수정 후 그대로 `load -w` → `Input/output error 5` 발생. 위 절차로 해결.
+
 ### 5.2 Instruct tokenizer 검증 (Base 모델이 잘못 다운된 케이스 차단)
 
 Qwen 3.5는 Qwen 2.5와 달리 별도 Coder 계열이 없어 "Base Coder 실수 다운로드" 함정은
@@ -807,6 +863,9 @@ curl -fsS http://127.0.0.1:8001/v1/models > /dev/null && echo "✓ 122B 정상"
 | mlx-vlm 변환 이슈 | mlx_lm.server 로드 실패 (35B는 mlx-vlm 0.3.12로 변환됨) | `mlx_vlm.server` 시도 (동일 인터페이스) |
 | `content` 빈 문자열 | `reasoning_content`에 응답이 있고 `content`가 비어있음 | §6 + `extractContent` 패치 필요 |
 | OOM on 122B cold start | `exit status 137` 또는 `[METAL] Insufficient Memory` | §7.3 옵션 참조 |
+| `Load failed: 5: Input/output error` | plist 수정 후 `launchctl load -w` 실행 시 발생 | §5.1.1 — `unload` 먼저 → `load -w` (또는 `bootout`/`bootstrap` pair) |
+| service 즉시 종료, exit status `2` | `launchctl list \| grep ohama` 두 번째 컬럼이 `2`; 로드 직후 KeepAlive 재기동 루프 | argparse 거부 — plist 의 잘못된 플래그 이름 의심 (예: `--chat-template-kwargs` → §4.1 의 `--chat-template-args` 로 교정) |
+| `python -m mlx_lm.server` deprecation 경고 | 로그에 `Calling python -m mlx_lm.server... directly is deprecated` 반복 | §4.1/§4.2 — plist 의 `ProgramArguments` 를 entry-point 스크립트 `~/llm-system/env/qwen-env/bin/mlx_lm.server` 로 교체 |
 
 ---
 
