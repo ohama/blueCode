@@ -173,8 +173,16 @@ ls ~/llm-system/models/qwen35b/config.json ~/llm-system/models/qwen122b/config.j
 
 ### 4.1 `~/Library/LaunchAgents/com.ohama.qwen35b.plist`
 
-아래 XML을 그대로 복사해 저장한다. `--chat-template-kwargs` + `{"enable_thinking": false}`
+아래 XML을 그대로 복사해 저장한다. `--chat-template-args` + `{"enable_thinking": false}`
 쌍이 핵심이다 — 이 두 줄이 없으면 thinking mode가 활성화된 채 서버가 뜬다.
+
+> **플래그 이름 주의**: mlx_lm 0.31.x 기준 server CLI 플래그는 `--chat-template-args`이며
+> JSON kwargs string을 받는다 (`--help` 예시: `'{"enable_thinking":false}'`).
+> 이전 패치에서 `--chat-template-kwargs`로 작성됐다면 모두 `--chat-template-args`로 교체할 것.
+> Path B (§6) 의 F# 패치는 HTTP 요청 body 필드 이름을 사용하는데 — mlx_lm 0.31.x 의 해당
+> body 필드 이름은 `chat_template_args` 또는 `chat_template_kwargs` 중 하나로 추정되며,
+> Path A 가용 시 검증 불필요. Path B 진입 시 mlx_lm.server source 의 request handler 를
+> 참조하여 정확한 필드명을 확정한다.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -195,7 +203,7 @@ ls ~/llm-system/models/qwen35b/config.json ~/llm-system/models/qwen122b/config.j
         <string>127.0.0.1</string>
         <string>--port</string>
         <string>8000</string>
-        <string>--chat-template-kwargs</string>
+        <string>--chat-template-args</string>
         <string>{"enable_thinking": false}</string>
     </array>
 
@@ -259,7 +267,7 @@ ls ~/llm-system/models/qwen35b/config.json ~/llm-system/models/qwen122b/config.j
         <string>127.0.0.1</string>
         <string>--port</string>
         <string>8001</string>
-        <string>--chat-template-kwargs</string>
+        <string>--chat-template-args</string>
         <string>{"enable_thinking": false}</string>
     </array>
 
@@ -300,23 +308,25 @@ plutil -lint ~/Library/LaunchAgents/com.ohama.qwen122b.plist
 # 둘 다 "OK" 출력이어야 한다
 ```
 
-### 4.4 `--chat-template-kwargs` 플래그 가용성 사전 검증 (Path A 선택의 결정적 단계)
+### 4.4 `--chat-template-args` 플래그 가용성 사전 검증 (Path A 선택의 결정적 단계)
 
 launchd로 로드하기 **전에** 이 확인을 반드시 실행한다. 플래그가 없는 버전을 사용하면
 plist를 수정해야 하는 번거로움이 생긴다.
 
 ```bash
 source ~/llm-system/env/qwen-env/bin/activate
-python3 -m mlx_lm.server --help 2>&1 | grep chat-template-kwargs
+python3 -m mlx_lm.server --help 2>&1 | grep chat-template-args
 ```
 
 | 출력 | 의미 | 다음 단계 |
 |------|------|-----------|
-| `--chat-template-kwargs ...` 한 줄 출력 | Path A 사용 가능 | §5로 진행 — plist 그대로 사용 |
-| 출력 없음 | Path A 불가 — 이 버전의 mlx_lm.server가 플래그를 미지원 | §6 (Path B 코드 패치) 적용 후 plist에서 `--chat-template-kwargs` 관련 `<string>` 2줄 제거 |
+| `--chat-template-args ...` 한 줄 출력 (예: `A JSON formatted string of arguments for the tokenizer's apply_chat_template, e.g. '{"enable_thinking":false}'`) | Path A 사용 가능 | §5로 진행 — plist 그대로 사용 |
+| 출력 없음 | Path A 불가 — 이 버전의 mlx_lm.server가 플래그를 미지원 | §6 (Path B 코드 패치) 적용 후 plist에서 `--chat-template-args` 관련 `<string>` 2줄 제거 |
 
 출력 없음이 나왔다면 `pip install --upgrade mlx-lm` 후 재확인을 시도한다 (§1.1에서 이미
 업그레이드했다면 Path B 적용이 불가피).
+
+> **2026-04-27 검증 완료** (mlx-lm 0.31.3): `--chat-template-args` 플래그 존재 확인 — Path A 사용 가능.
 
 ---
 
@@ -389,7 +399,7 @@ for p in ['/Users/ohama/llm-system/models/qwen35b/tokenizer_config.json',
 ### 5.3 Thinking-mode 무력화 검증 (Qwen 3.5 핵심 검증)
 
 이 단계가 실패하면 blueCode는 첫 호출부터 `InvalidJsonOutput`을 반복한다. §4의 plist에
-`--chat-template-kwargs` 플래그가 정상적으로 반영됐는지 확인하는 유일한 경험적 방법이다.
+`--chat-template-args` 플래그가 정상적으로 반영됐는지 확인하는 유일한 경험적 방법이다.
 
 **35B (포트 8000) 검증:**
 
@@ -482,7 +492,7 @@ except Exception as e:
 > **중요**: §6은 17-02에서 Path A 실패가 *경험적으로 확인된 후에만* 실행한다.
 > 17-01은 이 절차를 문서화만 하고 코드를 건드리지 않는다.
 
-**명시적 트리거**: §4.4에서 `--chat-template-kwargs` 미지원 확인, 또는 §5.3/§5.4 FAIL.
+**명시적 트리거**: §4.4에서 `--chat-template-args` 미지원 확인, 또는 §5.3/§5.4 FAIL.
 
 **패치 대상**: `src/BlueCode.Cli/Adapters/QwenHttpClient.fs` 내 `buildRequestBody` 함수.
 
@@ -526,7 +536,9 @@ dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj --summary 2>&1 |
 # §5.3 smoke test 재실행 — PASS 확인
 ```
 
-**Path B 선택 시 plist 수정**: `--chat-template-kwargs` 와 `{"enable_thinking": false}` 두 `<string>` 요소를 plist에서 제거하거나 그대로 둬도 무해하다 (서버가 플래그를 무시하고 요청 body를 따른다). 단 plist를 정리하려면 `plutil -lint` 재확인 필수.
+**Path B 선택 시 plist 수정**: `--chat-template-args` 와 `{"enable_thinking": false}` 두 `<string>` 요소를 plist에서 제거하거나 그대로 둬도 무해하다 (서버가 플래그를 무시하고 요청 body를 따른다). 단 plist를 정리하려면 `plutil -lint` 재확인 필수.
+
+> **주의 (Path B body 필드명)**: 위 코드의 `chat_template_kwargs` 필드명은 mlx_lm 0.31.x server 의 request handler 가 받는 정확한 필드명을 패치 적용 직전 source 또는 README 에서 재확인할 것 (`chat_template_args` 일 가능성도 있음 — CLI 플래그가 `--chat-template-args` 인 것과 일관성). Path A 가용 시 (2026-04-27 기준 mlx-lm 0.31.3 에서 가용 확인됨) 이 검증 불필요.
 
 ---
 
