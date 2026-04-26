@@ -403,11 +403,18 @@ let rec private runLoop
 /// routes the input through Router to pick a Model, and kicks off runLoop.
 /// onStep is invoked exactly once per completed Step (both ToolCall and FinalAnswer).
 /// The model is fixed at turn start (PITFALLS D-7 — no mid-turn switching).
+///
+/// priorSteps: chronological steps from earlier turns in the same Session.
+/// They are replayed into the ContextBuffer before the loop begins so
+/// buildMessages emits them as assistant+observation message pairs ahead
+/// of the current user prompt. The caller (Repl.runMultiTurn) accumulates
+/// returned AgentResult.Steps onto its Session.Steps for the next turn.
 let runSession
     (config: AgentConfig)
     (client: ILlmClient)
     (tools: IToolExecutor)
     (onStep: Step -> unit)
+    (priorSteps: Step list)   // NEW: chronological steps from prior turns in the same session
     (userInput: string)
     (ct: CancellationToken)
     : Task<Result<AgentResult, AgentError>> =
@@ -415,6 +422,9 @@ let runSession
         config.ForcedModel
         |> Option.defaultWith (fun () -> userInput |> classifyIntent |> intentToModel)
 
-    let ctx = ContextBuffer.create config.ContextCapacity
+    let ctx0 = ContextBuffer.create config.ContextCapacity
+    // Replay prior steps so buildMessages emits them as assistant/observation pairs.
+    // ContextBuffer.add returns a new buffer; fold to apply each prior step in order.
+    let ctx = priorSteps |> List.fold (fun b s -> ContextBuffer.add s b) ctx0
     let guard = Map.empty: LoopGuardState
     runLoop config model client tools userInput ctx guard 0 [] None None onStep ct
