@@ -171,6 +171,14 @@ ls ~/llm-system/models/qwen35b/config.json ~/llm-system/models/qwen122b/config.j
 
 ## 4. launchd plist (Path A: 서버 플래그로 thinking 끄기)
 
+> **mlx_lm 진입점 주의** (0.31.x 기준): `python3 -m mlx_lm.server` 호출은 deprecated 다.
+> 런타임 로그에 다음 경고가 반복 출력된다:
+> `Calling python -m mlx_lm.server... directly is deprecated. Use mlx_lm.server... or python -m mlx_lm server ... instead.`
+> plist 의 `ProgramArguments` 는 console-script entry-point (`/Users/ohama/llm-system/env/qwen-env/bin/mlx_lm.server`)
+> 를 직접 호출한다 — 이 스크립트의 shebang 이 venv python 을 가리키므로 venv 활성화 불필요.
+> `documentation/local-llm-services.md` 의 v1 32B/72B plist 는 deprecated 형태이며 17-03
+> SWITCH 결정 시 §9.4.5 reference 정리에서 갱신 또는 archive 처리한다.
+
 ### 4.1 `~/Library/LaunchAgents/com.ohama.qwen35b.plist`
 
 아래 XML을 그대로 복사해 저장한다. `--chat-template-args` + `{"enable_thinking": false}`
@@ -194,9 +202,7 @@ ls ~/llm-system/models/qwen35b/config.json ~/llm-system/models/qwen122b/config.j
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/ohama/llm-system/env/qwen-env/bin/python3</string>
-        <string>-m</string>
-        <string>mlx_lm.server</string>
+        <string>/Users/ohama/llm-system/env/qwen-env/bin/mlx_lm.server</string>
         <string>--model</string>
         <string>/Users/ohama/llm-system/models/qwen35b</string>
         <string>--host</string>
@@ -258,9 +264,7 @@ ls ~/llm-system/models/qwen35b/config.json ~/llm-system/models/qwen122b/config.j
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/ohama/llm-system/env/qwen-env/bin/python3</string>
-        <string>-m</string>
-        <string>mlx_lm.server</string>
+        <string>/Users/ohama/llm-system/env/qwen-env/bin/mlx_lm.server</string>
         <string>--model</string>
         <string>/Users/ohama/llm-system/models/qwen122b</string>
         <string>--host</string>
@@ -315,7 +319,7 @@ plist를 수정해야 하는 번거로움이 생긴다.
 
 ```bash
 source ~/llm-system/env/qwen-env/bin/activate
-python3 -m mlx_lm.server --help 2>&1 | grep chat-template-args
+mlx_lm.server --help 2>&1 | grep chat-template-args
 ```
 
 | 출력 | 의미 | 다음 단계 |
