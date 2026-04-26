@@ -4,6 +4,8 @@
 
 > **TL;DR** 128GB Mac 에서 32B + 72B 동시 상시 구동 **가능하지만 여유 1GB 미만** — 빠듯. Instruct 모드 단답 워크로드에서 3회 연속 blueCode 요청 OOM 없이 통과. 과거 OOM 사례 (v1.1 세션)는 **mlx_lm.server HF-fallback regression + 1024-token Base-mode continuation** 으로 인한 것이었고, v1.1 06-03 gap closure 이후 재현 안 됨.
 
+> **v1.3 currency (2026-04-26):** 본 문서는 v1.1 시점 측정. v1.2 / v1.3 마일스톤은 런타임 레이어를 건드리지 않았으므로 (소스 변경은 `src/BlueCode.{Core,Cli}` 한정, mlx_lm.server 측은 무변경) 측정값과 OOM 분석은 그대로 유효. v1.3 의 16+회 bench 게이트 실행 (`bench/run.sh --gate`, ~115s × N) 전체에서 zero kickstart 필요 — 4.2 / 4.3 의 OOM 시나리오는 여전히 미재현 상태.
+
 ---
 
 ## 1. 측정 환경

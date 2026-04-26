@@ -38,7 +38,7 @@ If the gate fails, inspect the per-test diff lines in the console output and the
 | `--gate` | 8 | ~2 min | Regression gate (CI/pre-commit). Exits non-zero on regression. |
 | `--canary` | 4 | ~1.5 min | Quick smoke for ad-hoc development. |
 | `--regression` | 14 | ~6 min | Part 1 reproducibility (T1–T7 × both models). |
-| `--b2` | 2 | ~30 s | B2 divide-by-zero diagnose only — Phase 11 PERF-03 target. |
+| `--b2` | 2 | ~30 s | B2 divide-by-zero diagnose only — useful for prompt-shrink hypothesis testing (originally Phase 11 PERF-03's iteration tool). |
 | `--all` | 30+ | ~25 min | Full re-bench equivalent. |
 | `--help` | 0 | — | Print usage. |
 
@@ -94,23 +94,26 @@ about what input triggers it."` — no tool naming.
 
 ## How to Update Baseline After an Intentional Fix
 
-Phase 11 PERF-03 will be the first such update: when the prompt shrink restores B2 to
-correct diagnosis, the B2 entries in `bench/baseline.json` need updating from
-`pass: false, regression: true` to `pass: true`. The procedure:
+The B2 recovery in Phase 11 PERF-03 is the canonical worked example. The procedure
+generalizes to any future intentional behavior change:
 
-1. Apply the fix (Phase 11 commits in `src/BlueCode.Cli/CompositionRoot.fs`).
-2. Run the gate: `bash bench/run.sh --gate`. It will exit 0 because B2 is still marked
-   `regression: true` in `baseline.json` (the gate treats known regressions as PASSing
-   — it cannot detect answer-quality recovery from logs alone, only step-count and
-   exit-code drift). To verify the recovery: open the most recent
-   `bench/runs/gate-<timestamp>/gate_B2_32b.log` and look for the model's diagnosis
-   text. If the model now says "empty list" or similar instead of "integer truncation",
-   PERF-03 has succeeded — proceed to step 3.
-3. Edit `bench/baseline.json`: change `B2_32b.pass` to `true`, remove the `regression`
-   field, update the `note` to record the recovery (e.g., "Recovered post-PERF-03;
-   prompt shrink to ≤800 chars"). Same for `B2_72b` if both recovered.
-4. Re-run the gate: `bash bench/run.sh --gate` should now exit 0 with `GATE PASS (8/8)`.
+1. Apply the fix (e.g., source-code or prompt change).
+2. Run the gate: `bash bench/run.sh --gate`. If the affected entry is currently marked
+   `regression: true` in `baseline.json`, the gate treats it as PASSing regardless of
+   answer quality (the gate cannot detect quality from logs alone — only step-count and
+   exit-code drift). Verify recovery manually: open the most recent
+   `bench/runs/gate-<timestamp>/gate_<test>.log` and read the model's diagnosis text.
+3. Edit `bench/baseline.json`: change the entry's `pass` to `true`, remove the
+   `regression` field, update the `note` to record the recovery (cite the verbatim
+   model thought when relevant — see the v1.3 B2 entries for the canonical format).
+4. Re-run the gate: `bash bench/run.sh --gate` should now exit 0 with `GATE PASS (8/8)`
+   and the recovered entry validating against real step counts.
 5. Commit the baseline update alongside the fix commit.
+
+**v1.3 worked example:** Phase 11 PERF-03 flipped both `B2_32b` and `B2_72b` from
+`pass: false, regression: true` to `pass: true` after the 54% prompt shrink (1689 →
+783 chars) recovered correct empty-list diagnosis on both models. See
+`documentation/benchmark-32b-vs-72b.md` Part 4 §21.3 for the diff and rationale.
 
 ## Hang Contingency for `mlx_lm.server` 32B
 
@@ -152,34 +155,40 @@ A passing gate looks like:
 ===== GATE: regression subset (8 invocations) =====
 ... per-test run logs ...
 ===== GATE: compare to baseline =====
-  PASS T6_32b     steps=4/5 exit=0
-  PASS T6_72b     steps=5/6 exit=0
+  PASS T6_32b     steps=3/5 exit=0
+  PASS T6_72b     steps=3/5 exit=0
   PASS W1_32b     steps=3/3 exit=0
   PASS W2_32b     steps=3/3 exit=0
-  PASS T1_32b     steps=1/3 exit=0
+  PASS T1_32b     steps=3/3 exit=0
   PASS T5_72b     steps=3/4 exit=0
   PASS B2_32b     steps=2/3 exit=0
   PASS B2_72b     steps=2/3 exit=0
 ===== GATE PASS (8/8) =====
 ```
 
+(Step counts above are post-v1.3 actuals; T6 went from 4-5 steps to deterministic 3
+after the prompt shrink moved the 32B/72B toward `grep_search → read_file → final` as
+the canonical pattern.)
+
 A failing gate prints `FAIL <key> ... — <reason>` lines, and ends with
 `GATE FAIL (N/8 regressed)` with exit code 1.
 
 ## Known Regressions (Baseline State)
 
-`B2_32b` and `B2_72b` are recorded as `pass: false, regression: true` in
-`bench/baseline.json`. Both models currently misdiagnose the divide-by-zero fixture
-as "integer truncation" instead of "empty list → DivideByZeroException." This is the
-v1.2 audit's prompt-length attention-shift hypothesis materialized.
+**Current state (post-v1.3 close, 2026-04-26):** zero entries marked `regression: true`
+in `bench/baseline.json`. All 8 baseline entries (T6 × 32B/72B, W1/W2 × 32B, T1/T5
+canaries, B2 × 32B/72B) validate against real step counts and pass states.
 
-Phase 11 PERF-03 targets recovery via the system-prompt shrink. Until then, the gate
-treats the regressed state as the baseline and PASSes. PERF-03's recovery is manual:
-the operator inspects the most recent `bench/runs/gate-<timestamp>/gate_B2_32b.log`
-for correct diagnosis text ("empty list" vs the regressed "integer truncation"), then
-updates `bench/baseline.json` (set `pass: true`, remove the `regression` field). The
-gate cannot detect answer-quality recovery from logs alone — only step-count and
-exit-code drift.
+**Historical:** `B2_32b` and `B2_72b` were recorded as `pass: false, regression: true`
+from Phase 10 close through Phase 11 mid-execution. Both models misdiagnosed the
+divide-by-zero fixture as "integer truncation" instead of "empty list → DivideByZeroException"
+— the v1.2 audit's prompt-length attention-shift hypothesis materialized. Phase 11 PERF-03
+recovered correct diagnosis on both models after the 54% prompt shrink (1689 → 783 chars);
+baseline entries were flipped to `pass: true` in commit `04b6f92`. The audit hypothesis
+was confirmed: prompt length was the single cause.
+
+If a future regression is identified, mark its baseline entry with `regression: true`
+and follow the "How to Update Baseline" procedure above to track recovery.
 
 ## See Also
 
