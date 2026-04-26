@@ -4,18 +4,13 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current Milestone: v1.3 Bench-Driven Quality Gates
+## Current State (post-v1.3)
 
-**Goal:** Lock in v1.2's behavioral wins as a regressable suite (move bench from `/tmp/` to repo-tracked `bench/` with `--gate` mode), then use that suite to validate a system-prompt shrink that closes the B2 regression and creates headroom for future tools.
+v1.3 Bench-Driven Quality Gates shipped 2026-04-26. blueCode now has a repo-tracked regression bench harness (`bench/run.sh --gate`, ~115s for 8-test detection), a system prompt shrunk 54% (1689 → 783 chars), an extended loop-injection primitive (`lastEditPath` + `lastReadHint`) that moves contextual hints out of the base prompt, and demonstrated B2 divide-by-zero recovery on both 32B and 72B confirming the v1.2 audit's prompt-length attention-shift hypothesis. Four milestones shipped: v1.0 MVP, v1.1 Refinement, v1.2 Tool Expansion, v1.3 Bench-Driven Quality Gates. Daily-driver use ongoing as the user's primary Mac coding agent.
 
-**Target features (8 requirements, 2 phases):**
+**Next milestone TBD.** Run `/gsd:new-milestone` to scope v1.4. Recommended Path B from v1.3 close discussion: a small tactical milestone (~3 days, 2 phases) — TST-01 (shared `makeMockResponse` helper, 3-milestone-old debt) + bench fixture cleanup automation (gitignore drift after `--gate` runs surfaced in v1.3 Part 4). Explicit exit criterion: 2-week observation window using `/gsd:add-todo` to capture real-use pain signals; v1.5 scoped from that signal pool rather than the existing deferred-list backlog.
 
-- **Bench (BENCH-01..05)**: `bench/run.sh` consolidates v1.2's `/tmp/` selectors with semantic names; `bench/fixtures/` versions the bug fixtures; `bench/baseline.json` records the post-9.1 baseline; `--gate` mode runs the regression subset (~2 min) and exits non-zero on regression; `documentation/bench.md` explains conventions
-- **Performance (PERF-01..03)**: `defaultSystemPrompt` cut from ~1500 chars to ≤800 chars without regressing any bench gate; 09.1-05 loop-injection primitive extended to post-tool-result hints (`read_file`-truncated, optionally post-`write_file`); B2 fixture (divide-by-zero misdiagnosis) returns to v1.1 baseline behavior
-
-**Scope:** Quality gates only. Excluded: STM-01 streaming (UX win, no measured pain), SES-01 session persistence (XL), ROU-05 auto-escalation (less urgent post-9.1), OPS-01 cache hygiene (9.1 needed zero kickstarts), OBS-06 max-model-len visibility (minor), TST-01 mock-helper dedupe (minor).
-
-**Phase numbering:** continues at 10, 11 (v1.0 used 1-5; v1.1 used 6-7; v1.2 used 8 + 9 + 9.1 inserted).
+Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3}-ROADMAP.md`.
 
 ## Current State (post-v1.2)
 
@@ -49,19 +44,17 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ Native `grep_search` — regex content search with ReDoS guard, structured `(path, line, content)` output (replaces `run_shell grep`) — v1.2 (TLX-03)
 - ✓ `read_file` metadata header `[file:..., lines X-Y of Z, not-truncated|truncated|out-of-range]` with dispatcher default-window for partial bounds — v1.2 (TOOL-08, behaviorally completed in 9.1)
 - ✓ Code-level loop-injection primitive — `lastEditPath` threaded through `runLoop`; post-user-prompt System-role message enforces tool-terminality at conversation-history layer (overrides user-prompt explicit tool naming) — v1.2 (Phase 9.1, reusable for future post-tool constraints)
+- ✓ Bench harness with regression gate — `bench/run.sh --gate` (8-test, ~115s, jq-based JSON diff vs `bench/baseline.json`) + `bench/fixtures/` versioned bug fixtures + `documentation/bench.md` — v1.3 (BENCH-01..05)
+- ✓ System prompt shrunk 54% (1689 → 783 chars, Path C ≤800 achieved) without regressing any gate test — v1.3 (PERF-01)
+- ✓ Loop-injection extended to post-`read_file`-truncated/out-of-range — `lastReadHint: (string * string) option` parameter mirrors 09.1-05's `lastEditPath` discipline; `[POST-READ HINT]` System message fires only when relevant — v1.3 (PERF-02)
+- ✓ B2 divide-by-zero diagnosis recovered on both 32B and 72B post-shrink — v1.2 audit's prompt-length attention-shift hypothesis empirically confirmed — v1.3 (PERF-03)
 
-### Active (v1.3 Bench-Driven Quality Gates)
+### Active (next milestone — TBD)
 
-<!-- v1.3 scope confirmed 2026-04-26. 8 requirements across 2 phases. -->
+<!-- Cleared after v1.3 close. Run /gsd:new-milestone to scope v1.4 requirements.
+     Path B candidate: TST-01 + bench fixture cleanup automation. -->
 
-- [ ] **BENCH-01**: `bench/run.sh` repo-tracked, consolidates v1.2's `/tmp/` selectors with semantic names
-- [ ] **BENCH-02**: `bench/fixtures/` holds versioned bug fixtures (currently in untracked `bench-fixtures/`)
-- [ ] **BENCH-03**: `bench/baseline.json` records the post-9.1 baseline (T6 32B/72B step counts + pass status, W1/W2 32B step counts, T1/T5 timings, B2 regression status)
-- [ ] **BENCH-04**: `bench/run.sh --gate` runs the regression subset (~2 min), prints one-line PASS/FAIL + diff, exits non-zero on regression
-- [ ] **BENCH-05**: `documentation/bench.md` explains fixture conventions and how to add new tests
-- [ ] **PERF-01**: `defaultSystemPrompt` cut from ~1500 to ≤800 chars without regressing any `bench/run.sh --gate` test
-- [ ] **PERF-02**: 09.1-05 loop-injection primitive extended to post-`read_file`-truncated (and optionally post-`write_file`) cases; contextual hints move from base prompt to post-tool injections
-- [ ] **PERF-03**: B2 fixture (divide-by-zero misdiagnosis) returns to v1.1 baseline behavior — validates the audit's prompt-length hypothesis
+(none — v1.4 scope pending)
 
 ### Deferred (v1.4+ candidates)
 
@@ -165,8 +158,14 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 | v1.2: read_file header words anchor with `\n` in test substring assertions | `truncated` contains `a`, `lines` contains `e` — collision with body text | ✓ Good — pattern generalizable for any tool prepending fixed-format headers |
 | v1.2: `dotnet test` documented as NOT running Expecto in this project | 4-executor pitfall; explicit `rootTests` + `[<EntryPoint>]` pattern | ✓ Good — STATE decisions log; canonical runner is `dotnet run --project tests/...` |
 | v1.2 (9.1-04 discovery): User-prompt explicit tool naming overrides system-prompt directive wording | bench fixture "using write_file" exposed wording-only intervention class limit | ✓ Good — drove 9.1-05 to code-level enforcement, more robust |
-| v1.2 (9.1-05): Loop-injection primitive — `lastEditPath` threaded through `runLoop`; post-user `[POST-EDIT CONSTRAINT]` System-role message overrides user-prompt priority via conversation-history position | Reusable mechanism for tool-terminality enforcement at a layer below LLM's view of "user said X, system said Y" | ✓ Good — closes W1 (`4→3 steps`); reusable primitive for future post-tool constraints; could let PERF-01 move contextual hints out of base prompt |
-| v1.2: Mid-milestone audit (`/gsd:audit-milestone`) caught structural-vs-behavioral gap | Audit checked spec contract (intact), missed behavioral effectiveness; live re-bench was the truth source | ⚠ Revisit — v1.3+ phase verifiers should require probe-style behavioral tests for any spec citing a specific failure trace |
+| v1.2 (9.1-05): Loop-injection primitive — `lastEditPath` threaded through `runLoop`; post-user `[POST-EDIT CONSTRAINT]` System-role message overrides user-prompt priority via conversation-history position | Reusable mechanism for tool-terminality enforcement at a layer below LLM's view of "user said X, system said Y" | ✓ Good — closes W1 (`4→3 steps`); reusable primitive for future post-tool constraints; v1.3 PERF-02 extended pattern to `lastReadHint` |
+| v1.2: Mid-milestone audit (`/gsd:audit-milestone`) caught structural-vs-behavioral gap | Audit checked spec contract (intact), missed behavioral effectiveness; live re-bench was the truth source | ✓ Good (resolved by v1.3 BENCH-04) — `bench/run.sh --gate` is now the structural answer; phase verifiers can rely on gate exit codes for behavioral verification |
+| v1.3 (BENCH-04): jq-based 3-branch verdict with `is_regression` whitelist as first branch | Plan-checker iteration 1/3 caught a fourth-branch "regression recovery" detector that would have fired on every B2 run, breaking SC1 | ✓ Good — clean, testable; whitelist enables shipping with known regressions tracked rather than hidden |
+| v1.3 (PERF-01): Path C target with Path D escape hatch | Aggressive shrink (≤800) needed pre-defined fallback (≤1000 with rationale) to avoid infinite iteration trap | ✓ Good — Path C achieved at 783; escape hatch unused but discipline prevented over-iteration |
+| v1.3 (PERF-02): `lastReadHint: (string * string) option` mirrors `lastEditPath` discipline | Function parameter rather than Domain.fs record field; same single-iteration lifecycle | ✓ Good — Domain.fs untouched across both extensions; pattern reusable for any future post-tool injection (post-`write_file` redundancy guard, etc.) |
+| v1.3 (PERF-03): Audit hypothesis empirically confirmed | 54% prompt reduction recovered correct B2 diagnosis on both models without surgical hint | ✓ Good — validates "ship-from-pain" discipline; future debugging starts with prompt-length sanity check |
+| v1.3: 2 Rule 3 auto-fixes during PERF-01 iteration (`edit_file` empty `old_string` infinite loop, `grep_search` file-path support) | Bench-blockers surfaced during prompt-shrink iteration; fixed under workflow's auto-fix-blockers discipline | ✓ Good — no silent bug accumulation; Rule 3 worked as intended |
+| v1.3: Howto pattern — capture v1.2/v1.3 reusable lessons (5 howtos) | Knowledge that previously lived in milestone-archive SUMMARYs (effectively buried) now in discoverable docs | — Pending — value depends on whether future sessions actually consult them; revisit after v1.5 |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -179,4 +178,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-26 after starting v1.3 milestone*
+*Last updated: 2026-04-26 after v1.3 milestone complete*

@@ -1,5 +1,38 @@
 # Project Milestones: blueCode
 
+## v1.3 Bench-Driven Quality Gates (Shipped: 2026-04-26)
+
+**Delivered:** v1.2's behavioral wins formalized as a repo-tracked regression suite (`bench/run.sh --gate`), then a 54% system-prompt shrink (1689 → 783 chars) validated by that suite — recovering correct B2 divide-by-zero diagnosis on both 32B and 72B and empirically confirming the v1.2 audit's prompt-length attention-shift hypothesis.
+
+**Phases completed:** 10 - 11 (6 plans total — 3 in Phase 10 + 3 in Phase 11)
+
+**Key accomplishments:**
+
+- **Bench harness in repo with gate mode**: moved `/tmp/bench-v1.2/run.sh` to repo-tracked `bench/run.sh` with mode-flag dispatcher (`--gate`, `--regression`, `--canary`, `--all`, `--b2`, `--help`); `bench/baseline.json` records 8-test baseline; `bench/fixtures/` versions the bug fixtures (added new `bug_divide_zero.fs` for B2). `--gate` mode runs 8 invocations in ~115s, jq-based JSON diff vs baseline, exits non-zero on regression. SC1 verified positive (current binary → exit 0) AND negative (tightened baseline → exit 1, restored → exit 0 round-trip clean).
+- **System prompt shrink to 783 chars** (54% reduction from 1689) via 13-cycle iterative protocol: edit → `bench/run.sh --gate` → bisect on FAIL → repeat. Path C target (≤800) achieved without invoking Path D escape hatch. Source code delta confined to `src/BlueCode.Cli/CompositionRoot.fs` for the prompt itself plus 2 Rule 3 auto-fixes in `Adapters/FsToolExecutor.fs` (`edit_file` empty-`old_string` infinite-loop guard + `grep_search` file-path support).
+- **Post-`read_file` injection extending 09.1-05's loop-injection primitive**: `lastReadHint: (string * string) option` parameter threaded through `runLoop`; on successful `read_file`, `buildMessages` appends a System-role `[POST-READ HINT]` message at END of message list (post-user position) when the header status is `truncated` or `out-of-range`. Two-arm hint logic with kind-specific corrective actions. New `testCaseAsync` in existing `AgentLoopTests.fs` (242 → 243 tests). Domain.fs untouched (parameter discipline mirrors `lastEditPath`).
+- **B2 recovery on both 32B and 72B**: `bench/baseline.json` B2 entries flipped from `pass: false, regression: true` to `pass: true`. Verbatim model thoughts (32B): *"The bug is identified. It occurs when the function `average` is called with an empty list, leading to a division by zero error."* (72B): *"The bug is triggered when the function `average` is called with an empty list. This causes a division by zero because `List.length xs` returns 0 for an empty list."* The audit's prompt-length attention-shift hypothesis is confirmed: 54% prompt reduction was sufficient on its own; no surgical B2 hint needed.
+- **5 new howtos capturing v1.2 + v1.3 reusable lessons** in `documentation/howto/` — post-user-injection pattern, bench-driven prompt iteration, agent fixture design, header-substring collision pitfall, jq-based regression gate. Each howto passed the 4-criteria quality gate (Non-Googleable + Hard-Won + Actionable + Reusable).
+- **T6 step count deterministic at 3** for both 32B and 72B (was 4-5 with occasional MaxLoops at v1.2 close); the new `grep_search → read_file → final` pattern is reliable post-shrink.
+
+**Stats:**
+
+- 2 phases (10, 11), 6 plans, 243 tests passing (242 v1.2 baseline + 1 from 11-01); 1 env-gated smoke ignored
+- Source code delta: `src/BlueCode.Core/AgentLoop.fs` (+lastReadHint threading + injection), `src/BlueCode.Cli/{CompositionRoot.fs (prompt shrink), Adapters/FsToolExecutor.fs (2 Rule 3 fixes)}`, `tests/BlueCode.Tests/AgentLoopTests.fs` (1 new testCase)
+- New infrastructure: `bench/` directory tree (run.sh + 3 fixtures + baseline.json), `documentation/bench.md` (190 lines), 5 new howtos
+- 25 commits since v1.2 close
+- ~1 day wall-clock (2026-04-26 milestone start → 2026-04-26 Phase 11 verified)
+
+**Git range:** `6133abc` (v1.2 close) → `13a875d` (howto additions)
+
+**What's next:**
+
+v1.4 candidate: "Test Hygiene + Bench Polish" — small tactical milestone (~3 days, 2 phases) for TST-01 (shared `makeMockResponse` helper, 3-milestone-old debt) + bench fixture cleanup automation (gitignore drift after `--gate` runs). Explicit exit criterion: 2-week observation window using `/gsd:add-todo` to capture real-use pain signals from daily-driver use, scoping v1.5 from that signal pool rather than the existing deferred-list backlog. Defer STM-01 (streaming) one more cycle — five deferrals is a strong signal that observation, not feature work, is the right next move.
+
+**Audit note:** v1.3 did NOT run `/gsd:audit-milestone` (Phase 10 + Phase 11 verifiers both passed independently with 5/5 and 4/4 must-haves; the bench gate's deterministic verdict logic provides cross-phase E2E validation by construction). This is the same shipping discipline as v1.0 and v1.1 (both shipped without formal audits, justified by other validation gates). The bench gate is now the project's primary regression-detection mechanism.
+
+---
+
 ## v1.2 Tool Expansion (Shipped: 2026-04-26)
 
 **Delivered:** Three new agent tools (`edit_file`, `glob_search`, `grep_search`) plus a `read_file` metadata header (TOOL-08), with a post-audit Phase 9.1 that hardened TOOL-08's actual behavioral effectiveness and shipped a reusable code-level loop-injection mechanism for tool-terminality enforcement (`[POST-EDIT CONSTRAINT]` System-role message, post-user-prompt position).
