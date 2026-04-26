@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 15 in progress (Plan 15-01 ✓ complete)
-Plan: 15-01 complete; 15-02 next
-Status: 248/1/0 tests; bench gate green by construction (unchanged LLM path); ready for 15-02
-Last activity: 2026-04-27 — Completed 15-01-PLAN.md (runSession priorSteps + FileSessionStore.Save + Repl threading)
+Phase: Phase 15 in progress (Plans 15-01 ✓ 15-02 ✓ complete)
+Plan: 15-02 complete; 15-03 next
+Status: 248/1/0 tests; bench gate 8/8 PASS; `--resume`/`--new-session` flags live
+Last activity: 2026-04-27 — Completed 15-02-PLAN.md (Argu flags + FileSessionStore.Load + CompositionRoot wiring + Program.fs dispatch)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 ✓ Phase 15 ◆ (15-01 ✓ 15-02 ░ 15-03 ░) Phase 16 ░
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 ✓ Phase 15 ◆ (15-01 ✓ 15-02 ✓ 15-03 ░) Phase 16 ░
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -46,7 +46,10 @@ Items relevant to v2.0 (architectural touch points):
 - **v2.0 Phase 14-02 PlanValidator** — Pure `validatePlan : Plan -> Result<Plan, AgentError>` in Core. MaxPlanSteps=5 hardcoded (not AgentConfig-aware); knownTools set mirrors AgentLoop.dispatchTool. Priority order: length → tool registry → adjacent dups. Schema validation deferred to Phase 16 Cli adapter JSON parse layer.
 - **v2.0 Phase 15-01 priorSteps** — `runSession` extended with `priorSteps: Step list` parameter (position: after `onStep`, before `userInput`). Steps replayed into ContextBuffer via `List.fold` before `runLoop`; `runLoop.steps` accumulator stays current-turn-only. Repl concatenates on each turn.
 - **v2.0 Phase 15-01 JSONL format** — v2 header `{"version":2,"sessionId":"...","createdAt":"..."}` + per-turn `TurnComplete` envelope with cumulative `steps`. Last-envelope-wins on Load. Path: `~/.bluecode/sessions/<id>.jsonl` (distinct from existing per-step `session_<ts>.jsonl`).
-- **v2.0 Phase 15-01 runMultiTurnWithSession** — New entry point in Repl.fs with explicit `Session` + `ISessionStore` params. Legacy `runMultiTurn` delegates to it with fresh Session + FileSessionStore. 15-02 will call `runMultiTurnWithSession` directly with loaded/fresh Session.
+- **v2.0 Phase 15-01 runMultiTurnWithSession** — New entry point in Repl.fs with explicit `Session` + `ISessionStore` params. Legacy `runMultiTurn` delegates to it with fresh Session + FileSessionStore. Program.fs now calls `runMultiTurnWithSession` directly with loaded/fresh Session.
+- **v2.0 Phase 15-02 Argu --new-session flag** — Argu converts `NewSession` DU case to `--newsession` (no hyphen). Added `[<AltCommandLine("--new-session")>]` so both `--newsession` and `--new-session` work. Post-parse conflict check: `match resumeId, isNewSession with | Some _, true -> eprintfn "ERROR: conflicting flags..." + exit 2`.
+- **v2.0 Phase 15-02 exact error messages** — `session not found: <id>` (exit 1), `session corrupt: <detail>` (exit 1), `conflicting flags: --resume and --new-session cannot be used together.` (exit 2). 15-03 assertions must match exactly.
+- **v2.0 Phase 15-02 single-turn Save** — Program.fs now calls `SessionStore.Save` after single-turn completion so `--resume <id>` works across single-turn invocations too.
 
 ### Pending Todos
 
@@ -65,6 +68,6 @@ v2.1+ candidates (after v2.0 ships):
 
 ## Session Continuity
 
-Last session: 2026-04-27T05:00Z
-Stopped at: Completed 15-01-PLAN.md (runSession priorSteps + FileSessionStore.Save + Repl threading, 248/1/0 preserved)
-Resume file: None — run 15-02 next (`--resume`/`--new-session` Argu flags + CompositionRoot wiring + full Load impl)
+Last session: 2026-04-27T05:11Z
+Stopped at: Completed 15-02-PLAN.md (Argu flags + FileSessionStore.Load + CompositionRoot wiring + Program.fs dispatch, 248/1/0 preserved, bench 8/8)
+Resume file: None — run 15-03 next (SessionStoreTests + round-trip tests + Program integration tests)
