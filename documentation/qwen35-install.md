@@ -545,6 +545,31 @@ except Exception as e:
 
 `JSON parse: OK; action= final` 이면 통과. 122B (포트 8001, model `qwen122b`)도 동일하게 반복한다.
 
+```bash
+curl -s -X POST http://127.0.0.1:8001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "/Users/ohama/llm-system/models/qwen122b",
+    "messages": [
+      {"role": "system", "content": "Respond ONLY with valid JSON: {\"thought\": string, \"action\": \"final\", \"input\": {\"answer\": string}}"},
+      {"role": "user", "content": "What is 2+2?"}
+    ],
+    "max_tokens": 200,
+    "temperature": 0.0
+  }' | python3 -c "
+import sys, json
+r = json.load(sys.stdin)
+content = r['choices'][0]['message']['content']
+try:
+    obj = json.loads(content)
+    print('JSON parse: OK; action=', obj.get('action'))
+except Exception as e:
+    print('JSON parse FAILED:', e); print('raw:', content[:300])
+"
+```
+
+`JSON parse: OK; action= final` 이면 통과. 122B (포트 8001, model `qwen122b`)도 동일하게 반복한다.
+
 ### 5.5 Load-test 측정값 수집 (17-02 LOAD-TEST.md 산출물)
 
 §5.1–§5.4 가 모두 PASS 한 직후 — 첫 inference 가 끝나 prompt cache 가 워밍된 상태에서
@@ -563,15 +588,23 @@ ps -o pid,rss,command -p $(pgrep -f qwen35b) 2>/dev/null | awk 'NR==1 || /qwen35
 ps -o pid,rss,command -p $(pgrep -f qwen122b) 2>/dev/null | awk 'NR==1 || /qwen122b/'
 ```
 
-기대 범위 (워밍 직후, 첫 inference 1회 완료 시점):
+**RSS 는 워크로드에 따라 단계적으로 증가한다** — MLX 가 weights 를 `mmap` 하므로
+프로세스가 실제로 touch 한 페이지만 RSS 에 반영된다. MoE 모델은 expert subset 만
+활성화되므로 §5.3/§5.4 의 단순 smoke test 후 RSS 는 디스크 크기보다 작다.
+본 bench (`--all`) 가 다양한 prompt 로 expert routing 을 흩뜨리면서 RSS 가 디스크
+크기에 점근한다.
 
-| 모델 | 기대 RSS | 비고 |
-|------|----------|------|
-| qwen35b | ~19-21 GB | weights 19.5 GB + tokenizer + python overhead |
-| qwen122b | ~70-74 GB | weights 69.6 GB + KV cache + python overhead |
-| **합계** | **~89-95 GB** | 128 GB Mac 에서 OS / 다른 앱용 ~33-39 GB 잔여 |
+| 모델 | RSS @ smoke 직후 | RSS @ bench `--all` 후 | 비고 |
+|------|------------------|------------------------|------|
+| qwen35b | ~17 GB (~83% of 20.4 GB disk) | ~19-21 GB | dense activation 비율이 높아 smoke 만으로도 대부분 touch |
+| qwen122b | ~45 GB (~65% of 69.6 GB disk) | ~65-72 GB | MoE — smoke test 가 활성화한 expert 만 RSS 진입; bench 후 대부분의 expert 가 touch 됨 |
+| **합계 @ smoke** | **~62 GB** | — | OS / 다른 앱용 ~66 GB 잔여 (여유) |
+| **합계 @ bench `--all`** | — | **~84-93 GB** | OS / 다른 앱용 ~35-44 GB 잔여 |
 
-값이 **합계 95 GB 초과** 면 §7.3 의 OOM 옵션 검토 필요.
+> **2026-04-27 실측치** (§5.4 PASS 직후): 35B 17,716,256 KB (16.9 GB), 122B 47,593,232 KB (45.4 GB), 합계 62.3 GB.
+
+값이 **bench `--all` 후 합계 95 GB 초과** 면 §7.3 의 OOM 옵션 검토 필요. smoke 직후
+65 GB 초과 면 비정상 — 다른 고메모리 프로세스 점유 의심 (`top -o MEM`).
 
 #### 5.5.2 시스템 메모리 압박 확인
 
@@ -603,13 +636,19 @@ bench/run.sh --canary
 | Metric | 35B (port 8000) | 122B (port 8001) |
 |--------|------------------|-------------------|
 | PID | <pid> | <pid> |
-| RSS (post first-inference) | <GB> | <GB> |
+| RSS @ smoke (post §5.4) | <GB> | <GB> |
+| RSS @ bench `--all` 완료 후 | <GB> | <GB> |
 | Cold-start wall-clock | ~30-60s | ~120-240s |
-| Compressor (system) | <MB> | (same) |
+| Compressor @ smoke | <MB> | (system-wide) |
+| Compressor @ bench 완료 | <MB> | (system-wide) |
 | §5.3 thinking-mode test | PASS / FAIL | PASS / FAIL |
 | §5.4 JSON-schema test | PASS / FAIL | PASS / FAIL |
 | Canary bench exit code | 0 / non-zero | 0 / non-zero |
 ```
+
+**RSS 두 번 캡처하는 이유**: §5.5.1 표 참조 — MoE + mmap 으로 RSS 가 워크로드와
+함께 증가하므로, smoke 직후값과 bench 완료 후값 모두 기록해야 OOM 마진을 정확히
+판단할 수 있다.
 
 ---
 
