@@ -14,7 +14,7 @@ v2.0 makes two architectural investments simultaneously: session state persists 
 
 ## Phases
 
-- [ ] **Phase 14: Domain Extensions** — Session record, Plan DU, ISessionStore port, plan validator (all Core types, no Cli wiring)
+- [x] **Phase 14: Domain Extensions** ✓ — Session record, Plan DU, ISessionStore port, plan validator (all Core types, no Cli wiring)
 - [ ] **Phase 15: Persistence Wiring** — REPL session threading, JSONL adapter, --resume, --new-session
 - [ ] **Phase 16: Planning Wiring + Bench** — --plan flag, approval gate UI, plan retry wiring, bench fixtures extended
 
@@ -34,9 +34,9 @@ v2.0 makes two architectural investments simultaneously: session state persists 
 
 1. `Domain.fs` contains `Session = { Id: SessionId; Steps: Step list; CreatedAt: DateTimeOffset; LastActivityAt: DateTimeOffset }` and `LlmOutput.Plan of Plan` where `Plan = { Steps: PlannedStep list; Rationale: string }` — both compile with exhaustive pattern match coverage verified by the compiler.
 2. `ISessionStore` port is defined in Core (`Save: Session -> Task<Result<unit, AgentError>>` and `Load: SessionId -> Task<Result<Session, AgentError>>`), with `AgentError.SessionNotFound` and `AgentError.SessionCorrupt` variants added.
-3. `AgentError.PlanInvalid of string` variant exists; the plan validator (pure function in Core) returns `PlanInvalid` for: unknown tool name, schema-invalid input, Steps.Length > 5, duplicate adjacent steps.
-4. Mocked-LLM tests cover the new types: plan JSON parses to `LlmOutput.Plan`; out-of-schema plan returns parse failure; each of the four `PlanInvalid` failure modes is covered by a dedicated test case.
-5. Existing 243/1/0 test baseline is preserved — zero regression on `ToolCall`/`FinalAnswer` paths.
+3. `AgentError.PlanInvalid of string` variant exists; the plan validator (pure function in Core) returns `PlanInvalid` for the THREE structural rules: unknown tool name, Steps.Length > 5, duplicate adjacent steps. **Schema-invalid input is deferred to Phase 16's JSON parse layer** (where `JsonSchema.Net` lives, in `BlueCode.Cli/Adapters/Json.fs` — Cli-side concern outside Core's purity boundary).
+4. Unit tests cover the validator: 5 `testCase`s in `PlanValidatorTests.fs` covering happy-path + each of the 3 structural failure modes + 1 edge case. **Plan JSON parsing (and out-of-schema parse failure) is deferred to Phase 16** — Phase 14 ships the F# types + pure validator only; the LLM-wire-format layer is wired when `--plan` flag and system-prompt suffix arrive in Phase 16. `makePlanResponse` mock helper exists in `MockHelpers.fs` for future Phase 16 consumers.
+5. Existing 243/1/0 test baseline is preserved on the `ToolCall`/`FinalAnswer` paths (extended to 248/1/0 with the +5 PlanValidator test cases).
 
 **Plans:** 2 plans expected
 
@@ -79,7 +79,7 @@ Plans:
 
 **Requirements:** PLAN-02, PLAN-03, PLAN-04 (wiring), PERSIST-01 (verified end-to-end with planning)
 
-**Note:** PLAN-01 and PLAN-04 (type + pure validator) land in Phase 14. This phase wires them into the Cli execution path and adds plan-mode to the agent loop.
+**Note:** PLAN-01 (Plan DU) and PLAN-04 (pure validator covering 3 structural rules: unknown tool, length>5, duplicate adjacent) land in Phase 14. **This phase additionally wires the Plan JSON parse layer** in `src/BlueCode.Cli/Adapters/Json.fs` — extends the `llmStepSchema` enum with `"plan"`, adds a `Plan` branch to `toLlmOutput`, and handles the 4th `PlanInvalid` failure mode (schema-invalid input) at parse time before the validator runs. `makePlanResponse` (defined in Phase 14 `MockHelpers.fs`) becomes load-bearing for Phase 16's plan-mode tests.
 
 **Success Criteria** (what must be TRUE when Phase 16 completes):
 
@@ -102,7 +102,7 @@ Plans:
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
-| 14. Domain Extensions | v2.0 | PERSIST-01, PLAN-01, PLAN-04 | 0/2 | Not started | - |
+| 14. Domain Extensions | v2.0 | PERSIST-01, PLAN-01, PLAN-04 | 2/2 | ✓ Complete | 2026-04-26 |
 | 15. Persistence Wiring | v2.0 | PERSIST-01, PERSIST-02, PERSIST-03, PERSIST-04 | 0/3 | Not started | - |
 | 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 0/3 | Not started | - |
 

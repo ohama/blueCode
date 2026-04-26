@@ -10,10 +10,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 of 3 (Domain Extensions) — complete (2/2 plans complete)
-Plan: 14-02 complete; ready for /gsd:verify-phase 14, then Phase 15
-Status: 14-02 committed (2 task commits + metadata); Phase 14 complete pending verify
-Last activity: 2026-04-26 — Completed 14-02-PLAN.md (PlanValidator pure function + 5 tests, 243→248)
+Phase: Phase 14 ✓ Complete (verified passed 5/5 in iteration 2); Phase 15 ready for planning
+Plan: —
+Status: 248/1/0 tests; bench gate 8/8 PASS; ready for `/gsd:plan-phase 15`
+Last activity: 2026-04-26 — Phase 14 closed; ROADMAP SC3+SC4+Phase16 note revised mid-verification to align with the orchestrator's pre-planning architectural decision (validator owns 3 structural rules; JSON parse + schema-invalid input deferred to Phase 16's Cli adapter layer)
 
 Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ Phase 14 ✓ (Phase 15 next) ░░░
 

@@ -96,14 +96,14 @@ Tracked for awareness; not pulled into v2.0 roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERSIST-01  | Phase 14 (shape) + Phase 15 (wiring) | Pending |
+| PERSIST-01  | Phase 14 (shape) + Phase 15 (wiring) | Phase 14 ✓ shape; Phase 15 wiring pending |
 | PERSIST-02  | Phase 15 | Pending |
 | PERSIST-03  | Phase 15 | Pending |
 | PERSIST-04  | Phase 15 | Pending |
-| PLAN-01     | Phase 14 | Pending |
+| PLAN-01     | Phase 14 | ✓ Complete (Phase 14, 2026-04-26) |
 | PLAN-02     | Phase 16 | Pending |
 | PLAN-03     | Phase 16 | Pending |
-| PLAN-04     | Phase 14 (validator) + Phase 16 (wiring) | Pending |
+| PLAN-04     | Phase 14 (validator) + Phase 16 (wiring) | Phase 14 ✓ pure validator; Phase 16 wiring pending |
 
 **Coverage:**
 - v2.0 requirements: 8 total
