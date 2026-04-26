@@ -70,18 +70,16 @@ v1 boundaries unchanged. v1.4 adds no new exclusions; deferred items are "v1.5+ 
 
 ## Traceability
 
-Empty until roadmap creation. Each requirement maps to exactly one phase.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TST-01    | TBD   | Pending |
-| BENCH-06  | TBD   | Pending |
+| TST-01      | 12    | Pending |
+| BENCH-06    | 13    | Pending |
 
 **Coverage:**
 - v1.4 requirements: 2 total
-- Mapped to phases: 0 (roadmap not yet created)
-- Unmapped: 2 ⚠
+- Mapped to phases: 2
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 — initial v1.4 definition (Path B)*
+*Last updated: 2026-04-26 — traceability filled after roadmap creation (TST-01 → Phase 12, BENCH-06 → Phase 13)*

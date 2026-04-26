@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-04-26 after starting v1.4 milestone)
 ## Current Position
 
 Milestone: v1.4 Test Hygiene + Bench Polish (started 2026-04-26)
-Phase: Not started (defining requirements + roadmap)
+Phase: Not started (roadmap defined; ready for planning)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-26 — v1.3 archived; v1.4 scope confirmed (Path B: 2 REQs across 2 phases — TST-01 + BENCH-06); PROJECT.md updated.
+Status: Roadmap defined; ready for /gsd:plan-phase 12
+Last activity: 2026-04-26 — v1.4 REQUIREMENTS.md + ROADMAP.md written; Phase 12 (TST-01) and Phase 13 (BENCH-06) defined.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 (◆ in progress, requirements defining)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 (◆ in progress, roadmap defined)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -34,9 +34,11 @@ Rolled up into PROJECT.md Key Decisions table at v1.0/v1.1/v1.2/v1.3 milestone c
 
 Notable items relevant to v1.4:
 
-- v1.0 Expecto explicit `rootTests` list — 4 executors hit registration pitfall; CLAUDE.md "Test discovery pattern" documents the pitfall but `[<Tests>]` auto-discovery transition still pending. v1.4 TST-01 may need to revalidate this discipline when adding the new MockHelpers.fs module.
-- v1.1 `makeMockResponse` test helper duplicated — TST-01 is the v1.4 closure of this 3-milestone-old debt. Now 3 instances (2 in AgentLoopTests.fs from 09.1-05 + 11-01, 1 in ReplTests.fs).
+- v1.0 Expecto explicit `rootTests` list — 4 executors hit registration pitfall; CLAUDE.md "Test discovery pattern" documents the pitfall but `[<Tests>]` auto-discovery transition still pending. v1.4 TST-01 adds `MockHelpers.fs` as a pure helper module (no testList) — NO entry needed in `RouterTests.fs:rootTests`. Only `BlueCode.Tests.fsproj` `<Compile Include>` registration required, placed BEFORE `AgentLoopTests.fs` and `ReplTests.fs` in compile order.
+- v1.1 `makeMockResponse` test helper duplicated — TST-01 is the v1.4 closure of this 3-milestone-old debt. Currently 3 instances: 2 in AgentLoopTests.fs (from 09.1-05 + 11-01), 1 in ReplTests.fs.
 - v1.3 bench fixture working-tree drift — `--gate`, `--canary`, `--all`, `--b2` runs leave write-task fixtures in LLM-edited state. v1.4 BENCH-06 is the closure.
+- bench/run.sh is bash 3.2 compatible (macOS default); uses `set -u` only (no `set -e`). The trap must be bash 3.2 compatible and must NOT interfere with exit codes.
+- `dotnet test` does NOT run Expecto in this project. Canonical runner: `dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj`.
 
 v1.4-specific input from v1.3 close discussion:
 
@@ -57,10 +59,10 @@ v1.5+ candidates (scope from observation, not from this list):
 
 ### Blockers/Concerns
 
-None at v1.4 start. Daily-driver use of blueCode ongoing; v1.4 work is bounded (test infrastructure + bench script polish — no Core diff expected, no new behavioral surface).
+None at v1.4 roadmap completion. Both phases are mechanical / bash-only; no Core diff expected.
 
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: v1.4 milestone scoped and PROJECT.md updated. Next: write REQUIREMENTS.md, then spawn `gsd-roadmapper` for Phase 12 + 13.
-Resume file: None — milestone setup is in progress; the workflow continues with REQUIREMENTS + ROADMAP.
+Stopped at: v1.4 REQUIREMENTS.md written + ROADMAP.md written (Phases 12 + 13 defined). Next: `/gsd:plan-phase 12`.
+Resume file: None — roadmap is on disk; continue with plan-phase.
