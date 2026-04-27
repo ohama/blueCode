@@ -149,12 +149,12 @@ Plans:
 
 5. If verdict is **DROP-35B**: `documentation/single-model-eval.md` enumerates the architectural changes needed (Router collapse, baseline.json halve, bench script simplify, CLAUDE.md update) but does NOT execute them in this phase. A separate follow-up plan handles the code changes. If **KEEP-DUAL**: 35B is reloaded post-bench; findings recorded as "evaluated, deferred". If **CONDITIONAL**: documented opt-in mechanism (e.g., env var or CLI flag) sketched; full implementation OOS.
 
-**Plans:** 3 plans (estimated)
+**Plans:** 3 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Service unload + memory profile (CHECKPOINT — `autonomous: false`): launchctl unload 35B with user help, capture before/after PhysMem/Compressor/122B-RSS, verify 122B stays responsive via §5.3 smoke
-- [ ] 18-02-PLAN.md — 122B-only bench: create `scripts/bench-122b-only.sh` (or extend `bench/run.sh` with a `--all-on-122b` mode) that routes every test to port 8001; run full bench (~25 min); capture per-test latency + step counts + B2 diagnoses
-- [ ] 18-03-PLAN.md — `documentation/single-model-eval.md`: per-test comparison vs Phase 17 dual-loaded numbers; decision matrix; named verdict; if DROP-35B verdict, enumerate follow-up architectural changes (no code changes in this plan)
+- [ ] 18-01-PLAN.md — Service unload + memory profile (Wave 1, `autonomous: false` — 1 user checkpoint for `launchctl unload`): pre/post PhysMem + Compressor + 35B/122B RSS snapshots; 122B health verified post-unload via thinking-mode + JSON-schema smokes; ROADMAP §SC4 memory criteria evaluated; produces `18-01-MEMORY-PROFILE.md` (≥ 60 lines)
+- [ ] 18-02-PLAN.md — 122B-only bench (Wave 2, autonomous — depends on 18-01): create `scripts/bench-122b-only.sh` (Option A — additive, leaves `bench/run.sh` untouched; uses `--model 72b` exclusively to route every invocation to port 8001); run `--all` mode (30+ invocations, ~25-35 min); capture per-test elapsed + step counts + B2 diagnosis quote + post-bench RSS; produces `18-02-BENCH-RESULTS.md` (≥ 80 lines)
+- [ ] 18-03-PLAN.md — Decision + write-up (Wave 3, autonomous — depends on 18-02): apply 5 ROADMAP §SC4 criteria mechanically; name verdict (DROP-35B/KEEP-DUAL/CONDITIONAL); document 35B reload procedure (mandatory on KEEP-DUAL/CONDITIONAL, recommended on DROP-35B); enumerate (but do NOT execute) architectural follow-ups (Router collapse, baseline halve, CLAUDE.md update); update STATE.md; produces `documentation/single-model-eval.md` (≥ 150 lines)
 
 **Reversibility note:** Phase 18 makes ZERO permanent changes if verdict is KEEP-DUAL — just unload + bench + reload. The architectural changes (Router collapse etc.) are deferred to a follow-up phase regardless of verdict, so this phase is safe to run.
 
