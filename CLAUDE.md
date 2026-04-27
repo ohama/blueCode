@@ -125,18 +125,20 @@ Rendering.renderStep Verbose
 ## Runtime Environment
 
 - macOS only (Mac `ohama`)
-- Qwen 32B Instruct (Coder) @ `localhost:8000` via `mlx_lm.server` + launchd (`com.ohama.qwen32b.plist`)
-- Qwen 72B Instruct (AWQ 4-bit) @ `localhost:8001` same pattern
-- Model paths: `~/llm-system/models/qwen{32b,72b}/`
-- Setup docs: `documentation/local-llm-services.md`
+- Qwen 3.5 35B-A3B-4bit (MoE; ~3B activated/token) @ `localhost:8000` via `mlx_lm.server` + launchd (`com.ohama.qwen35b.plist`)
+- Qwen 3.5 122B-A10B-4bit (MoE; ~10B activated/token) @ `localhost:8001` same pattern
+- Model paths: `~/llm-system/models/qwen{35b,122b}/`
+- Setup docs: `documentation/qwen35-install.md` (legacy 32B/72B docs still on disk: `documentation/local-llm-services.md`, `documentation/qwen32b-base-to-instruct.md`)
 
-Unified memory is the stress point: 32B (~17GB) + 72B (~45GB) + OS / prompt cache fills 128GB closely. Dual-service stress test (v1.1) showed no OOM for normal Instruct-mode workloads, but prompt cache accumulates; periodic `launchctl kickstart` recommended for long sessions.
+**Thinking-mode mitigation (critical):** Both launchd plists pass `--chat-template-args '{"enable_thinking": false}'` to `mlx_lm.server`. Without this flag, Qwen 3.5 emits `<think>...</think>` tokens that break blueCode's strict JSON schema validation. If this flag is unavailable in a future mlx_lm version, Path B fallback is documented in `documentation/qwen35-install.md` §6. See also: commit `54e54a9` (AgentLoop User role fix for mid-conversation hints — required for T6 to pass on Qwen 3.5).
+
+Unified memory is tighter than v1: 35B (~17GB) + 122B (~45GB) + OS / KV cache combined ~62 GB resident at steady state (MoE sparse routing keeps RSS well below disk size; bench-all confirmed flat at 62.4 GB). Periodic `launchctl kickstart` recommended for long sessions (KV cache accumulates). Old 32B/72B model files preserved at `~/llm-system/models/qwen{32b,72b}/` for rollback.
 
 ## Common Gotchas
 
 ### "Connection refused" or 180s timeout
 
-Server might be crashed (check `~/llm-system/services/logs/{32b,72b}.err` for `[METAL] Insufficient Memory`), still loading weights after kickstart (RSS climbing toward 17GB / 45GB), or the HF fallback trap firing. Use `--trace` to see actual POST body + response, diff against `curl localhost:8000/v1/models` to confirm id matching. Full protocol in `documentation/howto/debug-local-llm-server-responses.md`.
+Server might be crashed (check `~/llm-system/services/logs/{35b,122b}.err` for `[METAL] Insufficient Memory`), still loading weights after kickstart (RSS climbing toward 17GB / 45GB), or the HF fallback trap firing. Use `--trace` to see actual POST body + response, diff against `curl localhost:8000/v1/models` to confirm id matching. Full protocol in `documentation/howto/debug-local-llm-server-responses.md`.
 
 ### Spectre.Console markup parsing
 
