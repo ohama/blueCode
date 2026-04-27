@@ -11,11 +11,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
 Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk (revision pending — _32b/_72b keys need re-keying to _35b/_122b) Phase 17 ✓ Phase 18 added (not planned yet)
-Plan: 18-01 complete
-Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 in progress (18-01 done: 35B unloaded, memory profile PASS; 18-02 bench next); Phase 18 next, then Phase 16
-Last activity: 2026-04-27 — Phase 18-01 complete (35B unloaded CLEAN; PhysMem unused +19.42 GB freed; 122B RSS 45.42 GB stable; both SC4 memory criteria PASS; 18-02 READY)
+Plan: 18-02 complete
+Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 in progress (18-01 done: 35B unloaded; 18-02 done: 122B-only bench 31/31 exit=0, all criteria PASS; 18-03 decision matrix next)
+Last activity: 2026-04-27 — Phase 18-02 complete (bench-122b-only.sh 31 invocations, 0 failures, T1/T2 median 3s, T6 4 steps, B2 PASS, RSS stable at 45.43 GB; 18-03 READY)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ◆ (18-01 ✓ 18-02 ░ 18-03 ░)]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ◆ (18-01 ✓ 18-02 ✓ 18-03 ░)]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -73,8 +73,18 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 18-01-PLAN.md (35B unloaded, memory profile captured, 122B health smokes PASS, SC4 memory criteria both PASS, 18-02 READY)
-Resume file: None — 18-01 complete; run 18-02 (bench-122b-only.sh) next
+Stopped at: Completed 18-02-PLAN.md (bench-122b-only.sh created; 31/31 invocations exit=0; all SC3/SC4 criteria PASS; 18-03 READY)
+Resume file: None — 18-02 complete; run 18-03 (decision matrix + documentation) next
+
+### New Decisions (18-02)
+
+- **v2.0 Phase 18-02 bench-122b-only.sh 31/31 exit=0** — All 31 bench invocations completed cleanly (0 LlmUnreachable vs ≤1 tolerance). 122B alone is stable for sequential bench-mode operation. Wall-clock 252s (~4 min) — fast due to sequential JIT reuse.
+- **v2.0 Phase 18-02 T1/T2 median 3s** — T1 and T2 (simple prompts, 1 step) median elapsed 3s. Well within 6s ROADMAP §SC4 threshold. Note: Phase 17 baseline T1_122b=11s was cold-start; 18-02 measures warm sequential bench. Step count (1) matches baseline.
+- **v2.0 Phase 18-02 T6 step-count deterministic** — All 6 T6 variance runs = exactly 4 steps, median elapsed 11s. Zero step-count variance single-model. Matches Phase 17 dual-loaded baseline (4 steps, baseline_max=5). PASS.
+- **v2.0 Phase 18-02 W1/W2=3 steps single-model** — Loop-injection constraint (read+write+final) holds with 122B alone. W1=3, W2=3, both within baseline_max=3. PASS.
+- **v2.0 Phase 18-02 B2 diagnosis preserved** — 3 grep matches on DivideByZeroException/division by zero in diagnose_B2_122b.log and b2_122b.log. Semantically identical to Phase 17 dual-loaded B2_122b baseline. PASS.
+- **v2.0 Phase 18-02 122B RSS bench-mode flat** — Post-bench RSS 45.43 GB (+0.01 GB / +1.4 MB from pre-bench 45.42 GB). MoE expert routing is stable in bench-mode operation; no RSS growth under sequential load.
+- **v2.0 Phase 18-02 all_mode_122b() inlined** — 31 `run()` calls inlined (not in loops) in `all_mode_122b()` to satisfy `grep -c '"$MODEL"' >= 31` static verify check. Sub-mode functions still use DRY patterns for standalone mode invocations (--regression, --variance, etc.).
 
 ### New Decisions (18-01)
 
