@@ -163,5 +163,45 @@ let duRoundTripTests =
                   (serialized.Contains("\"Case\""))
                   "FSharp.SystemTextJson should produce F#-idiomatic DU form, not the Case/Fields shape" ]
 
+// ── extractContentFromJson fallback ladder (Phase 20-02) ─────────────────────
+// Tests cover the content → reasoning_content fallback:
+//   (a) content present → uses content
+//   (b) content empty + reasoning_content present → uses reasoning_content
+//   (c) both empty → None (caller maps to LlmUnreachable)
+//   (d) content JSON null + reasoning_content present → uses reasoning_content
+//       (validates the ValueKind = JsonValueKind.String guard rejects JSON null literals)
+//
+// Pure tests: invoke extractContentFromJson directly with synthetic JSON strings.
+// No HTTP, no mocks, no Console.SetOut — testSequenced not required.
+
+let extractContentFallbackTests =
+    testList
+        "extractContentFromJson (Phase 20-02)"
+        [
+
+          testCase "happy path: content present, no reasoning_content -> Some content"
+          <| fun _ ->
+              let json = """{"choices":[{"message":{"content":"hello"}}]}"""
+              let result = BlueCode.Cli.Adapters.QwenHttpClient.extractContentFromJson json
+              Expect.equal result (Some "hello") "should return content"
+
+          testCase "fallback: empty content + reasoning_content present -> Some reasoning"
+          <| fun _ ->
+              let json = """{"choices":[{"message":{"content":"","reasoning_content":"thinking out loud"}}]}"""
+              let result = BlueCode.Cli.Adapters.QwenHttpClient.extractContentFromJson json
+              Expect.equal result (Some "thinking out loud") "should fall back to reasoning_content"
+
+          testCase "both empty -> None"
+          <| fun _ ->
+              let json = """{"choices":[{"message":{"content":"","reasoning_content":""}}]}"""
+              let result = BlueCode.Cli.Adapters.QwenHttpClient.extractContentFromJson json
+              Expect.equal result None "both empty should return None"
+
+          testCase "null content + reasoning_content present -> Some reasoning"
+          <| fun _ ->
+              let json = """{"choices":[{"message":{"content":null,"reasoning_content":"answer"}}]}"""
+              let result = BlueCode.Cli.Adapters.QwenHttpClient.extractContentFromJson json
+              Expect.equal result (Some "answer") "JSON null content should fall back to reasoning_content" ]
+
 let allTests =
-    testList "LlmPipeline" [ extractionTests; schemaTests; duRoundTripTests ]
+    testList "LlmPipeline" [ extractionTests; schemaTests; duRoundTripTests; extractContentFallbackTests ]
