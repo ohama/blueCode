@@ -16,6 +16,7 @@
     <Compile Include="Adapters/FileSessionStore.fs" />
     <Compile Include="Rendering.fs" />
     <Compile Include="CompositionRoot.fs" />
+    <Compile Include="PlanGate.fs" />
     <Compile Include="Repl.fs" />
     <Compile Include="CliArgs.fs" />
     <Compile Include="Program.fs" />
