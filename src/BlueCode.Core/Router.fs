@@ -62,12 +62,9 @@ let endpointToUrl: Endpoint -> string =
 /// Per-model sampling parameters per the Qwen 3.5 model card (non-thinking coding mode).
 /// Both 35B and 122B use temperature=0.7, top_p=0.8, top_k=20, presence_penalty=0.0.
 /// Identical values today; explicit pattern match preserves compile-time exhaustiveness
-/// so future per-model tuning is a one-line change. Replaces v1.0-era modelToTemperature
-/// (0.2/0.4) which targeted the retired Qwen 2.5 pair.
+/// so future per-model tuning is a one-line change. Replaces the v1.0-era per-model
+/// temperature function (0.2/0.4) which targeted the retired Qwen 2.5 pair.
 let modelToSamplingParams: Model -> SamplingParams =
     function
     | Qwen35B  -> { Temperature = 0.7; TopP = 0.8; TopK = 20; PresencePenalty = 0.0 }
     | Qwen122B -> { Temperature = 0.7; TopP = 0.8; TopK = 20; PresencePenalty = 0.0 }
-
-/// DEPRECATED: kept for one task only. Removed in Task 3 when QwenHttpClient.fs is rewired.
-let modelToTemperature (m: Model) : float = (modelToSamplingParams m).Temperature

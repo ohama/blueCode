@@ -28,10 +28,11 @@ type ModelInfo =
 /// Single HttpClient instance for the CLI process. Created once;
 /// reused across all requests. Phase 4 CompositionRoot.fs will own
 /// this; Phase 2 keeps it module-scope private for the smoke test.
-/// 180s timeout covers 72B worst case (~60s) + generous margin.
+/// 300s timeout covers Qwen 3.5 122B cold-start scenarios (240s observed after
+/// launchctl kickstart) + generous margin. Phase 20-01 raised from 180s to 300s.
 let private httpClient: HttpClient =
     let c = new HttpClient()
-    c.Timeout <- TimeSpan.FromSeconds(180.0)
+    c.Timeout <- TimeSpan.FromSeconds(300.0)
     c
 
 let private roleString: MessageRole -> string =
@@ -43,8 +44,9 @@ let private roleString: MessageRole -> string =
 // ── Request build (from Plan 02-01, unchanged — stays `let private`) ────────
 
 /// Build the vLLM OpenAI-compat request body. Pins stream=false,
-/// max_tokens=1024, presence_penalty=1.5 (Qwen model-card), and the
-/// per-model temperature from Router.modelToTemperature (LLM-05).
+/// max_tokens=1024 and per-model SamplingParams from Router.modelToSamplingParams.
+/// Phase 20-01: temp/top_p/top_k/presence_penalty per Qwen 3.5 model card
+/// (non-thinking coding: 0.7 / 0.8 / 20 / 0.0).
 /// No response_format field — Phase 2 relies on the extraction
 /// pipeline (Plan 02-02) as the primary defense; json_object mode is
 /// a Phase 5 optimization (02-RESEARCH.md Finding 2).
@@ -62,12 +64,15 @@ let private buildRequestBody (messages: Message list) (model: Model) (modelId: s
                content = m.Content |})
         |> List.toArray
 
+    let sp = modelToSamplingParams model
     let req =
         {| model = modelId
            messages = msgArr
-           temperature = modelToTemperature model
+           temperature = sp.Temperature
+           top_p = sp.TopP
+           top_k = sp.TopK
            max_tokens = 1024
-           presence_penalty = 1.5
+           presence_penalty = sp.PresencePenalty
            stream = false |}
 
     JsonSerializer.Serialize(req, jsonOptions)
@@ -81,7 +86,7 @@ let private buildRequestBody (messages: Message list) (model: Model) (modelId: s
 /// Error mapping table (02-RESEARCH.md Finding 9):
 ///   HttpRequestException                      -> LlmUnreachable url ex.Message
 ///   TaskCanceledException (ex.CancellationToken = ct)  -> UserCancelled
-///   TaskCanceledException (any other token)   -> LlmUnreachable url "request timed out after 180s"
+///   TaskCanceledException (any other token)   -> LlmUnreachable url "request timed out after 300s"
 ///   HTTP 4xx/5xx                              -> LlmUnreachable url "HTTP {code}: {body-snippet}"
 ///
 /// PRIVATE: internal helper called only from CompleteAsync via withSpinner.
@@ -118,7 +123,7 @@ let private postAsync (url: string) (body: string) (ct: CancellationToken) : Tas
             // DIFFERENT (internal) token. Map to LlmUnreachable with
             // a timeout detail so the caller can distinguish "I cancelled"
             // from "network/model was too slow".
-            return Error(LlmUnreachable(url, "request timed out after 180s"))
+            return Error(LlmUnreachable(url, "request timed out after 300s"))
     }
 
 // ── OpenAI envelope extraction ──────────────────────────────────────────────
