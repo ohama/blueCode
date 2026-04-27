@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ░ (20-01 ✓ 20-02 ✓ 20-03 pending)
-Plan: 20-02 complete
-Status: 266/1/0 tests; bench gate 6/6 PASS; Phase 20-02 complete (extractContentFromJson public helper + reasoning_content fallback + 4 new tests + qwen35-install.md RESOLVED markers)
-Last activity: 2026-04-27 — Phase 20-02 complete (extractContentFromJson public, reasoning_content fallback, 262→266 tests, bench gate 6/6 PASS)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ✓ (20-01 ✓ 20-02 ✓ 20-03 ✓)
+Plan: 20-03 complete (Phase 20 complete)
+Status: 266/1/0 tests; bench gate 6/6 PASS (post-Phase-20); Phase 20 complete (Qwen 3.5 protocol alignment: sampling params per 3.5 model card, timeout 300s, reasoning_content fallback, mid-conversation Role=User REJECT verdict confirmed for 122B)
+Last activity: 2026-04-27 — Phase 20-03 complete (probe-system-role.sh, 122B REJECT HTTP 404, AgentLoop.fs comments, howto sync, qwen35-install.md cross-reference, bench gate 6/6 PASS)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ░ (20-01 ✓ 20-02 ✓)]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ✓]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -75,8 +75,15 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 20-02-PLAN.md (extractContentFromJson + reasoning_content fallback; 266/1/0 tests; bench gate 6/6 PASS)
-Resume file: None — Phase 20-02 complete; next: run 20-03 (122B Role=System probe), then Phase 16
+Stopped at: Completed 20-03-PLAN.md (probe-system-role.sh REJECT, AgentLoop.fs comments, howto sync, bench gate 6/6 PASS)
+Resume file: None — Phase 20 complete; next: `/gsd:plan-phase 16`
+
+### New Decisions (20-03)
+
+- **v2.0 Phase 20-03 probe verdict REJECT** — `scripts/probe-system-role.sh` probed 122B (port 8001) with a 3-message system/user/system POST. HTTP 404: `"System message must be at the beginning."`. mlx_lm.server chat template enforces a structural rule: no System message after position 0. This applies to both Qwen 3.5 35B (Phase 17-02 evidence) and 122B (Phase 20-03 probe).
+- **v2.0 Phase 20-03 AgentLoop.fs role state** — `Role = User` at lines 249/260/266 (POST-EDIT CONSTRAINT, POST-READ HINT truncated/out-of-range) is permanently documented via in-code 3-line comments citing Phase 17-02 + Phase 20-03 probe date + HTTP 404 code. The authority signal is in the text marker, not the role. See `20-03-PROBE-OUTPUT.md`.
+- **v2.0 Phase 20-03 howto doc sync** — `documentation/howto/enforce-llm-tool-terminality-via-post-user-injection.md` F# snippets at lines 110+188 updated from `Role = System` (stale since v1.1) to `Role = User` with inline comments. History section added. Checklist updated to mention User role requirement.
+- **v2.0 Phase 20-03 qwen35-install.md cross-reference** — §Phase 20-03 section added at end of qwen35-install.md: REJECT verdict, HTTP 404, `scripts/probe-system-role.sh` reference, `20-03-PROBE-OUTPUT.md` pointer.
 
 ### New Decisions (20-02)
 
