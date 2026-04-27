@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v2.0 milestone complete)
 ## Current Position
 
 Milestone: v2.1 Empirical Qwen 3.5 122B Coding Evaluation (started 2026-04-27)
-Phase: 21 (single phase) — not started; roadmap defined; ready for `/gsd:plan-phase 21`
-Plan: —
-Status: PROJECT.md + REQUIREMENTS.md + ROADMAP.md all written; 10 reqs mapped to Phase 21 (5 plans expected); ready to plan
-Last activity: 2026-04-27 — v2.1 milestone setup complete; plan file at `/Users/ohama/.claude/plans/async-weaving-pnueli.md` is detailed implementation plan
+Phase: 21 (single phase) — in progress; Wave 1 complete
+Plan: 1 of 5 complete (21-01: Harness Scaffolding)
+Status: eval harness scaffold + venv live; throughput + TTFT measured; bench gate 7/7 PASS
+Last activity: 2026-04-28 — Completed 21-01-PLAN.md (eval harness scaffold, --setup/--throughput/--ttft handlers, evalplus 0.3.1 on Python 3.14.3)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21 ready for planning)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21: 1/5 plans complete)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -74,10 +74,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-27 (v2.1 milestone start)
-Stopped at: v2.1 milestone setup — PROJECT.md + STATE.md updated; REQUIREMENTS.md + ROADMAP.md pending
-Resume file: None — milestone is mid-setup
-Next workflow trigger: write REQUIREMENTS.md + ROADMAP.md, then `/gsd:plan-phase 21` to begin execution
+Last session: 2026-04-28 (Phase 21 Wave 1 execution)
+Stopped at: Completed 21-01-PLAN.md — harness scaffold + live runs done; bench gate 7/7 PASS
+Resume file: None
+Next workflow trigger: `/gsd:execute-phase 21` Wave 2 → 21-02 (--humaneval handler)
 
 ## v2.1 Architectural Touch Points (load-bearing)
 
@@ -86,8 +86,8 @@ Next workflow trigger: write REQUIREMENTS.md + ROADMAP.md, then `/gsd:plan-phase
 - **mlx-runner constraint:** Sibling project `/Users/ohama/projs/mlx-runner/` uses `mlx_lm.load()` in-process; would OOM the launchd-managed 122B service (~70GB resident). MUST adapt prompts/methodology to call `localhost:8001/v1/chat/completions` over HTTP — never load a second instance.
 - **Bench gate stability mandatory post-eval:** `bash bench/run.sh --gate` exit 0 with 7/7 PASS must hold. Eval is purely external instrumentation; modifies fixtures (multi-file refactor) but EXIT trap restores them. NO `bench/baseline.json` or `src/` changes.
 - **No new tests in `tests/BlueCode.Tests/`:** Eval is observational; harness lives in `bench/eval-qwen35-122b.sh` + `bench/eval-humaneval-http.py` + `bench/eval-needle.py`. Test count stays 282/1/0.
-- **SSE streaming confirmed working** on mlx_lm.server (probed during plan mode; emits `data: {...delta: {content: ...}}` chunks; awk filter must skip `: keepalive N/14` SSE comments and initial `delta.role` chunk).
-- **Python 3.14 + evalplus compatibility risk:** evalplus historically supports 3.8-3.12; fallback path is `uv venv --python 3.12` (uv not installed currently; install if needed).
+- **SSE streaming confirmed working** on mlx_lm.server (probed during 21-01 live run). First chunk combines role+content (NOT separate role-only chunk). awk filter `/"content":/ && !/"content":""/` captures it. curl exits 23 (broken pipe) when awk exits early — suppress with `|| true` in subshell. TTFT median 224 ms (trials 2-10 stable 214-230ms; trial 1 cold at 929ms).
+- **Python 3.14 + evalplus compatibility RESOLVED (21-01):** evalplus 0.3.1 pip install succeeded on Python 3.14.3. uv fallback not needed. `bench/.venv-eval/` populated and stable.
 - **Cold-start gated behind `--coldstart` flag** — disruptive (kills 122B for ~3min via `launchctl kickstart`). Per scope decision, deferred from default `--full`; reproducibility instructions in eval doc §10.
 - **Cloud comparison (Claude/GPT-4) explicit non-goal** — documented in eval doc §6.3 as deliberate boundary.
 - **Atomic commits per CLAUDE.md:** 5 task commits + plan-meta + final eval doc commit. Format: `chore(21-XX): {task-name}` for instrumentation; `docs(21-XX): write coding eval verdict doc` for the final doc.
