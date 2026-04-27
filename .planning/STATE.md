@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ✓ (20-01 ✓ 20-02 ✓ 20-03 ✓)
-Plan: 20-03 complete (Phase 20 complete)
-Status: 266/1/0 tests; bench gate 6/6 PASS (post-Phase-20); Phase 20 complete (Qwen 3.5 protocol alignment: sampling params per 3.5 model card, timeout 300s, reasoning_content fallback, mid-conversation Role=User REJECT verdict confirmed for 122B)
-Last activity: 2026-04-27 — Phase 20-03 complete (probe-system-role.sh, 122B REJECT HTTP 404, AgentLoop.fs comments, howto sync, qwen35-install.md cross-reference, bench gate 6/6 PASS)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 in progress (16-01 ✓) Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ✓ (20-01 ✓ 20-02 ✓ 20-03 ✓)
+Plan: 16-01 complete; Phase 16 in progress (16-02 and 16-03 remain)
+Status: 274/1/0 tests; bench gate 6/6 PASS (post-16-01); 16-01 complete (Plan wire parse, runPlanTurn entry point with 2-retry, PlanParseTests 8 cases)
+Last activity: 2026-04-27 — Phase 16-01 complete (LlmWire PlanWire/PlannedStepWire, Json.fs schema +plan, QwenHttpClient toLlmOutput Plan branch, AgentLoop runPlanTurn, PlanParseTests 274/1/0, bench gate 6/6 PASS)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ✓]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ◆ (16-01 ✓ 16-02 ░ 16-03 ░) Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ✓]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -50,6 +50,13 @@ Items relevant to v2.0 (architectural touch points):
 - **v2.0 Phase 15-02 Argu --new-session flag** — Argu converts `NewSession` DU case to `--newsession` (no hyphen). Added `[<AltCommandLine("--new-session")>]` so both `--newsession` and `--new-session` work. Post-parse conflict check: `match resumeId, isNewSession with | Some _, true -> eprintfn "ERROR: conflicting flags..." + exit 2`.
 - **v2.0 Phase 15-02 exact error messages** — `session not found: <id>` (exit 1), `session corrupt: <detail>` (exit 1), `conflicting flags: --resume and --new-session cannot be used together.` (exit 2). 15-03 assertions must match exactly.
 - **v2.0 Phase 15-02 single-turn Save** — Program.fs now calls `SessionStore.Save` after single-turn completion so `--resume <id>` works across single-turn invocations too.
+- **v2.0 Phase 16-01 PlanWire intermediate records** — `LlmWire.PlannedStepWire` + `LlmWire.PlanWire` records (public). Same rationale as `LlmStep`: plain records round-trip cleanly via `System.Text.Json`; DUs would serialize as `{"Item":"..."}`. Wire maps to `Domain.Plan` in `QwenHttpClient.deserializePlanWire` (private).
+- **v2.0 Phase 16-01 _raw passthrough for plan-step inputs** — `PlannedStep.Input = ToolInput(Map.ofList [("_raw", s.input.GetRawText())])`. Consistent with `ToolCall` path (QwenHttpClient.fs:209-210). Per-tool input shapes are dispatch-time concerns, not plan-parse-time.
+- **v2.0 Phase 16-01 runPlanTurn signature** — `AgentConfig -> ILlmClient -> Model -> Step list -> string -> string -> CancellationToken -> Task<Result<Plan, AgentError>>`. Module-level public in `AgentLoop`. 2 attempts (1 initial + 1 retry). `systemPromptSuffix` parameterized (Core stays string-literal-free). `priorSteps` mirrors `runSession` for `--plan --resume` SC4.
+- **v2.0 Phase 16-01 retryable/non-retryable error split** — Retryable in runPlanTurn: `InvalidJsonOutput`, `SchemaViolation`, `PlanInvalid`. Non-retryable (short-circuit): `LlmUnreachable`, `UserCancelled`, `PathRetired`.
+- **v2.0 Phase 16-01 PlanValidator NOT called in toLlmOutput** — `deserializePlanWire` handles structural wire failures (→ `SchemaViolation`). `PlanValidator.validatePlan` runs in `runPlanTurn` after wire parse succeeds (→ `PlanInvalid`). Separation enables per-error retry messaging.
+- **v2.0 Phase 16-01 mid-loop Plan guard preserved** — `| Ok { Output = Plan _ } -> Error(PlanInvalid "Plan output received outside plan-mode")` at AgentLoop.fs:408 unchanged. `runPlanTurn` is the ONLY legitimate Plan-output entry point.
+- **v2.0 Phase 16-01 test count 266→274** — 8 new tests in `PlanParseTests.fs` (3 wire parse + 5 runPlanTurn). fsproj + rootTests both at 22 entries.
 
 ### Roadmap Evolution
 
@@ -75,8 +82,8 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 20-03-PLAN.md (probe-system-role.sh REJECT, AgentLoop.fs comments, howto sync, bench gate 6/6 PASS)
-Resume file: None — Phase 20 complete; next: `/gsd:plan-phase 16`
+Stopped at: Completed 16-01-PLAN.md (Plan wire parse, runPlanTurn 2-retry, PlanParseTests 274/1/0, bench gate 6/6 PASS)
+Resume file: None — Phase 16-01 complete; next: Phase 16-02 (--plan Argu flag + PlanGate.fs)
 
 ### New Decisions (20-03)
 
