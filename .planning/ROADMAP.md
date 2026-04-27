@@ -20,6 +20,7 @@ v2.0 makes two architectural investments simultaneously: session state persists 
 - [x] **Phase 17: Qwen 3.5 Evaluation** ✓ — SWITCH verdict 2026-04-27; 35B/122B replaces 32B/72B as canonical pair (3.4× speedup, no regressions, 8/8 gate)
 - [x] **Phase 18: Single-Model 122B Evaluation** ✓ — DROP-35B verdict 2026-04-27; all 5 §SC4 criteria PASS; 31/31 bench invocations exit=0; +19.42 GB PhysMem freed; B2 DivByZero preserved; Router collapse + baseline halve deferred to follow-up phase
 - [x] **Phase 19: Qwen 2.5 Retirement + 122B Single-Model Default** ✓ — Retired Qwen 2.5 32B/72B + qwen72b.3bit (85 GB reclaimed); 122B canonical (single-model default); 35B preserved as cold rollback; `--model 32b/72b` aliases removed (exit 2 with retirement error); `--with-35b` opt-in flag added with eager port-8000 probe; `bench/run.sh` absorbed `scripts/bench-122b-only.sh`; `bench/baseline.json` halved to 6 `_122b` entries; gate 6/6 PASS; 262/1/0 tests (completed 2026-04-27)
+- [ ] **Phase 20: Qwen 3.5 Protocol Alignment** — Replace Qwen 2.5-era LLM client assumptions with Qwen 3.5-native conventions where mechanical and bench-safe. Sampling parameters (temp/top_p/top_k/presence_penalty per Qwen 3.5 model card), HttpClient timeout 180→300s, `extractContent` `reasoning_content` fallback, mid-conversation Role=System probe + conditional restore for 122B. Thinking-mode-on + native `tool_calls` deferred to v2.1+ (added 2026-04-27 via /gsd:add-phase)
 
 **Note on phase ordering:** Phase 17 should run BEFORE Phase 16 if model swap is desired before bench fixtures are set. If 35B/122B replaces 32B/72B as canonical, Phase 16's bench baseline (T6_32b, W1_32b, B2_72b, etc.) needs new model ids. Phase 16 plans on disk remain valid for whichever model pair ends up canonical; user decides execution order after Phase 17 ships findings. **Phase 19 also runs BEFORE Phase 16** — once `bench/baseline.json` is halved to single-model `_122b` keys, Phase 16-03's multi-turn fixture additions (MT_*) must use the final canonical baseline shape.
 
@@ -78,28 +79,29 @@ Plans:
 
 ### Phase 16: Planning Wiring + Bench
 
-**Goal:** `blueCode --plan "..."` triggers plan-then-execute mode — the LLM emits a typed plan, the plan validator runs before the user sees it, the user chooses accept/reject/edit/quit, and the agent executes (or retries) accordingly. New bench fixtures cover multi-turn scenarios; `bench/baseline.json` grows from 8 to 10 entries (plan-mode bench fixture deferred to v2.1+ — keystroke-driven UX is intractable for a regression gate; unit-test coverage in PlanParseTests + PlanGateTests substitutes).
+**Goal:** `blueCode --plan "..."` triggers plan-then-execute mode — the LLM emits a typed plan, the plan validator runs before the user sees it, the user chooses accept/reject/edit/quit, and the agent executes (or retries) accordingly. New bench fixture covers multi-turn persistence; `bench/baseline.json` grows from 6 to 7 entries (plan-mode bench fixture deferred to v2.1+ — keystroke-driven UX is intractable for a regression gate; unit-test coverage in PlanParseTests + PlanGateTests + AgentLoopTests substitutes).
 
-**Depends on:** Phase 15 (REPL session threading must be stable; plan validator from Phase 14 used here for retry wiring)
+**Depends on:** Phase 15 (REPL session threading must be stable; plan validator from Phase 14 used here for retry wiring), Phase 19 (single-model 122B canonical — bench fixtures use single MT_122b, not dual MT_32b/MT_72b), Phase 20-03 (Role=User invariant for all mid-conversation injections including [PLAN REJECTED])
 
 **Requirements:** PLAN-02, PLAN-03, PLAN-04 (wiring), PERSIST-01 (verified end-to-end with planning)
 
-**Note:** PLAN-01 (Plan DU) and PLAN-04 (pure validator covering 3 structural rules: unknown tool, length>5, duplicate adjacent) land in Phase 14. **This phase additionally wires the Plan JSON parse layer** in `src/BlueCode.Cli/Adapters/Json.fs` — extends the `llmStepSchema` enum with `"plan"`, adds a `Plan` branch to `toLlmOutput`, and handles the 4th `PlanInvalid` failure mode (schema-invalid input) at parse time before the validator runs. `makePlanResponse` (defined in Phase 14 `MockHelpers.fs`) becomes load-bearing for Phase 16's plan-mode tests.
+**Note:** PLAN-01 (Plan DU) and PLAN-04 (pure validator covering 3 structural rules: unknown tool, length>5, duplicate adjacent) land in Phase 14. **This phase additionally wires the Plan JSON parse layer** in `src/BlueCode.Cli/Adapters/Json.fs` — extends the `llmStepSchema` enum with `"plan"`, adds a `Plan` branch to `toLlmOutput`, and handles schema-invalid plan input (the 4th `PlanInvalid` mode) at parse time before the validator runs. `makePlanResponse` (defined in Phase 14 `MockHelpers.fs`) becomes load-bearing for Phase 16's plan-mode tests. **Single-model invariant (Phase 19):** all bench fixtures use `_122b` keys; no `_32b` / `_72b` / `_35b`. **Role=User invariant (Phase 20-03):** `[PLAN REJECTED]` re-prompt is delivered as part of the next user-prompt turn (Role=User by definition), NOT a Role=System mid-conversation message.
 
 **Success Criteria** (what must be TRUE when Phase 16 completes):
 
 1. `blueCode --plan "list 3 files in src"` displays a rendered numbered plan table (step #, tool, input preview, rationale) and shows the `[a]ccept / [r]eject / [e]dit / [q]uit` prompt before any tool runs.
-2. Typing `a` executes the plan steps in order; typing `r` sends a `[PLAN REJECTED]` message back to the LLM and re-prompts for a new plan; typing `q` exits with code 0 and no tool execution; typing `e` prompts for a comment that is appended to the next LLM message.
-3. A malformed plan (unknown tool name, schema-invalid input, > 5 steps, or duplicate adjacent steps) never reaches the user's approval prompt — it is rejected silently, the LLM is asked to retry, and only a valid plan is shown; after 2 retries the error is surfaced to the user.
-4. `--plan --resume <id>` is a valid combination — the agent loads prior context and enters plan mode for the next turn.
-5. `bench/run.sh --gate` exits 0 with the extended baseline (10 entries: 8 original T1-T7/W1/W2/B2 + 2 multi-turn MT_32b/MT_72b); no regression on the original 8.
+2. Typing `a` executes the plan; typing `r` re-prompts the LLM with a `[PLAN REJECTED]` Role=User message; typing `q` exits with code 0 and no tool execution; typing `e` prompts for a comment that is prefixed (`[PLAN EDIT NOTE: ...]`) to the next runPlanTurn invocation.
+3. A malformed plan (unknown tool name, schema-invalid input, > 5 steps, or duplicate adjacent steps) never reaches the user's approval prompt — it is rejected silently, the LLM is asked to retry, and only a valid plan is shown; after 2 attempts the error is surfaced to the user (runPlanTurn returns Error to Cli; Cli renders to stderr and exits 1).
+4. `--plan --resume <id>` is a valid combination — the agent loads prior context and enters plan mode for the next turn (verified live against 122B). `--plan` without a prompt exits 2 with "REPL plan-mode is v2.1+ scope". `--plan --with-35b` exits 2 (35B is rollback-only post-Phase-19).
+5. `bench/run.sh --gate` exits 0 with the extended baseline (7 entries: original 6 byte-for-byte preserved [T6_122b, T5_122b, B2_122b, T1_122b, W1_122b, W2_122b] + 1 new [MT_122b multi-turn PERSIST-01 fixture]); no regression on the original 6. Plan-mode bench fixture DEFERRED to v2.1+ per planner judgment.
 
-**Plans:** 3 plans expected
+**Plans:** 3 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Plan JSON parse wiring (`llmStepSchema` "plan" enum + `toLlmOutput` Plan branch handling all 4 PlanInvalid failure modes); `runPlanTurn` plan-mode entry point in AgentLoop with 2-retry validator-or-parse-failure path; PlanParseTests (≥6 cases) covering happy path + each PlanInvalid mode + retry behavior
-- [ ] 16-02-PLAN.md — `PlanGate.fs` (Spectre-rendered numbered plan table + keystroke dispatch a/r/e/q via Console.ReadKey); `--plan` flag in CliArgs/CliOptions/Program.fs dispatch; reject re-prompt injection (`[PLAN REJECTED]`) and edit comment capture (`[PLAN EDIT NOTE: ...]`) mirror 09.1-05 loop-injection primitive; `--plan --resume <id>` valid combo; PlanGateTests (≥4 cases); live smoke for SC1/SC2/SC4
-- [ ] 16-03-PLAN.md — Multi-turn bench fixtures (MT_32b + MT_72b validate PERSIST-01 end-to-end); `bench/baseline.json` 8→10 entries (originals byte-for-byte preserved); `bench/run.sh --gate` extended + verified 10/10 PASS; `documentation/bench.md` updated; AgentLoopTests gains one mocked plan-mode end-to-end test; plan-mode bench DEFERRED to v2.1+ (keystroke UX intractable for gate, documented rationale)
+- [ ] 16-01-PLAN.md — Plan JSON parse wiring (LlmWire.fs PlanWire records + Json.fs llmStepSchema "plan" enum + QwenHttpClient.toLlmOutput Plan branch via deserializePlanWire); runPlanTurn plan-mode entry point in AgentLoop (Core, returns Task<Result<Plan, AgentError>>; 2-attempt retry on InvalidJsonOutput / SchemaViolation / PlanInvalid; LlmUnreachable returned immediately); PlanParseTests (≥7 cases: 3 wire + 4 runPlanTurn covering happy path + retry recovery + retry exhaustion + non-retryable + wrong-output-kind); 266→273/1/0 tests
+- [ ] 16-02-PLAN.md — PlanGate.fs (Spectre.Console.Table render + IKeyReader abstraction + Console.ReadKey-based realKeyReader + a/r/e/q dispatch loop); CliArgs.Plan boolean flag (Argu --plan); CompositionRoot.planSystemPromptSuffix; Program.fs dispatch (--plan + prompt → runPlanTurn loop with maxUserRejects=3 cap → PlanGate → on accept dispatch to Repl.runSingleTurn with original prompt; reject prepends [PLAN REJECTED], edit prepends [PLAN EDIT NOTE: ...]); guardrails (--plan no-prompt → exit 2; --plan --with-35b → exit 2); PlanGateTests (≥6 cases via testSequenced + Console.SetOut capture); live smoke against 122B for SC1/SC2/SC4; 273→279/1/0 tests
+- [ ] 16-03-PLAN.md — Single MT_122b multi-turn bench fixture (PERSIST-01 end-to-end via --resume <id>); bench/run.sh mt() helper + gate() invocation + labels list 6→7; bench/baseline.json original 6 byte-for-byte preserved + MT_122b appended (gate metric: turn-1 step count via existing head -1 parser semantics); documentation/bench.md gains MT_122b section + plan-mode-bench DEFERRED rationale; AgentLoopTests gains runPlanTurnTests sub-list (≥2 mocked end-to-end cases including priorSteps propagation); 279→281/1/0 tests; bench gate 7/7 PASS final verify
+
 
 ---
 
@@ -200,18 +202,67 @@ Plans:
 
 ---
 
+### Phase 20: Qwen 3.5 Protocol Alignment
+
+**Goal:** Replace Qwen 2.5-era LLM client assumptions with Qwen 3.5-native conventions where the change is mechanical and bench-safe. Three plans, all targeting `src/BlueCode.Cli/Adapters/QwenHttpClient.fs` + `src/BlueCode.Core/Router.fs` + `src/BlueCode.Core/AgentLoop.fs`. Larger architectural changes (`enable_thinking: true` mode consuming `<think>` blocks; OpenAI-native `tool_calls` instead of custom JSON schema) are explicitly OUT of scope for this phase — v2.1+ milestone candidates because they require `max_tokens` bump, re-bench, and bench-fixture rewrites.
+
+**Depends on:** Phase 19 ✓ (single-model 122B canonical; gate keys aligned)
+
+**Requirements:** None new (operations + protocol cleanup; no v2.0 REQ-IDs)
+
+**Key architectural decisions:**
+
+- **A. Single-model 122B is the only target** — 35B is preserved as cold rollback (Phase 19 Decision A). All sampling/role/timeout choices are calibrated for 122B alone. If 35B is later reactivated via `--with-35b`, decisions revisit (35B may need different sampling).
+- **B. Bench gate is regression authority** — every plan ends with `bench/run.sh --gate` exit 0. If sampling-parameter change degrades T6/W1/W2/T1/T5/B2 step counts, the change is rolled back or recalibrated. No quality regression for performance gain.
+- **C. Thinking mode stays OFF** — `--chat-template-args '{"enable_thinking": false}'` in launchd plists remains. Native `<think>` consumption is a follow-up milestone.
+- **D. `additionalProperties: false` stays** — defensive guard preserved (operates on extracted JSON object, not raw content; safe for Qwen 3.5 with thinking off).
+- **E. Probe-driven role decision (20-03)** — restoring `Role = System` for mid-conversation hints is conditional on a live probe against 122B (port 8001). If probe returns HTTP 404 or any non-200, keep `Role = User` (the Phase 17-02 fix). Document the probe outcome in 20-03-SUMMARY.md regardless.
+
+**Success Criteria** (what must be TRUE when Phase 20 completes):
+
+1. `buildRequestBody` (`QwenHttpClient.fs`) emits `temperature`, `top_p`, `top_k`, `presence_penalty` per Qwen 3.5 model card (non-thinking coding mode: 0.7 / 0.8 / 20 / 0.0). `Router.fs` exposes `modelToSamplingParams` (or equivalent) returning the four-tuple per model. `bench/run.sh --gate` 6/6 PASS post-change (no regression).
+
+2. HttpClient timeout in `QwenHttpClient.fs` raised from 180s to 300s. Documented rationale in code comment + CLAUDE.md `## Common Gotchas`. 122B cold-start scenario (after `launchctl kickstart`) verifiable via `time curl localhost:8001/v1/models` succeeding within 300s.
+
+3. `extractContent` falls back to `reasoning_content` when `content` is empty/null. JsonTests gains ≥1 case covering the fallback. The `qwen35-install.md` §5.3 gotcha table updated to mark this as "handled in code (Phase 20-02)" rather than "extractContent 패치 필요".
+
+4. 122B `Role = System` mid-conversation probe executed (live `curl` to port 8001 with three messages: system / user / system). Result documented in `20-03-SUMMARY.md` with verdict ACCEPT (restore System role) or REJECT (keep User role). If ACCEPT: `AgentLoop.fs:249,259,265` switch back to `Role = System`; bench gate 6/6 still PASS.
+
+5. `documentation/howto/enforce-llm-tool-terminality-via-post-user-injection.md` F# code snippets aligned with current code state (Phase 17-02 + Phase 20-03 outcome). The howto should describe the actual current behavior, not a stale Phase 17 snapshot.
+
+6. `documentation/qwen35-install.md` "새로운 함정" section updated: gotchas (5) `reasoning_content` and (6) sampling-parameter mismatch are marked "RESOLVED in Phase 20" with cross-reference. Tests still pass (262/1/0 → 263-265/1/0 expected delta from 20-02 JsonTests addition).
+
+**Plans:** 3 plans expected
+
+Plans:
+- [ ] 20-01-PLAN.md — Sampling parameter alignment (`temp`/`top_p`/`top_k`/`presence_penalty` per Qwen 3.5 model card) + HttpClient timeout 180→300s. Autonomous. Files: `QwenHttpClient.fs`, `Router.fs`, possibly `Domain.fs` if a `SamplingParams` record is added. Bench gate 6/6 final verify.
+- [ ] 20-02-PLAN.md — `extractContent` `reasoning_content` fallback. Autonomous. Files: `QwenHttpClient.fs` (extractContent), `tests/BlueCode.Tests/JsonTests.fs` or `QwenHttpClientTests.fs` (≥1 fallback case). Update `qwen35-install.md` §5.3 gotcha row.
+- [ ] 20-03-PLAN.md — 122B Role = System probe + conditional restore. Autonomous (probe is read-only curl). Files: live curl script (output captured to summary), `AgentLoop.fs` (3 sites — only if probe ACCEPT), howto doc sync, `qwen35-install.md` gotcha row. Bench gate 6/6 final verify.
+
+**Reversibility:** All three plans are reversible via single revert commit. No filesystem retirement. No model service changes. Phase ships zero new launchd / model-id touches.
+
+**Out of scope (v2.1+ candidates, documented but NOT in this phase):**
+- `enable_thinking: true` mode + `<think>` block consumption (requires `max_tokens` bump 1024→2048-4096, re-bench)
+- OpenAI native `tool_calls` (function calling) replacing custom JSON schema (rewrites `toLlmOutput`, all bench fixtures)
+- `additionalProperties` relaxation (currently `false`, keep as-is)
+- `max_tokens` budget revision (currently 1024; thinking-mode would need 2048-4096)
+
+---
+
 ## Progress
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
 | 14. Domain Extensions | v2.0 | PERSIST-01, PLAN-01, PLAN-04 | 2/2 | ✓ Complete | 2026-04-26 |
 | 15. Persistence Wiring | v2.0 | PERSIST-01, PERSIST-02, PERSIST-03, PERSIST-04 | 3/3 | ✓ Complete | 2026-04-27 |
-| 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 0/3 | Not started (plans on disk) | - |
+| 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 0/3 | Plans ready (replanned 2026-04-27 against post-Phase-20 state) | - |
 | 17. Qwen 3.5 Evaluation | v2.0 | (none — operations) | 3/3 | ✓ Complete (SWITCH) | 2026-04-27 |
 | 18. Single-Model 122B Eval | v2.0 | (none — operations + decision) | 3/3 | ✓ Complete (DROP-35B) | 2026-04-27 |
 | 19. Qwen 2.5 Retirement + 122B Default | v2.0 | (none — operations + cleanup) | 2/2 | ✓ Complete | 2026-04-27 |
+| 20. Qwen 3.5 Protocol Alignment | v2.0 | (none — protocol cleanup) | 0/3 | Not started | - |
 
 ---
 
 *Roadmap created: 2026-04-26*
-*Last updated: 2026-04-27 — Phase 19 complete (85 GB reclaimed; single-model 122B canonical; 6/6 gate PASS; 262/1/0 tests; --with-35b opt-in flag added)*
+*Last updated: 2026-04-27 — Phase 20 added via /gsd:add-phase (Qwen 3.5 protocol alignment: sampling params per 3.5 model card, timeout 180→300s, reasoning_content fallback, mid-conversation Role=System probe; thinking-mode-on + native tool_calls deferred to v2.1+)*
+*Last updated: 2026-04-27 — Phase 16 REPLANNED FROM SCRATCH against post-Phase-19/20 state (single-model 122B; baseline 6→7 entries with single MT_122b; Role=User [PLAN REJECTED] invariant). Stale Phase 16 plans (assuming 32B/72B dual-model + 8→10 baseline + MT_32b/MT_72b) preserved as `.stale` siblings in `.planning/phases/16-planning-wiring-+-bench/`*
