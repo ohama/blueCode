@@ -9,8 +9,9 @@ open BlueCode.Core.Domain
 /// Classifies free-text user input into an Intent by scanning for
 /// characteristic keywords. Pure: no IO, no mutation, deterministic.
 ///
-/// ROU-01: Debug/Design/Analysis -> 72B, Implementation/General -> 32B
-/// (routing rule is applied by intentToModel, not here).
+/// ROU-01: Debug/Design/Analysis -> 35B (smaller/faster), Implementation/General -> 122B (larger).
+/// (routing rule is applied by intentToModel, not here). Note: dormant in single-model
+/// default mode since ForcedModel = Some Qwen122B bypasses this classification.
 ///
 /// Keyword sets intentionally cover English + Korean where this repo's
 /// user works bilingually. Extending the lists does not change the
