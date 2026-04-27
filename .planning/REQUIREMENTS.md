@@ -40,25 +40,25 @@ State outlives a single `runSession`. The REPL gains memory; sessions can resume
 
 Agent emits a typed plan, user approves, agent executes. Plan validation catches malformed plans before they reach the user, not at runtime.
 
-- [ ] **PLAN-01**: Agent loop supports a `Plan` DU as a new `LlmOutput` variant (or sibling).
+- [x] **PLAN-01**: Agent loop supports a `Plan` DU as a new `LlmOutput` variant (or sibling). ✓ (Phase 14, 2026-04-26; JSON parse wired Phase 16, 2026-04-27)
   - **Goal:** When invoked in plan mode, the LLM produces structured output `{ kind: "plan", steps: [{ tool, input, rationale }, ...], rationale: "..." }` validated against existing tool schema.
   - **Behavior:** `Domain.LlmOutput` extended with `LlmOutput.Plan of Plan` where `Plan = { Steps: PlannedStep list; Rationale: string }` and `PlannedStep = { Tool: ToolName; Input: ToolInput; Rationale: string }`. `JsonSchema.Net` validation extended for the plan kind.
   - **Validation:** Mocked-LLM test: plan-mode JSON parses to `LlmOutput.Plan` with correct structure; out-of-schema plan returns `ParseFailure`. Existing `LlmOutput.ToolCall` and `LlmOutput.FinalAnswer` paths unchanged (243/1/0 baseline preserved).
   - **Out of scope:** Plans with > 5 steps (rejected by PLAN-04). Recursive sub-plans (v2.1+ sub-agents).
 
-- [ ] **PLAN-02**: `--plan` CLI flag enables plan-then-execute mode for the next turn.
+- [x] **PLAN-02**: `--plan` CLI flag enables plan-then-execute mode for the next turn. ✓ (Phase 16, 2026-04-27)
   - **Goal:** `blueCode --plan "refactor X"` triggers the agent to emit a plan first, pause for user approval, then execute.
   - **Behavior:** Argu accepts `--plan` (boolean). Plan mode adds a system-prompt suffix that instructs the LLM to emit a plan before any tool call. CompositionRoot wires plan mode into `runSession`. `--plan` + `--resume <id>` is allowed (resume into plan mode for the next turn).
   - **Validation:** Live run: `blueCode --plan "list 3 files in src"` shows a plan, prompts for approval, executes on "yes". Test: with `--plan`, the first LLM call gets system-prompt suffix `[PLAN MODE]` (or equivalent marker).
   - **Out of scope:** Per-turn plan-mode toggle inside REPL (v2.1 `/plan` slash command). Default plan mode (always-on).
 
-- [ ] **PLAN-03**: User approval gate between plan emission and execution — accept / reject / edit-and-retry.
+- [x] **PLAN-03**: User approval gate between plan emission and execution — accept / reject / edit-and-retry. ✓ (Phase 16, 2026-04-27)
   - **Goal:** After the LLM emits a valid plan, the user is shown a rendered plan and prompted: `[a]ccept / [r]eject / [e]dit / [q]uit`. Accept proceeds to execution; reject sends a "plan rejected, try a different approach" message back to LLM and re-prompts; edit drops user into a comment field that's appended to the next user message; quit exits with code 0.
   - **Behavior:** Spectre.Console renders the plan as a numbered table (step #, tool, input preview, rationale). `Repl.fs` (or a new `PlanGate.fs`) reads a single keystroke, dispatches accordingly. On reject, agent loop reruns the same turn with `[PLAN REJECTED: <reason>]` injection.
   - **Validation:** Live run with mocked stdin: typing `a` proceeds to execute; typing `r` re-prompts LLM; typing `q` exits 0. Test: PlanGate decodes keystrokes deterministically.
   - **Out of scope:** Per-step approval (whole-plan only). Editing individual plan steps (only the next-user-message hint).
 
-- [ ] **PLAN-04**: Plan validation runs BEFORE user sees approval prompt.
+- [x] **PLAN-04**: Plan validation runs BEFORE user sees approval prompt. ✓ (Phase 14 pure validator + Phase 16 JSON parse wiring, 2026-04-27)
   - **Goal:** A malformed plan (unknown tool, schema-invalid input, > 5 steps, duplicate identical steps) is rejected at parse time and the LLM is asked to retry. The user never sees a malformed plan.
   - **Behavior:** Plan validator: each `PlannedStep.Tool` exists in `ToolRegistry`; each `PlannedStep.Input` validates against the tool's `JsonSchema`; `Steps.Length ≤ 5`; no two adjacent steps are byte-identical (loop-guard analog). Validation failures map to `AgentError.PlanInvalid <reason>` and trigger the same 2-attempt retry as `LlmOutput` parse failures.
   - **Validation:** Mocked plans for each failure mode (unknown tool, schema-invalid input, 6 steps, duplicate steps) all return `PlanInvalid` and trigger retry. After 2 retries, agent surfaces the error to the user (not the malformed plan).
@@ -100,10 +100,10 @@ Tracked for awareness; not pulled into v2.0 roadmap.
 | PERSIST-02  | Phase 15 | ✓ Complete (Phase 15, 2026-04-27) |
 | PERSIST-03  | Phase 15 | ✓ Complete (Phase 15, 2026-04-27) |
 | PERSIST-04  | Phase 15 | ✓ Complete (Phase 15, 2026-04-27) |
-| PLAN-01     | Phase 14 | ✓ Complete (Phase 14, 2026-04-26) |
-| PLAN-02     | Phase 16 | Pending |
-| PLAN-03     | Phase 16 | Pending |
-| PLAN-04     | Phase 14 (validator) + Phase 16 (wiring) | Phase 14 ✓ pure validator; Phase 16 wiring pending |
+| PLAN-01     | Phase 14 (DU) + Phase 16 (JSON parse) | ✓ Complete (Phase 16, 2026-04-27) |
+| PLAN-02     | Phase 16 | ✓ Complete (Phase 16, 2026-04-27) |
+| PLAN-03     | Phase 16 | ✓ Complete (Phase 16, 2026-04-27) |
+| PLAN-04     | Phase 14 (validator) + Phase 16 (wiring) | ✓ Complete (Phase 16, 2026-04-27) |
 
 **Coverage:**
 - v2.0 requirements: 8 total

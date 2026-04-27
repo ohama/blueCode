@@ -16,7 +16,7 @@ v2.0 makes two architectural investments simultaneously: session state persists 
 
 - [x] **Phase 14: Domain Extensions** ✓ — Session record, Plan DU, ISessionStore port, plan validator (all Core types, no Cli wiring)
 - [x] **Phase 15: Persistence Wiring** ✓ — REPL session threading, JSONL adapter, --resume, --new-session
-- [ ] **Phase 16: Planning Wiring + Bench** — --plan flag, approval gate UI, plan retry wiring, bench fixtures extended
+- [x] **Phase 16: Planning Wiring + Bench** ✓ — --plan flag, approval gate UI (PlanGate.fs + IKeyReader), plan retry wiring (runPlanTurn 2-attempt path), MT_122b multi-turn bench fixture (PERSIST-01 end-to-end); 282/1/0 tests; bench gate 7/7 PASS (completed 2026-04-27)
 - [x] **Phase 17: Qwen 3.5 Evaluation** ✓ — SWITCH verdict 2026-04-27; 35B/122B replaces 32B/72B as canonical pair (3.4× speedup, no regressions, 8/8 gate)
 - [x] **Phase 18: Single-Model 122B Evaluation** ✓ — DROP-35B verdict 2026-04-27; all 5 §SC4 criteria PASS; 31/31 bench invocations exit=0; +19.42 GB PhysMem freed; B2 DivByZero preserved; Router collapse + baseline halve deferred to follow-up phase
 - [x] **Phase 19: Qwen 2.5 Retirement + 122B Single-Model Default** ✓ — Retired Qwen 2.5 32B/72B + qwen72b.3bit (85 GB reclaimed); 122B canonical (single-model default); 35B preserved as cold rollback; `--model 32b/72b` aliases removed (exit 2 with retirement error); `--with-35b` opt-in flag added with eager port-8000 probe; `bench/run.sh` absorbed `scripts/bench-122b-only.sh`; `bench/baseline.json` halved to 6 `_122b` entries; gate 6/6 PASS; 262/1/0 tests (completed 2026-04-27)
@@ -255,7 +255,7 @@ Plans:
 |-------|-----------|--------------|----------------|--------|-----------|
 | 14. Domain Extensions | v2.0 | PERSIST-01, PLAN-01, PLAN-04 | 2/2 | ✓ Complete | 2026-04-26 |
 | 15. Persistence Wiring | v2.0 | PERSIST-01, PERSIST-02, PERSIST-03, PERSIST-04 | 3/3 | ✓ Complete | 2026-04-27 |
-| 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 0/3 | Plans ready (replanned 2026-04-27 against post-Phase-20 state) | - |
+| 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 3/3 | ✓ Complete | 2026-04-27 |
 | 17. Qwen 3.5 Evaluation | v2.0 | (none — operations) | 3/3 | ✓ Complete (SWITCH) | 2026-04-27 |
 | 18. Single-Model 122B Eval | v2.0 | (none — operations + decision) | 3/3 | ✓ Complete (DROP-35B) | 2026-04-27 |
 | 19. Qwen 2.5 Retirement + 122B Default | v2.0 | (none — operations + cleanup) | 2/2 | ✓ Complete | 2026-04-27 |
