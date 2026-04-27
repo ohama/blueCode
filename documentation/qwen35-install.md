@@ -980,3 +980,33 @@ curl -fsS http://127.0.0.1:8001/v1/models > /dev/null && echo "✓ 122B 정상"
 - `documentation/qwen32b-base-to-instruct.md` — v1.x Base/Coder/Instruct 함정 (이 문서의 §5.2 크로스레퍼런스)
 - `.planning/phases/17-qwen-3-5-evaluation/17-RESEARCH.md` — 본 가이드의 수치 및 명령 소스
 - `src/BlueCode.Cli/Adapters/QwenHttpClient.fs` — Path B 패치 대상 (`buildRequestBody` 함수)
+
+---
+
+## §10 Phase 17 SWITCH decision (2026-04-27)
+
+Phase 17 evaluated Qwen 3.5 (35B-A3B-4bit / 122B-A10B-4bit) against the v1.4 32B/72B pair via
+`bench/run.sh --all` (34 invocations, all exit=0) and decided **SWITCH**. As of 2026-04-27, the
+35B/122B pair is the canonical daily-driver pair.
+
+Key findings:
+- 3.4× aggregate speedup across all measurable gate tests (T6_32b: 22s → 6s; T6_72b: 45s → 11s)
+- Zero correctness regressions; B2 diagnose accuracy preserved on both models
+- Combined post-bench RSS 62.4 GB — 27 GB below the 89.5 GB worst-case projection (MoE routing
+  converged on stable expert subset; RSS held flat at smoke-level throughout bench-all)
+- Zero `<think>` token leakage (Path A confirmed on mlx_lm 0.31.3)
+
+Old 32B/72B services and model files are preserved on disk for rollback (see §9).
+Re-baselined `bench/baseline.json` reflects the new pair's measured numbers (binary_state:
+`post-17-03-switch`). `CLAUDE.md` `## Runtime Environment` names the new pair.
+
+**RSS post-bench finding (update to §5.5.1 projection):** The §5.5.1 table projected RSS would
+grow toward disk size during bench-all as diverse prompts drive expert routing to new slices.
+Empirically, RSS held flat: 35B at 16.9 GB (82% of 20.4 GB disk) and 122B at 45.4 GB (65% of
+69.6 GB disk) both pre- and post-bench. The blueCode bench fixtures (max 4-step, structurally
+similar prompts) converged on a stable expert subset; the mmap-backed weights for rarely-activated
+experts were never paged in. The projection of ~84–93 GB post-bench was conservative; actual
+combined steady-state is ~62 GB.
+
+Eval evidence: `documentation/benchmark-qwen35-eval.md` (per-test comparison + decision matrix).
+Empirical service-load record: `.planning/phases/17-qwen-3-5-evaluation/17-02-LOAD-TEST.md`.
