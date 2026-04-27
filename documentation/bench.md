@@ -37,7 +37,7 @@ All invocations use `--model 122b` (single-model canonical, Phase 19).
 
 | Flag | Invocations | Wall-clock | Purpose |
 |------|-------------|------------|---------|
-| `--gate` | 6 | ~2 min | Regression gate (CI/pre-commit). Exits non-zero on regression. Labels: T6/W1/W2/T1/T5/B2 all _122b. |
+| `--gate` | 7 | ~3-4 min | Regression gate (CI/pre-commit). Exits non-zero on regression. Labels: T6/W1/W2/T1/T5/B2/MT all _122b. |
 | `--canary` | 4 | ~1.5 min | Quick smoke for ad-hoc development. |
 | `--regression` | 7 | ~6 min | Part 1 reproducibility (T1–T7 × 122B). |
 | `--b2` | 1 | ~30 s | B2 divide-by-zero diagnose only — useful for prompt-shrink hypothesis testing. |
@@ -46,18 +46,61 @@ All invocations use `--model 122b` (single-model canonical, Phase 19).
 
 ## Fixture Naming Convention
 
-Fixtures live in `bench/fixtures/` and follow the pattern `bug_<short_symptom>.fs`:
+Fixtures live in `bench/fixtures/` and follow the pattern `bug_<short_symptom>.fs` for bug
+fixtures, or `mt_<purpose>.txt` for multi-turn text prompts:
 
 - `bug_lastchar.fs` — off-by-one indexer (`s.[s.Length]`); used by W1 write task.
 - `bug_average.fs` — divide-by-zero in `average`; used by W2 write task (agent adds `averageSafe`).
 - `bug_divide_zero.fs` — purpose-built diagnose-only fixture for B2 (kept separate from
   `bug_average.fs` so W2 and B2 don't share state).
+- `mt_followup.txt` — turn-2 prompt for MT_122b multi-turn fixture (Phase 16-03); plain text
+  referencing prior session context ("What was the file I just listed? Just give me the file count.").
 
 Each fixture is a single F# module with one bug. The bug-trigger should be obvious from
 a docstring or comment in the fixture itself, so the test is reproducible without
 context. Fixtures are committed to git in their broken baseline state. The W1/W2 runs
 mutate them in-place, then `bench/run.sh` restores via `cat <<'EOF'` heredoc before
 each run.
+
+### MT_122b — Multi-turn persistence fixture (Phase 16-03)
+
+**Purpose:** Validates PERSIST-01 (cross-turn session memory via `--resume <id>`) at the bench
+regression layer. Single-model 122B (Phase 19 canonical).
+
+**Shape:**
+
+1. **Turn 1** — `dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "List the files in bench/fixtures and tell me the count."` Captures session id from stderr (`Session: <id>` line, Phase 15-02 deliverable).
+2. **Turn 2** — `dotnet run --project src/BlueCode.Cli -- --verbose --model 122b --resume <id> "$(cat bench/fixtures/mt_followup.txt)"`. Follow-up prompt deliberately references prior context ("What was the file I just listed? Just give me the file count.") so it cannot be answered correctly without the resumed session.
+
+**Both turns must exit 0** for MT_122b to PASS. The bench harness (`mt()` in `bench/run.sh`)
+records `combined_exit = max(turn1_exit, turn2_exit)` to `${label}.meta` for the gate's
+exit-code check.
+
+**Gate metric:** Step count from turn 1 (parser uses `head -1` on `[INF] Session ok: N steps`
+markers; turn 2's step count is documented in baseline `note` field but not gate-asserted).
+This matches the existing single-turn parser semantics; no parser changes were made in 16-03.
+
+**Baseline:** `step_count: 2` (typical: `list_dir` + `final` = 2 steps), `step_count_max: 4`,
+`elapsed_median_s: 7` (full 2-turn cycle including session save/load round-trip, observed
+empirically in Phase 16-03 smoke run on 122B).
+
+**Failure modes:**
+
+- **Missing session id from turn-1 stderr:** Phase 15-02 deliverable broken — `mt()` aborts with exit 99 before invoking turn 2.
+- **Turn 2 exits non-zero:** Session not persisted, or `--resume` could not load it. PERSIST-01 regression.
+- **Turn-1 step count exceeds 4:** Routing pattern shifted (LLM chose grep instead of list_dir, or added an extra read_file). Re-tune `step_count_max` once if observed and stable across 3+ runs.
+
+**What is NOT tested by MT_122b:**
+
+- Plan-mode interactive flow (deferred — see "Plan-mode bench" section below).
+- Session corruption / `SessionCorrupt` recovery (covered by SessionStoreTests at unit level).
+- 35B-targeted multi-turn (35B is rollback-only post-Phase-19; not bench-targeted).
+
+**Why a single fixture, not multiple:** The original Phase 16 plan outlined both `MT_32b` and
+`MT_72b` entries for a dual-model configuration. Phase 19 retired Qwen 2.5 entirely; 122B alone
+is canonical. A single `MT_122b` fixture covers the persistence regression surface. Adding
+`MT_35b` would test the rollback path against a service not loaded by default — out of scope
+for the gate.
 
 ## Auto-Reset of Write Fixtures
 
@@ -138,6 +181,43 @@ generalizes to any future intentional behavior change:
 783 chars) recovered correct empty-list diagnosis on both models. See
 `documentation/benchmark-32b-vs-72b.md` Part 4 §21.3 for the diff and rationale.
 
+## Plan-mode bench fixture — DEFERRED to v2.1+
+
+**Status:** Out of scope for v2.0 / Phase 16. Will be revisited when REPL plan-mode
+(`/plan` slash command) and full multi-turn plan-mode interaction land in v2.1.
+
+**Why deferred:**
+
+1. **Keystroke-driven UX is intractable for an autonomous regression gate.** PlanGate's
+   `[a]ccept / [r]eject / [e]dit / [q]uit` prompt requires `Console.ReadKey` interaction.
+   Scripting this in a CI-friendly way demands either:
+   - A `--plan-script <a|r|e|q>` non-interactive flag (CLI-surface change, not in 16-02 scope)
+   - PTY emulation in shell (brittle; macOS launchd + bash + `expect` is fragile)
+   - In-process IKeyReader injection (collapses the bench to unit testing — already covered by PlanGateTests in 16-02)
+
+2. **Coverage substitute exists.** Phase 16-02 PlanGateTests covers all 4 keystroke paths
+   plus unknown-key re-prompt. Phase 16-01 PlanParseTests covers parse + validation +
+   retry exhaustion. Phase 16-03 AgentLoopTests covers runPlanTurn end-to-end with mocked
+   LLM. The plan-mode pipeline is regression-protected at unit + integration boundaries
+   without a bench fixture.
+
+3. **Live smoke is documented.** Phase 16-02 SUMMARY captures live-smoke transcripts
+   against 122B for SC1 (plan table), SC2 (a/r/e/q dispatch), SC4 (--plan --resume).
+   These are point-in-time evidence; the bench gate's role is automated regression
+   detection, which the unit/integration tests already provide.
+
+4. **REPL plan-mode arrives in v2.1.** Once `/plan` slash command + multi-turn plan-mode
+   exist, a plan-mode bench fixture becomes feasible: drive plan -> accept via stdin
+   piping rather than keystroke interception. v2.1 planning revisits this.
+
+**What v2.1 should add (placeholder for future planner):**
+
+- A `PLAN_122b` fixture invoking `--plan` with stdin-piped accept (`yes a |` or similar)
+- Baseline assertion: plan validates (no PlanInvalid surfaced), execution produces same
+  step count as the equivalent non-plan-mode invocation
+- Decision: should plan-mode and non-plan-mode share a baseline (plan should not change
+  step count) or have distinct baselines (plan-mode may add 1 step for the plan-emission turn)?
+
 ## Hang Contingency for `mlx_lm.server` 122B
 
 **Symptom:** A 122B run shows no console output progress for >90 s. The blueCode HTTP
@@ -172,12 +252,15 @@ plan can revisit this trade-off.
 
 ## Interpreting Gate Output
 
-A passing gate looks like (Phase 19 single-model 122B, 6/6 format):
+A passing gate looks like (Phase 16-03, single-model 122B, 7/7 format):
 
 ```
 Pre-condition OK: port 8001 (122B) responsive.
-===== GATE: regression subset (6 invocations) =====
+===== GATE: regression subset (7 invocations) =====
 ... per-test run logs ...
+===== gate_MT_122b (multi-turn, model=122b) =====
+  turn1: exit=0 session=<id>
+  turn2: exit=0  combined exit=0 elapsed=7s
 ===== GATE: compare to baseline =====
   PASS T6_122b    steps=4/5 exit=0
   PASS W1_122b    steps=3/3 exit=0
@@ -185,16 +268,17 @@ Pre-condition OK: port 8001 (122B) responsive.
   PASS T1_122b    steps=1/3 exit=0
   PASS T5_122b    steps=3/4 exit=0
   PASS B2_122b    steps=2/3 exit=0
-===== GATE PASS (6/6) =====
+  PASS MT_122b    steps=2/4 exit=0
+===== GATE PASS (7/7) =====
 ```
 
 A failing gate prints `FAIL <key> ... — <reason>` lines, and ends with
-`GATE FAIL (N/6 regressed)` with exit code 1.
+`GATE FAIL (N/7 regressed)` with exit code 1.
 
 ## Known Regressions (Baseline State)
 
-**Current state (post-Phase-19, 2026-04-27):** zero entries marked `regression: true`
-in `bench/baseline.json`. All 6 baseline entries (T6/W1/W2/T1/T5/B2 × 122B) validate
+**Current state (post-Phase-16-03, 2026-04-27):** zero entries marked `regression: true`
+in `bench/baseline.json`. All 7 baseline entries (T6/W1/W2/T1/T5/B2/MT × 122B) validate
 against real step counts and pass states.
 
 **Historical:** `B2_32b` and `B2_72b` were recorded as `pass: false, regression: true`
