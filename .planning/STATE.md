@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 in progress (16-01 ✓) Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ✓ (20-01 ✓ 20-02 ✓ 20-03 ✓)
-Plan: 16-01 complete; Phase 16 in progress (16-02 and 16-03 remain)
-Status: 274/1/0 tests; bench gate 6/6 PASS (post-16-01); 16-01 complete (Plan wire parse, runPlanTurn entry point with 2-retry, PlanParseTests 8 cases)
-Last activity: 2026-04-27 — Phase 16-01 complete (LlmWire PlanWire/PlannedStepWire, Json.fs schema +plan, QwenHttpClient toLlmOutput Plan branch, AgentLoop runPlanTurn, PlanParseTests 274/1/0, bench gate 6/6 PASS)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 in progress (16-01 ✓ 16-02 ✓) Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ✓ (20-01 ✓ 20-02 ✓ 20-03 ✓)
+Plan: 16-02 complete; Phase 16 in progress (16-03 remains)
+Status: 280/1/0 tests; bench gate 6/6 PASS (post-16-02); 16-02 complete (PlanGate.fs IKeyReader+render+promptUser, --plan Argu flag, Program.fs plan-mode loop, PlanGateTests 6 cases, SC1/SC2/SC4 live smoke PASS)
+Last activity: 2026-04-27 — Phase 16-02 complete (PlanGate.fs new, CliArgs.Plan, CliOptions.PlanMode, planSystemPromptSuffix, Program.fs plan-mode dispatch, PlanGateTests 280/1/0, bench gate 6/6 PASS)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ◆ (16-01 ✓ 16-02 ░ 16-03 ░) Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ✓]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ◆ (16-01 ✓ 16-02 ✓ 16-03 ░) Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ✓]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -57,6 +57,12 @@ Items relevant to v2.0 (architectural touch points):
 - **v2.0 Phase 16-01 PlanValidator NOT called in toLlmOutput** — `deserializePlanWire` handles structural wire failures (→ `SchemaViolation`). `PlanValidator.validatePlan` runs in `runPlanTurn` after wire parse succeeds (→ `PlanInvalid`). Separation enables per-error retry messaging.
 - **v2.0 Phase 16-01 mid-loop Plan guard preserved** — `| Ok { Output = Plan _ } -> Error(PlanInvalid "Plan output received outside plan-mode")` at AgentLoop.fs:408 unchanged. `runPlanTurn` is the ONLY legitimate Plan-output entry point.
 - **v2.0 Phase 16-01 test count 266→274** — 8 new tests in `PlanParseTests.fs` (3 wire parse + 5 runPlanTurn). fsproj + rootTests both at 22 entries.
+- **v2.0 Phase 16-02 planSystemPromptSuffix OVERRIDE required** — The base system prompt's tool-call action enum caused 122B to ignore the plan-mode suffix. The suffix must begin with `OVERRIDE — PLAN MODE ACTIVE. Do NOT use read_file/... Your ONLY valid response is action="plan"` for 122B to comply. A gentle `[PLAN MODE]` prefix was not sufficient. Lesson: when base prompt and suffix conflict, use an explicit OVERRIDE directive.
+- **v2.0 Phase 16-02 realKeyReader stdin-redirect fallback** — `Console.ReadKey(intercept=true)` throws `InvalidOperationException` when stdin is redirected (pipe-mode). Catch and fall back to `Console.In.ReadLine()[0]` (defaulting to 'q' for empty). This enables both TTY interactive use and pipe-based smoke/automation.
+- **v2.0 Phase 16-02 maxUserRejects=3 cap** — User-facing reject loop capped at 3 iterations. Independent from runPlanTurn's internal 2-attempt retry (stacks: up to 3 * 2 = 6 LLM calls before abort). On exhaustion: `eprintfn "Plan-mode: N rejections without acceptance"` + exit 1.
+- **v2.0 Phase 16-02 [PLAN REJECTED] as userInput prefix** — Inject rejection as `currentPrompt = "[PLAN REJECTED] ... \n\n<original prompt>"` (the userInput parameter to runPlanTurn). Never injected via buildMessages. The user-prompt slot in buildMessages is always Role=User. Phase 20-03 invariant satisfied without explicit Role annotation.
+- **v2.0 Phase 16-02 Accept executes ORIGINAL prompt via runSingleTurn** — On accept, `Repl.runSingleTurn prompt ...` receives the user's original (un-prefixed) prompt, not the [PLAN REJECTED]-decorated variant. The accepted plan's SHAPE was approved; the executor re-asks the LLM to act on the original intent.
+- **v2.0 Phase 16-02 test count 274→280** — 6 new tests in `PlanGateTests.fs` (testSequenced). fsproj: 23 Compile entries. rootTests: 22 testList entries.
 
 ### Roadmap Evolution
 
@@ -82,8 +88,8 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 16-01-PLAN.md (Plan wire parse, runPlanTurn 2-retry, PlanParseTests 274/1/0, bench gate 6/6 PASS)
-Resume file: None — Phase 16-01 complete; next: Phase 16-02 (--plan Argu flag + PlanGate.fs)
+Stopped at: Completed 16-02-PLAN.md (PlanGate.fs, --plan Argu flag, Program.fs plan-mode dispatch, PlanGateTests 280/1/0, bench gate 6/6 PASS, SC1/SC2/SC4 live smoke PASS)
+Resume file: None — Phase 16-02 complete; next: Phase 16-03 (bench fixtures: MT_122b multi-turn + plan-mode baseline entries)
 
 ### New Decisions (20-03)
 
