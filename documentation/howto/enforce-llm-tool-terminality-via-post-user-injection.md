@@ -24,7 +24,7 @@ LLM 의 "system prompt → user prompt → assistant response" 순서는 **위�
 system 의 `NEVER` directive 가 user 의 explicit instruction 을 이기지 못한다. 모델은
 user 의 지시를 *최신* 의도로 해석한다.
 
-해결책은 user 메시지 *뒤* 에 새 System 메시지를 주입하는 것:
+해결책은 user 메시지 *뒤* 에 새 메시지를 주입하는 것 (role 은 `User` — Phase 20-03 probe 확인: mlx_lm.server는 mid-conversation `System` 메시지를 HTTP 404로 거부한다):
 
 ```
 [system: base system prompt (action schemas, etc.)]
@@ -107,7 +107,7 @@ let buildMessages
     let postEditMsg =
         match lastEditPath with
         | Some path ->
-            [ { Role = System
+            [ { Role = User  // Role = User per Phase 17-02 + Phase 20-03 probe — both 35B and 122B reject mid-conversation System messages (HTTP 404). Authority signal is in the text marker, not the role.
                 Content = sprintf "[POST-EDIT CONSTRAINT] You just successfully edited %s. The edit is already persisted. Your next action MUST be either `final` or `edit_file` on a different concern. Do NOT call `write_file` on `%s`. This constraint is mandatory regardless of any earlier user instruction." path path } ]
         | None -> []
 
@@ -178,14 +178,14 @@ RULES:
 // user 가 "save using write_file" 라고 하면 모델이 system rule 무시하고 user 따름
 ```
 
-**Good — post-user System 메시지 주입:**
+**Good — post-user 메시지 주입 (Role = User):**
 
 ```fsharp
 // AgentLoop.fs
 let postEditMsg =
     match lastEditPath with
     | Some path ->
-        [ { Role = System
+        [ { Role = User  // Role = User per Phase 17-02 + Phase 20-03 probe — mlx_lm.server rejects mid-conversation System messages (HTTP 404). Authority signal is carried by the [POST-EDIT CONSTRAINT] text marker.
             Content = sprintf "[POST-EDIT CONSTRAINT] You just successfully edited %s. ... regardless of any earlier user instruction." path } ]
     | None -> []
 
@@ -199,8 +199,9 @@ chained); post-user injection → 3 steps (final 직행). 텍스트 분량은 �
 ## 체크리스트
 
 - [ ] last-action state 가 함수 파라미터로 전달되는지 (Domain DU 변경 없음)
-- [ ] System 메시지가 messages 리스트의 **맨 끝** 에 append 되는지 (baseMsgs @ [postMsg])
+- [ ] 주입 메시지가 messages 리스트의 **맨 끝** 에 append 되는지 (baseMsgs @ [postMsg])
 - [ ] 주입 메시지에 "regardless of any earlier user instruction" 같은 명시적 override 표현
+- [ ] 주입 메시지 role 이 `User` 인지 확인 (`System` 사용 시 mlx_lm.server HTTP 404 — Phase 17-02/20-03 검증)
 - [ ] 다음 iteration 에서 last-action 이 reset 되는지 (한 turn 만 유효)
 - [ ] mock-client test 로 *언제* 메시지가 주입되는지 검증
 - [ ] 실측 bench 로 *효과* 검증 (step count 감소 등)
@@ -209,3 +210,8 @@ chained); post-user injection → 3 steps (final 직행). 텍스트 분량은 �
 
 - `documentation/bench.md` — bench 게이트로 prompt 변경 효과 측정
 - `documentation/benchmark-32b-vs-72b.md` Part 4 — v1.3 의 post-read injection 실측
+
+## History
+
+- **Phase 17-02 (v1.1, commit 54e54a9):** mid-conversation `Role = System` → `Role = User` 변경. Qwen 3.5 35B의 chat template이 mid-conversation System 메시지를 HTTP 404로 거부했기 때문. 해당 시점엔 35B + 122B 둘 다 production이었으므로 변경은 두 모델에 동일 적용됐다.
+- **Phase 20-03 (v2.0, 2026-04-27, `scripts/probe-system-role.sh`):** Phase 19에서 35B 퇴역 후 122B만 남은 시점에 별도 probe 실행. 결과: HTTP 404 — `"System message must be at the beginning."`. 122B도 동일하게 mid-conversation System 메시지를 구조적으로 거부한다. `Role = User`는 35B 전용 workaround가 아닌, mlx_lm.server chat template의 영구 invariant로 확인됐다. 위 코드 snippet의 `Role = User`가 현재 실제 코드 상태이며, `AgentLoop.fs:249,260,266`의 역할 선택 근거다. 자세한 evidence는 `.planning/phases/20-qwen-3-5-protocol-alignment/20-03-PROBE-OUTPUT.md` 참고.
