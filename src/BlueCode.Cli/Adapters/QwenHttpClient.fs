@@ -167,11 +167,39 @@ let private extractContent (url: string) (responseJson: string) : Result<string,
     | Some content -> Ok content
     | None -> Error(LlmUnreachable(url, "malformed response: no content or reasoning_content"))
 
+// ── Plan wire deserialization (Phase 16-01) ──────────────────────────────────
+
+/// Deserialize an LlmStep whose action="plan" into a Domain.Plan via a
+/// PlanWire intermediate. Maps wire failures (missing fields, wrong types,
+/// non-object steps) to SchemaViolation; the post-parse PlanValidator runs
+/// elsewhere (runPlanTurn). PRIVATE: invoked only from toLlmOutput.
+let private deserializePlanWire (input: JsonElement) : Result<Plan, AgentError> =
+    try
+        let wire = JsonSerializer.Deserialize<PlanWire>(input.GetRawText(), jsonOptions)
+        if wire = Unchecked.defaultof<PlanWire> then
+            Error(SchemaViolation "plan input failed to deserialize as {steps,rationale}")
+        else
+
+        if System.String.IsNullOrEmpty(wire.rationale) then
+            Error(SchemaViolation "plan rationale must be non-empty string")
+        else
+
+        let steps =
+            wire.steps
+            |> List.map (fun s ->
+                { Tool = ToolName s.tool
+                  Input = ToolInput(Map.ofList [ ("_raw", s.input.GetRawText()) ])
+                  Rationale = s.rationale })
+        Ok { Steps = steps; Rationale = wire.rationale }
+    with ex ->
+        Error(SchemaViolation(sprintf "plan input failed to deserialize as {steps,rationale}: %s" ex.Message))
+
 // ── LlmStep -> LlmResponse mapping ──────────────────────────────────────────
 
 /// Map the schema-validated wire record to the Core domain DU.
-/// The schema already verified action is one of the 5 enum values.
-/// For "final" we pull input.answer; for tool actions we pass the raw
+/// The schema already verified action is one of the 9 enum values (Phase 16
+/// added "plan" as 9th). For "final" we pull input.answer; for "plan" we
+/// deserialize via PlanWire -> Domain.Plan; for tool actions we pass the raw
 /// JSON text as a single-entry ToolInput map keyed "_raw" — Phase 3
 /// will replace the _raw passthrough with per-tool shape parsing.
 ///
@@ -205,6 +233,11 @@ let toLlmOutput (step: LlmStep) : Result<LlmResponse, AgentError> =
                 // schema is open in v1). Missing-answer is a schema gap,
                 // not a parse failure. See docblock above for full rationale.
                 Error(SchemaViolation "final action input missing string 'answer' field")
+        | "plan" ->
+            // Phase 16-01: deserialize plan wire, map to Domain.Plan.
+            // PlanValidator.validatePlan runs LATER in runPlanTurn (not here).
+            deserializePlanWire step.input
+            |> Result.map LlmOutput.Plan
         | toolName ->
             let raw = step.input.GetRawText()
             let ti = ToolInput(Map.ofList [ ("_raw", raw) ])

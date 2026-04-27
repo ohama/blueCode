@@ -23,3 +23,21 @@ type LlmStep =
     { thought: string
       action: string
       input: JsonElement }
+
+/// Wire-format record for one step inside a Plan input. Phase 16 wire
+/// intermediate; converted to Domain.PlannedStep in QwenHttpClient.toLlmOutput.
+/// Why a record (not Domain.PlannedStep directly): Domain.PlannedStep wraps
+/// strings in single-case DUs (ToolName, ToolInput) which serialize as
+/// {"Item":"..."} with FSharp.SystemTextJson. Wire stays plain.
+type PlannedStepWire =
+    { tool: string
+      input: JsonElement
+      rationale: string }
+
+/// Wire-format record for the Plan that the LLM emits as the input
+/// when action="plan". Schema (Phase 16 Json.fs additions) enforces:
+///   - steps: array of PlannedStepWire
+///   - rationale: non-empty string
+type PlanWire =
+    { steps: PlannedStepWire list
+      rationale: string }
