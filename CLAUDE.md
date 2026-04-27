@@ -136,6 +136,8 @@ its launchd service is not loaded by default.
 
 **Thinking-mode mitigation (critical):** Both launchd plists pass `--chat-template-args '{"enable_thinking": false}'` to `mlx_lm.server`. Without this flag, Qwen 3.5 emits `<think>...</think>` tokens that break blueCode's strict JSON schema validation. If this flag is unavailable in a future mlx_lm version, Path B fallback is documented in `documentation/qwen35-install.md` §6. See also: commit `54e54a9` (AgentLoop User role fix for mid-conversation hints — required for T6 to pass on Qwen 3.5).
 
+**Sampling parameters (Phase 20-01):** `buildRequestBody` in `QwenHttpClient.fs` sends the Qwen 3.5 model card non-thinking coding defaults: `temperature=0.7, top_p=0.8, top_k=20, presence_penalty=0.0`. Both 35B and 122B receive identical parameters via `Router.modelToSamplingParams`.
+
 **Single-model memory profile:** 122B alone: RSS ~45.4 GB (MoE sparse routing keeps resident pages well below disk size). OS/KV overhead ~17 GB. Total ~62 GB with both models; ~45-46 GB with 122B alone. Periodic `launchctl kickstart` recommended for long sessions (KV cache accumulates).
 
 ### Dual-mode reactivation
@@ -153,9 +155,9 @@ The default invocation (`blueCode "..."` or `blueCode --model 122b "..."`) alway
 
 ## Common Gotchas
 
-### "Connection refused" or 180s timeout
+### "Connection refused" or 300s timeout
 
-Server might be crashed (check `~/llm-system/services/logs/{35b,122b}.err` for `[METAL] Insufficient Memory`), still loading weights after kickstart (RSS climbing toward 17GB / 45GB), or the HF fallback trap firing. Use `--trace` to see actual POST body + response, diff against `curl localhost:8000/v1/models` to confirm id matching. Full protocol in `documentation/howto/debug-local-llm-server-responses.md`.
+Server might be crashed (check `~/llm-system/services/logs/{35b,122b}.err` for `[METAL] Insufficient Memory`), still loading weights after kickstart (RSS climbing toward 17GB / 45GB), or the HF fallback trap firing. Use `--trace` to see actual POST body + response, diff against `curl localhost:8000/v1/models` to confirm id matching. Full protocol in `documentation/howto/debug-local-llm-server-responses.md`. HttpClient.Timeout raised from 180s to 300s in Phase 20-01 (covers 122B cold-start up to 240s after `launchctl kickstart`).
 
 ### Spectre.Console markup parsing
 

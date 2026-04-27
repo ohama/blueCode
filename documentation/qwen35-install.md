@@ -739,17 +739,21 @@ OOM이 관찰되면 (`122b.err`에 `exit status 137` 또는 `[METAL] Insufficien
 
 ---
 
-## 8. 콜드 스타트 + blueCode 180s timeout 회피
+## 8. 콜드 스타트 + blueCode timeout 회피
 
-### 8.1 왜 문제인가
+> **RESOLVED Phase 20-01**: `HttpClient.Timeout`이 300s로 증가됐다 (180s → 300s).
+> 122B 콜드 스타트 최대 240s를 커버한다. 아래 수동 대기 절차는 여전히 권장되지만
+> timeout으로 인한 `LlmUnreachable`은 더 이상 발생하지 않는다.
 
-`QwenHttpClient.fs`의 `httpClient.Timeout = TimeSpan.FromSeconds(180.0)`는 72B
-최악의 경우 (~60s) + 여유 마진으로 설정됐다. 122B는 콜드 스타트 시 180–240초가
-소요될 수 있으므로, blueCode를 먼저 실행하면 `probeModelInfoAsync`가 타임아웃되어
-`ModelId = ""`를 반환하고, 이후 POST에서 HTTP 400/422 → `LlmUnreachable`이 된다.
+### 8.1 왜 문제인가 (이력)
 
-이것은 코드 버그가 아니라 운영 절차 문제다. 122B가 준비된 것을 확인한 뒤
-blueCode를 실행하는 것이 가장 간단한 해결책이다 (코드 변경 없음).
+`QwenHttpClient.fs`의 `httpClient.Timeout`이 v1.0-Phase17 초기에는
+`TimeSpan.FromSeconds(180.0)`로 설정됐다 — 72B 최악의 경우 (~60s) + 여유 마진.
+122B는 콜드 스타트 시 180–240초가 소요될 수 있어 timeout 오류가 발생했다.
+**Phase 20-01에서 300s로 수정됨. 현재 코드에서는 이 문제가 재현되지 않는다.**
+
+이것은 코드 버그가 아니라 운영 절차 문제였다. 122B가 준비된 것을 확인한 뒤
+blueCode를 실행하는 것이 가장 간단한 해결책이다.
 
 ### 8.2 수동 대기 절차
 
@@ -777,8 +781,8 @@ tail -f /Users/ohama/llm-system/services/logs/122b.log
 # "Uvicorn running on http://127.0.0.1:8001" 이 나오면 준비 완료
 ```
 
-> **참고**: `Timeout = 300s`로 늘리는 코드 변경도 가능하나 본 Phase OOS.
-> 이 결정은 Phase 17-03 bench 결과를 보고 판단한다.
+> **RESOLVED Phase 20-01**: `Timeout = 300s`로 코드 변경이 완료됐다.
+> `QwenHttpClient.fs` `httpClient.Timeout = TimeSpan.FromSeconds(300.0)` (Phase 20-01).
 
 ---
 
@@ -968,6 +972,7 @@ curl -fsS http://127.0.0.1:8001/v1/models > /dev/null && echo "✓ 122B 정상"
 | Thinking mode 기본 활성 | `<think>` 토큰이 응답 앞에 붙음; `InvalidJsonOutput` 반복 | §4.4 확인 → §5.3 검증 → 실패 시 §6 |
 | mlx_lm 버전 미달 | 모델 로드 실패, 아키텍처 미지원 오류 | §1.1 업그레이드 |
 | 122B 콜드 스타트 타임아웃 | `LlmUnreachable: request timed out after 180s` | §8.2 수동 대기 후 재실행 |
+| 샘플링 파라미터 불일치 (Qwen 2.5 era) | `temperature=0.2-0.4 / presence_penalty=1.5 / top_p 및 top_k 없음` — Qwen 2.5 Coder Instruct 값이 전송됨 | RESOLVED Phase 20-01 — `buildRequestBody`가 이제 `temp=0.7, top_p=0.8, top_k=20, presence_penalty=0.0` (Qwen 3.5 model card non-thinking coding mode) 전송. `grep "presence_penalty" src/BlueCode.Cli/Adapters/QwenHttpClient.fs` 로 확인 |
 | 4-bit 멀티턴 JSON 열화 | ~5 tool call 이후 JSON이 plain-text 근사치로 변질 | Phase 17-03 bench에서 관찰; 8-bit 변형 고려 |
 | mlx-vlm 변환 이슈 | mlx_lm.server 로드 실패 (35B는 mlx-vlm 0.3.12로 변환됨) | `mlx_vlm.server` 시도 (동일 인터페이스) |
 | `content` 빈 문자열 | `reasoning_content`에 응답이 있고 `content`가 비어있음 | §6 + `extractContent` 패치 필요 |
