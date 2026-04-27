@@ -201,7 +201,50 @@ run_ttft() {
 # ---------------------------------------------------------------------------
 # Stub handlers — bodies added in 21-02/21-03/21-04 by appending to this file
 # ---------------------------------------------------------------------------
-run_humaneval()    { echo "humaneval handler implemented in 21-02; not yet available" >&2; exit 4; }
+run_humaneval() {
+  require_port_8001
+  if [ ! -x "$VENV_PY" ]; then
+    echo "ERROR: $VENV_PY not found. Run: bash $0 --setup" >&2
+    exit 5
+  fi
+  mkdir -p "$LOG_DIR"
+  echo "===== HumanEval+ (chat + completion modes, 164 × 2 = 328 inferences, ~55 min) ====="
+  echo "  Sampling: temp=0.2 (eval-standard per mlx_llm_eval_guide.md §8)"
+  echo "  Note: differs from blueCode runtime default 0.7 — intentional (see eval doc §1)"
+  echo "  Output: $LOG_DIR/humaneval_results.json"
+  echo "  Per-mode jsonl: $LOG_DIR/humaneval_{chat,completion}.jsonl"
+  "$VENV_PY" bench/eval-humaneval-http.py --mode both --output-dir "$LOG_DIR"
+  # Post-hoc scoring via evalplus CLI for each mode
+  for mode in chat completion; do
+    local jsonl="$LOG_DIR/humaneval_${mode}.jsonl"
+    if [ ! -s "$jsonl" ]; then
+      echo "WARN: $jsonl empty or missing; skipping evalplus score for $mode" >&2
+      continue
+    fi
+    echo "----- evalplus score: mode=$mode -----"
+    # evalplus.evaluate expects {"task_id":..., "completion":...} per line
+    local eval_input="$LOG_DIR/humaneval_${mode}_eval_input.jsonl"
+    "$VENV_PY" - <<PYEOF
+import json
+src = '${jsonl}'
+dst = '${eval_input}'
+count = 0
+with open(src) as fin, open(dst, 'w') as fout:
+    for line in fin:
+        rec = json.loads(line)
+        fout.write(json.dumps({'task_id': rec['task_id'], 'completion': rec['completion']}) + '\n')
+        count += 1
+print(f'wrote {count} entries to {dst}')
+PYEOF
+    # Run evalplus.evaluate; tee to *_score.txt so 21-05 can grep pass@1 without re-running
+    "$VENV_PY" -m evalplus.evaluate humaneval \
+      --samples "$eval_input" \
+      | tee "$LOG_DIR/humaneval_${mode}_score.txt" \
+      || echo "evalplus.evaluate exited non-zero for $mode (check output above)" >&2
+  done
+  echo "humaneval: results at $LOG_DIR/humaneval_results.json"
+  echo "humaneval: scores at $LOG_DIR/humaneval_{chat,completion}_score.txt"
+}
 run_refactor()     { echo "refactor handler implemented in 21-03; not yet available" >&2; exit 4; }
 run_langcoverage() { echo "langcoverage handler implemented in 21-03; not yet available" >&2; exit 4; }
 run_multiturn()    { echo "multiturn handler implemented in 21-04; not yet available" >&2; exit 4; }
