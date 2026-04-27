@@ -19,7 +19,7 @@ v2.0 makes two architectural investments simultaneously: session state persists 
 - [ ] **Phase 16: Planning Wiring + Bench** — --plan flag, approval gate UI, plan retry wiring, bench fixtures extended
 - [x] **Phase 17: Qwen 3.5 Evaluation** ✓ — SWITCH verdict 2026-04-27; 35B/122B replaces 32B/72B as canonical pair (3.4× speedup, no regressions, 8/8 gate)
 - [x] **Phase 18: Single-Model 122B Evaluation** ✓ — DROP-35B verdict 2026-04-27; all 5 §SC4 criteria PASS; 31/31 bench invocations exit=0; +19.42 GB PhysMem freed; B2 DivByZero preserved; Router collapse + baseline halve deferred to follow-up phase
-- [ ] **Phase 19: Qwen 2.5 Retirement + 122B Single-Model Default** — Retire Qwen 2.5 32B/72B from disk + launchd (~55 GB reclaimed); make 122B canonical; preserve 35B as cold rollback asset (unloaded); remove `--model 32b/72b` aliases; add `--with-35b` flag for future dual mode; absorb `scripts/bench-122b-only.sh` into `bench/run.sh`; halve `bench/baseline.json` (added 2026-04-27 via /gsd:add-phase; runs BEFORE Phase 16 — same canonical-baseline ordering rationale as Phase 17)
+- [x] **Phase 19: Qwen 2.5 Retirement + 122B Single-Model Default** ✓ — Retired Qwen 2.5 32B/72B + qwen72b.3bit (85 GB reclaimed); 122B canonical (single-model default); 35B preserved as cold rollback; `--model 32b/72b` aliases removed (exit 2 with retirement error); `--with-35b` opt-in flag added with eager port-8000 probe; `bench/run.sh` absorbed `scripts/bench-122b-only.sh`; `bench/baseline.json` halved to 6 `_122b` entries; gate 6/6 PASS; 262/1/0 tests (completed 2026-04-27)
 
 **Note on phase ordering:** Phase 17 should run BEFORE Phase 16 if model swap is desired before bench fixtures are set. If 35B/122B replaces 32B/72B as canonical, Phase 16's bench baseline (T6_32b, W1_32b, B2_72b, etc.) needs new model ids. Phase 16 plans on disk remain valid for whichever model pair ends up canonical; user decides execution order after Phase 17 ships findings. **Phase 19 also runs BEFORE Phase 16** — once `bench/baseline.json` is halved to single-model `_122b` keys, Phase 16-03's multi-turn fixture additions (MT_*) must use the final canonical baseline shape.
 
@@ -209,9 +209,9 @@ Plans:
 | 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 0/3 | Not started (plans on disk) | - |
 | 17. Qwen 3.5 Evaluation | v2.0 | (none — operations) | 3/3 | ✓ Complete (SWITCH) | 2026-04-27 |
 | 18. Single-Model 122B Eval | v2.0 | (none — operations + decision) | 3/3 | ✓ Complete (DROP-35B) | 2026-04-27 |
-| 19. Qwen 2.5 Retirement + 122B Default | v2.0 | (none — operations + cleanup) | 0/2 | Not started | - |
+| 19. Qwen 2.5 Retirement + 122B Default | v2.0 | (none — operations + cleanup) | 2/2 | ✓ Complete | 2026-04-27 |
 
 ---
 
 *Roadmap created: 2026-04-26*
-*Last updated: 2026-04-27 — Phase 19 added via /gsd:add-phase (Qwen 2.5 retirement + 122B single-model default; 2 plans; 19-01 has user checkpoint for `rm` model files + plists; 19-02 autonomous code/bench/docs alignment; runs BEFORE Phase 16; key decisions: A=preserve 35B, B=remove `--model 32b/72b` aliases entirely, C=dual mode requires both launchctl load + `--with-35b` flag, D=`bench/run.sh` absorbs `scripts/bench-122b-only.sh`)*
+*Last updated: 2026-04-27 — Phase 19 complete (85 GB reclaimed; single-model 122B canonical; 6/6 gate PASS; 262/1/0 tests; --with-35b opt-in flag added)*
