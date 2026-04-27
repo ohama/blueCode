@@ -1049,3 +1049,15 @@ Empirical service-load record: `.planning/phases/17-qwen-3-5-evaluation/17-02-LO
    ```
 
 Memory budget with both models loaded: ~62 GB combined RSS (17 GB 35B + 45 GB 122B).
+
+---
+
+## §Phase 20-03 — 122B mid-conversation System role 검증 (2026-04-27)
+
+Phase 17-02에서 `Role = System` → `Role = User`로 변경한 이력이 있다 (35B chat template이 mid-conversation System 메시지를 HTTP 404로 거부). 당시 122B는 별도 검증하지 않고 동일 변경을 적용했다.
+
+Phase 20-03 (2026-04-27, `scripts/probe-system-role.sh`) 실행 결과: **122B도 REJECT — HTTP 404** (`"System message must be at the beginning."`). 35B와 동일하게 mid-conversation `role: system` 메시지를 구조적으로 거부한다.
+
+`AgentLoop.fs:249,260,266`의 현재 상태는 `Role = User`이며, 이는 35B 전용 workaround가 아닌 mlx_lm.server chat template의 영구 invariant다. 자세한 evidence는:
+- `scripts/probe-system-role.sh` — re-runnable probe script
+- `.planning/phases/20-qwen-3-5-protocol-alignment/20-03-PROBE-OUTPUT.md` — HTTP code + body excerpt + verdict
