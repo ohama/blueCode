@@ -246,6 +246,10 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
         match lastEditPath with
         | Some path ->
             let constraintMsg =
+                // Role = User per Phase 17-02 + Phase 20-03 probe (2026-04-27) — 122B rejected
+                // mid-conversation System messages with HTTP 404 ("System message must be at
+                // the beginning."). The authority signal is carried by the [POST-EDIT CONSTRAINT]
+                // text marker, not the role. See 20-03-PROBE-OUTPUT.md for evidence.
                 { Role = User
                   Content =
                     sprintf
@@ -257,12 +261,18 @@ let private buildMessages (systemPrompt: string) (userInput: string) (recentStep
     match lastReadHint with
     | Some (path, "truncated") ->
         withEdit @ [
+            // Role = User per Phase 17-02 + Phase 20-03 probe (2026-04-27) — 122B rejected
+            // mid-conversation System messages with HTTP 404. The authority signal is carried
+            // by the [POST-READ HINT] text marker, not the role. See 20-03-PROBE-OUTPUT.md.
             { Role = User
               Content =
                 sprintf "[POST-READ HINT] The previous read_file on %s returned truncated content (clipped to 2000 chars). Pick a smaller window — set end_line - start_line < 50 — and read again to get unclipped content." path }
         ]
     | Some (path, "out-of-range") ->
         withEdit @ [
+            // Role = User per Phase 17-02 + Phase 20-03 probe (2026-04-27) — 122B rejected
+            // mid-conversation System messages with HTTP 404. The authority signal is carried
+            // by the [POST-READ HINT] text marker, not the role. See 20-03-PROBE-OUTPUT.md.
             { Role = User
               Content =
                 sprintf "[POST-READ HINT] The previous read_file on %s returned out-of-range (start_line > total_lines). The header reported total_lines; choose a start_line <= total_lines and read again." path }
