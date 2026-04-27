@@ -13,6 +13,7 @@ open FsToolkit.ErrorHandling
 open BlueCode.Core.Domain
 open BlueCode.Core.Ports
 open BlueCode.Core.Router
+open BlueCode.Core.PlanValidator
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -438,3 +439,96 @@ let runSession
     let ctx = priorSteps |> List.fold (fun b s -> ContextBuffer.add s b) ctx0
     let guard = Map.empty: LoopGuardState
     runLoop config model client tools userInput ctx guard 0 [] None None onStep ct
+
+// ── Plan-mode entry point (Phase 16-01) ──────────────────────────────────────
+
+/// Plan-mode entry point. Drives ONE LLM call (with up to 1 retry on parse/validation failure)
+/// to obtain a validated Plan. Does NOT execute tool steps — the caller (PlanGate in Phase 16-02)
+/// presents the plan to the user for accept/reject/edit/quit before any execution.
+///
+/// Retry path:
+///   Attempt 1: build messages -> call LLM -> parse -> validate.
+///     On Ok plan: return Ok plan.
+///     On Error (InvalidJsonOutput | SchemaViolation _ | PlanInvalid _): build correction
+///       message ([PLAN PARSE ERROR] or [PLAN INVALID] with truncated detail), append, retry.
+///     On any other Error: return immediately (LlmUnreachable etc. — not retryable here).
+///   Attempt 2: same parse/validate path.
+///     On Ok plan: return Ok plan.
+///     On Error: return that error to caller.
+///
+/// priorSteps: chronological steps from earlier turns in the same Session (mirrors
+/// runSession parameter at line 427). Replayed via buildMessages so the LLM sees
+/// conversation history when entering plan mode mid-session (SC4: --plan --resume).
+///
+/// systemPromptSuffix: appended to config.SystemPrompt so the LLM is instructed
+/// to emit action="plan" instead of a tool call. Plan 16-02 supplies the actual
+/// suffix string from CompositionRoot; this function takes it as a parameter so
+/// Core stays string-literal-free for plan-mode prompting.
+let runPlanTurn
+    (config: AgentConfig)
+    (client: ILlmClient)
+    (model: Model)
+    (priorSteps: Step list)
+    (userInput: string)
+    (systemPromptSuffix: string)
+    (ct: CancellationToken)
+    : Task<Result<Plan, AgentError>> =
+    task {
+        let combinedSystemPrompt = config.SystemPrompt + "\n\n" + systemPromptSuffix
+        let baseMessages = buildMessages combinedSystemPrompt userInput priorSteps None None
+
+        // Inner helper: extract Plan from LlmResponse + run validator.
+        // Returns Ok plan, or Error with the parse/validation cause.
+        let extractAndValidate (response: LlmResponse) : Result<Plan, AgentError> =
+            match response.Output with
+            | LlmOutput.Plan p -> validatePlan p
+            | LlmOutput.ToolCall _
+            | LlmOutput.FinalAnswer _ ->
+                Error (PlanInvalid "expected plan output, got tool/final action")
+
+        let buildCorrection (err: AgentError) : Message =
+            // Role = User per Phase 20-03 probe (2026-04-27, REJECT verdict). 122B HTTP 404
+            // on mid-conversation Role=System ("System message must be at the beginning.").
+            // The authority signal is the [PLAN ...] text marker, not the role.
+            // See scripts/probe-system-role.sh + documentation/howto/enforce-llm-tool-terminality-via-post-user-injection.md.
+            let detail =
+                match err with
+                | InvalidJsonOutput raw ->
+                    let snippet = if raw.Length > 200 then raw.Substring(0, 200) + "..." else raw
+                    sprintf "[PLAN PARSE ERROR] Your previous response was not valid JSON. Required: {\"thought\":\"...\",\"action\":\"plan\",\"input\":{\"steps\":[{\"tool\":\"...\",\"input\":{...},\"rationale\":\"...\"}],\"rationale\":\"...\"}}. Raw: %s" snippet
+                | SchemaViolation d ->
+                    sprintf "[PLAN PARSE ERROR] Your previous response did not match the plan schema: %s. Emit action=\"plan\" with input={steps:[...], rationale:\"...\"}." d
+                | PlanInvalid d ->
+                    sprintf "[PLAN INVALID] Your previous plan failed validation: %s. Constraints: max 5 steps; tool must be one of read_file/write_file/list_dir/run_shell/edit_file/glob_search/grep_search; no two adjacent steps may be byte-identical." d
+                | _ ->
+                    "[PLAN ERROR] Re-emit a valid plan."
+            { Role = User; Content = detail }
+
+        // Attempt 1
+        let! attempt1 = client.CompleteAsync baseMessages model ct
+        match attempt1 with
+        | Error (LlmUnreachable _ as e) -> return Error e
+        | Error (UserCancelled as e) -> return Error e
+        | Error (PathRetired _ as e) -> return Error e
+        | Ok response ->
+            match extractAndValidate response with
+            | Ok plan -> return Ok plan
+            | Error e1 ->
+                let correction = buildCorrection e1
+                let messages2 = baseMessages @ [ correction ]
+                let! attempt2 = client.CompleteAsync messages2 model ct
+                match attempt2 with
+                | Error e -> return Error e
+                | Ok response2 ->
+                    return extractAndValidate response2
+        | Error other ->
+            // InvalidJsonOutput / SchemaViolation come back as Error from CompleteAsync
+            // (parsing happens inside QwenHttpClient before returning). Treat them as
+            // retryable here — same correction-and-retry shape.
+            let correction = buildCorrection other
+            let messages2 = baseMessages @ [ correction ]
+            let! attempt2 = client.CompleteAsync messages2 model ct
+            match attempt2 with
+            | Error e -> return Error e
+            | Ok response2 -> return extractAndValidate response2
+    }
