@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ◆ (19-01 ✓ 19-02 pending)
-Plan: 19-01 complete
-Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 complete (verdict: DROP-35B); Phase 19-01 complete (85 GiB reclaimed; qwen32b/qwen72b/qwen72b.3bit retired; 122B sole production model confirmed)
-Last activity: 2026-04-27 — Phase 19-01 complete (Qwen 2.5 physical retirement: 85 GiB reclaimed, 3 model dirs + 2 plists deleted, SC1 all PASS, 122B service unaffected)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓)
+Plan: 19-02 complete
+Status: 262/1/0 tests; bench gate 6/6 PASS (single-model 122B baseline); Phase 19 complete (Qwen 2.5 fully retired — physical disk + code + bench + docs); 122B sole production model, 35B standby/rollback
+Last activity: 2026-04-27 — Phase 19-02 complete (code/bench/docs alignment: Model DU rename, PathRetired guard, --with-35b flag, bench/run.sh rewrite, baseline 6-entry, docs updated)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ◆]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ✓]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -74,8 +74,17 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 19-01-PLAN.md (Qwen 2.5 physical retirement; 85 GiB reclaimed; SC1 all PASS; RETIREMENT.md complete)
-Resume file: None — Phase 19-01 complete; 19-02 ready (Wave 2: code/bench/docs alignment for single-model 122B canonical state). Run Phase 19-02 before Phase 16.
+Stopped at: Completed 19-02-PLAN.md (code/bench/docs alignment; 262/1/0 tests; bench gate 6/6 PASS)
+Resume file: None — Phase 19 complete; next: `/gsd:plan-phase 16` (Phase 16 is the next pending phase per ROADMAP; bench baseline now settled as single-model 122B)
+
+### New Decisions (19-02)
+
+- **v2.0 Phase 19-02 Model DU rename (Qwen32B→Qwen122B, Qwen72B→Qwen35B)** — Single atomic compile cascade across 11 files. AgentLoop.fs had no direct DU construction sites (uses `model` variable). Router semantic preserved: smaller model (35B) handles Debug/Design/Analysis; larger (122B) handles Implementation/General. Table dormant by default (ForcedModel=Some Qwen122B bypasses it).
+- **v2.0 Phase 19-02 PathRetired AgentError variant** — `validateModelPath` in QwenHttpClient rejects `/qwen32b` and `/qwen72b` path segments. Rendering.fs handles with user-readable message. 4 new ModelsProbeTests cases.
+- **v2.0 Phase 19-02 parseForcedModel None → Some Qwen122B** — Explicit single-model default. No intent routing indirection in single-model mode. `--model 32b`/`72b` → exit 2 with "retired in Phase 19" + "122b" in message (triggers `with | ex when ex.Message.Contains "retired" -> exit 2` in Program.fs).
+- **v2.0 Phase 19-02 WithDual flag + eager 35B probe** — `--with-35b` Argu flag (also `--withdual`). When set, Program.fs probes port 8000 with 2s timeout before bootstrap; exits 1 with "35B service not loaded" message if absent. Default path probes nothing.
+- **v2.0 Phase 19-02 bench gate 6/6** — T6/W1/W2/T1/T5/B2 all _122b. baseline.json flat top-level keys (no `tests.*` wrapper). gate() jq paths use `.${key}` not `.tests.${key}`.
+- **v2.0 Phase 19-02 scripts/bench-122b-only.sh deleted** — Absorbed into bench/run.sh in-place. All invocations use `--model 122b`.
 
 ### New Decisions (19-01)
 
