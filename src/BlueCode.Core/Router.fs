@@ -59,10 +59,15 @@ let endpointToUrl: Endpoint -> string =
     | Port8000 -> "http://127.0.0.1:8000/v1/chat/completions"
     | Port8001 -> "http://127.0.0.1:8001/v1/chat/completions"
 
-/// Per-model sampling temperature (LLM-05). Hardcoded; MUST NOT be
-/// exposed to users via CLI flags. 35B uses 0.2 (precise code edits);
-/// 122B uses 0.4 (more exploratory reasoning for Debug/Design/Analysis).
-let modelToTemperature: Model -> float =
+/// Per-model sampling parameters per the Qwen 3.5 model card (non-thinking coding mode).
+/// Both 35B and 122B use temperature=0.7, top_p=0.8, top_k=20, presence_penalty=0.0.
+/// Identical values today; explicit pattern match preserves compile-time exhaustiveness
+/// so future per-model tuning is a one-line change. Replaces v1.0-era modelToTemperature
+/// (0.2/0.4) which targeted the retired Qwen 2.5 pair.
+let modelToSamplingParams: Model -> SamplingParams =
     function
-    | Qwen35B -> 0.2
-    | Qwen122B -> 0.4
+    | Qwen35B  -> { Temperature = 0.7; TopP = 0.8; TopK = 20; PresencePenalty = 0.0 }
+    | Qwen122B -> { Temperature = 0.7; TopP = 0.8; TopK = 20; PresencePenalty = 0.0 }
+
+/// DEPRECATED: kept for one task only. Removed in Task 3 when QwenHttpClient.fs is rewired.
+let modelToTemperature (m: Model) : float = (modelToSamplingParams m).Temperature
