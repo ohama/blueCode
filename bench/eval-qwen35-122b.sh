@@ -162,6 +162,9 @@ run_ttft() {
     local start_ns
     start_ns=$(date +%s%N)
     local ttft_ms
+    # curl exits 23 (write error / broken pipe) when awk exits early after
+    # capturing the first content chunk. Suppress with || true since the
+    # pipe result is what matters (captured in ttft_ms via subshell).
     ttft_ms=$(curl -N -fsS -X POST "$ENDPOINT/v1/chat/completions" \
       -H "Content-Type: application/json" \
       -d "$body" 2>/dev/null \
@@ -179,7 +182,7 @@ run_ttft() {
               exit
             }
           }
-        ')
+        ' || true)
     if [ -z "$ttft_ms" ] || [ "$ttft_ms" = "0" ]; then
       ttft_ms="-1"
     fi
