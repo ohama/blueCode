@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ░ (20-01 ✓ 20-02 pending 20-03 pending)
-Plan: 20-01 complete
-Status: 262/1/0 tests; bench gate 6/6 PASS; Phase 20-01 complete (SamplingParams record, modelToSamplingParams, timeout 180→300s, docs updated)
-Last activity: 2026-04-27 — Phase 20-01 complete (sampling params aligned to Qwen 3.5 model card: temp=0.7/top_p=0.8/top_k=20/presence_penalty=0.0; HttpClient timeout 180→300s)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ░ (20-01 ✓ 20-02 ✓ 20-03 pending)
+Plan: 20-02 complete
+Status: 266/1/0 tests; bench gate 6/6 PASS; Phase 20-02 complete (extractContentFromJson public helper + reasoning_content fallback + 4 new tests + qwen35-install.md RESOLVED markers)
+Last activity: 2026-04-27 — Phase 20-02 complete (extractContentFromJson public, reasoning_content fallback, 262→266 tests, bench gate 6/6 PASS)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ░ (20-01 ✓)]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ░ (20-01 ✓ 20-02 ✓)]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -75,8 +75,16 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 20-01-PLAN.md (sampling params + timeout; 262/1/0 tests; bench gate 6/6 PASS)
-Resume file: None — Phase 20-01 complete; next: run 20-02 (extractContent reasoning_content fallback) then 20-03 (Role=System probe), then Phase 16
+Stopped at: Completed 20-02-PLAN.md (extractContentFromJson + reasoning_content fallback; 266/1/0 tests; bench gate 6/6 PASS)
+Resume file: None — Phase 20-02 complete; next: run 20-03 (122B Role=System probe), then Phase 16
+
+### New Decisions (20-02)
+
+- **v2.0 Phase 20-02 extractContentFromJson public helper** — Carved out of private `extractContent` as a public module-scope helper, mirroring `tryParseModelId` / `tryParseMaxModelLen` pattern in same file. Returns `string option` (not `Result`); `extractContent` wrapper maps `None → LlmUnreachable`. Public for direct unit test invocation without HTTP/mocks.
+- **v2.0 Phase 20-02 reasoning_content fallback semantics** — `pickStringField` inner function checks `ValueKind = JsonValueKind.String` + `IsNullOrEmpty` guard for both `content` and `reasoning_content`. JSON null literals and non-string types correctly skip to next rung. Fallback ladder: content (non-empty string) → reasoning_content (non-empty string) → None.
+- **v2.0 Phase 20-02 error message updated** — `extractContent` wrapper now emits "malformed response: no content or reasoning_content" when both rungs miss, replacing the previous "missing or empty content" (after Task 1 refactor) for clearer diagnostics.
+- **v2.0 Phase 20-02 test count 262 → 266** — 4 new tests in existing `LlmPipelineTests.fs` (no `.fsproj` / `rootTests` change). Delta +4 (3 required + 1 null-content guard). Bench gate 6/6 PASS.
+- **v2.0 Phase 20-02 qwen35-install.md rows RESOLVED** — §5.3 response table row (빈 문자열 + reasoning_content) and Appendix A `content` 빈 문자열 row both marked RESOLVED Phase 20-02. 2 matches of "RESOLVED Phase 20-02" in the file.
 
 ### New Decisions (20-01)
 
