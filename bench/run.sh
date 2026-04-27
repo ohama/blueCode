@@ -184,13 +184,13 @@ EOF
     actual_exit=$(grep -o "exit=[0-9]*" "$metafile" 2>/dev/null | grep -o "[0-9]*" | head -1)
     actual_exit=${actual_exit:-99}
 
-    # Pull baseline thresholds via jq
+    # Pull baseline thresholds via jq (flat top-level keys, no tests.* wrapper)
     local baseline_max
-    baseline_max=$(jq -r ".tests.${key}.step_count_max" "$BASELINE")
+    baseline_max=$(jq -r ".${key}.step_count_max" "$BASELINE")
     local baseline_pass
-    baseline_pass=$(jq -r ".tests.${key}.pass" "$BASELINE")
+    baseline_pass=$(jq -r ".${key}.pass" "$BASELINE")
     local is_regression
-    is_regression=$(jq -r ".tests.${key}.regression // false" "$BASELINE")
+    is_regression=$(jq -r ".${key}.regression // false" "$BASELINE")
 
     # Decision: verdict logic (3-branch form per Plan 10-02)
     local verdict="PASS"

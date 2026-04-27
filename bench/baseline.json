@@ -1,67 +1,45 @@
 {
-  "_meta": {
-    "created": "2026-04-27",
-    "binary_state": "post-17-03-switch",
-    "description": "Phase 17 SWITCH baseline. Gate tests: T6 x 35B/122B, W1/W2 x 35B, T1/T5 canaries, B2 x 35B/122B regression status."
+  "T6_122b": {
+    "step_count": 4,
+    "step_count_max": 5,
+    "pass": true,
+    "elapsed_median_s": 11,
+    "note": "Post-19-02 single-model default. 4 steps typical: double grep_search + read_file + final. Gate fails if >5."
   },
-  "tests": {
-    "T6_35b": {
-      "step_count": 4,
-      "step_count_max": 5,
-      "pass": true,
-      "elapsed_median_s": 6,
-      "note": "Post-17-03 SWITCH. 4 steps typical: read_file + grep_search + read_file (targeted) + final. Gate fails if >5."
-    },
-    "T6_122b": {
-      "step_count": 4,
-      "step_count_max": 5,
-      "pass": true,
-      "elapsed_median_s": 11,
-      "note": "Post-17-03 SWITCH. 4 steps typical: double grep_search + read_file + final. Gate fails if >5."
-    },
-    "W1_35b": {
-      "step_count": 3,
-      "step_count_max": 3,
-      "pass": true,
-      "elapsed_median_s": 5,
-      "note": "Loop-injection enforces 3 steps: read+write+final. >3 = regression."
-    },
-    "W2_35b": {
-      "step_count": 3,
-      "step_count_max": 3,
-      "pass": true,
-      "elapsed_median_s": 6,
-      "note": "Same as W1: loop-injection holds 3 steps."
-    },
-    "T1_35b": {
-      "step_count": 1,
-      "step_count_max": 3,
-      "pass": true,
-      "elapsed_median_s": 2,
-      "note": "Canary. 1 step typical; 3 steps observed once in prior variance. 4+ = alarm."
-    },
-    "T5_122b": {
-      "step_count": 3,
-      "step_count_max": 4,
-      "pass": true,
-      "elapsed_median_s": 6,
-      "note": "Canary. glob_search + run_shell + final pattern."
-    },
-    "B2_35b": {
-      "step_count": 2,
-      "step_count_max": 3,
-      "pass": true,
-      "expected_diagnosis": "empty list causes DivideByZeroException",
-      "actual_diagnosis": "empty list causes DivideByZeroException — 'The bug is in the average function which performs integer division by List.length xs without checking if the list is empty. When an empty list is passed, List.length returns 0, causing a DivideByZeroException at runtime.'",
-      "note": "Phase 17-03 SWITCH. 2 steps: read_file + final. Diagnosis accuracy confirmed."
-    },
-    "B2_122b": {
-      "step_count": 2,
-      "step_count_max": 3,
-      "pass": true,
-      "expected_diagnosis": "empty list causes DivideByZeroException",
-      "actual_diagnosis": "empty list causes DivideByZeroException — 'The bug is a division by zero when the input list is empty, because List.length [] returns 0, and dividing by zero raises a DivideByZeroException.'",
-      "note": "Phase 17-03 SWITCH. 2 steps: read_file + final. Diagnosis accuracy confirmed."
-    }
+  "T5_122b": {
+    "step_count": 3,
+    "step_count_max": 4,
+    "pass": true,
+    "elapsed_median_s": 6,
+    "note": "Canary. glob_search + run_shell + final pattern."
+  },
+  "B2_122b": {
+    "step_count": 2,
+    "step_count_max": 3,
+    "pass": true,
+    "expected_diagnosis": "empty list causes DivideByZeroException",
+    "actual_diagnosis": "empty list causes DivideByZeroException — 'The bug is a division by zero when the input list is empty, because List.length [] returns 0, and dividing by zero raises a DivideByZeroException.'",
+    "note": "Phase 17-03 SWITCH + Phase 18-02 single-model confirmed. 2 steps: read_file + final. Diagnosis accuracy confirmed."
+  },
+  "T1_122b": {
+    "step_count": 1,
+    "step_count_max": 3,
+    "pass": true,
+    "elapsed_median_s": 4,
+    "note": "Canary. 1 step typical (direct FinalAnswer). Phase 18-02 single-model-eval: median 3s warm bench; 4s cold. 4+ steps = alarm."
+  },
+  "W1_122b": {
+    "step_count": 3,
+    "step_count_max": 3,
+    "pass": true,
+    "elapsed_median_s": 8,
+    "note": "Loop-injection enforces 3 steps: read+write+final. Phase 18-02 W1=3 steps single-model. >3 = regression."
+  },
+  "W2_122b": {
+    "step_count": 3,
+    "step_count_max": 3,
+    "pass": true,
+    "elapsed_median_s": 9,
+    "note": "Same as W1: loop-injection holds 3 steps. Phase 18-02 W2=3 steps single-model."
   }
 }
