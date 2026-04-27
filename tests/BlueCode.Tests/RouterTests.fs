@@ -100,6 +100,7 @@ let rootTests =
           BlueCode.Tests.RunShellTests.runShellTests
           BlueCode.Tests.AgentLoopTests.agentLoopTests
           BlueCode.Tests.PlanValidatorTests.tests
+          BlueCode.Tests.PlanParseTests.tests          // NEW (Phase 16-01)
           BlueCode.Tests.JsonlSinkTests.tests
           BlueCode.Tests.RenderingTests.tests
           BlueCode.Tests.CompositionRootTests.tests
