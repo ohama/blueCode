@@ -5,17 +5,17 @@
 See: `.planning/PROJECT.md` (updated 2026-04-27 after v2.0 milestone complete)
 
 **Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 안정적으로 돌린다 (single-model canonical post-v2.0; 35B retained as cold rollback via `--with-35b`)
-**Current focus:** Between milestones — v2.0 shipped 2026-04-27. Next milestone scoping is observation-driven; daily-drive blueCode + `/gsd:add-todo` from real coding sessions before v2.1 commitment.
+**Current focus:** v2.1 Empirical Qwen 3.5 122B Coding Evaluation — Phase 21, 5 plans, ~2hr eval + ~2hr analysis. Multi-dimensional measurement (Performance / Correctness / Reliability / Documentation) producing `documentation/qwen35-122b-coding-eval.md` with 100-point scorecard verdict.
 
 ## Current Position
 
-Milestone: v2.0 ✓ SHIPPED 2026-04-27
-Phase: — (between milestones)
+Milestone: v2.1 Empirical Qwen 3.5 122B Coding Evaluation (started 2026-04-27)
+Phase: 21 (single phase) — not started; roadmap defined; ready for `/gsd:plan-phase 21`
 Plan: —
-Status: Observation window opens for v2.1 scoping; next milestone via `/gsd:new-milestone` when measurable scope surfaces
-Last activity: 2026-04-27 — v2.0 milestone closed; archives in `.planning/milestones/v2.0-*`; tag `milestone-v2.0`
+Status: PROJECT.md + REQUIREMENTS.md + ROADMAP.md all written; 10 reqs mapped to Phase 21 (5 plans expected); ready to plan
+Last activity: 2026-04-27 — v2.1 milestone setup complete; plan file at `/Users/ohama/.claude/plans/async-weaving-pnueli.md` is detailed implementation plan
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ○ (pending observation)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21 ready for planning)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -74,7 +74,20 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-27 (v2.0 milestone close)
-Stopped at: v2.0 archived to `.planning/milestones/v2.0-*`; tag `milestone-v2.0` created; observation window opens.
-Resume file: None — observation window is ambient, not session-bound.
-Next workflow trigger: `/gsd:new-milestone` (when observation surfaces v2.1 scope) OR `/gsd:add-todo` (during daily use).
+Last session: 2026-04-27 (v2.1 milestone start)
+Stopped at: v2.1 milestone setup — PROJECT.md + STATE.md updated; REQUIREMENTS.md + ROADMAP.md pending
+Resume file: None — milestone is mid-setup
+Next workflow trigger: write REQUIREMENTS.md + ROADMAP.md, then `/gsd:plan-phase 21` to begin execution
+
+## v2.1 Architectural Touch Points (load-bearing)
+
+- **Plan file is source-of-truth for scope:** `/Users/ohama/.claude/plans/async-weaving-pnueli.md` — 5-task structure, file map, reuse map, risk register, 100-point scorecard rubric. Approved 2026-04-27.
+- **Hybrid bash + Python(venv):** Pure-bash for performance/reliability/refactoring (reuses `bench/run.sh:30-46` `run()`, `bench/run.sh:111-157` `mt()`, `bench/run.sh:181-186` port precondition). Python (in `bench/.venv-eval/`) for HumanEval+ scoring (`evalplus` library) and long-context needle (mlx-runner template adapted to HTTP).
+- **mlx-runner constraint:** Sibling project `/Users/ohama/projs/mlx-runner/` uses `mlx_lm.load()` in-process; would OOM the launchd-managed 122B service (~70GB resident). MUST adapt prompts/methodology to call `localhost:8001/v1/chat/completions` over HTTP — never load a second instance.
+- **Bench gate stability mandatory post-eval:** `bash bench/run.sh --gate` exit 0 with 7/7 PASS must hold. Eval is purely external instrumentation; modifies fixtures (multi-file refactor) but EXIT trap restores them. NO `bench/baseline.json` or `src/` changes.
+- **No new tests in `tests/BlueCode.Tests/`:** Eval is observational; harness lives in `bench/eval-qwen35-122b.sh` + `bench/eval-humaneval-http.py` + `bench/eval-needle.py`. Test count stays 282/1/0.
+- **SSE streaming confirmed working** on mlx_lm.server (probed during plan mode; emits `data: {...delta: {content: ...}}` chunks; awk filter must skip `: keepalive N/14` SSE comments and initial `delta.role` chunk).
+- **Python 3.14 + evalplus compatibility risk:** evalplus historically supports 3.8-3.12; fallback path is `uv venv --python 3.12` (uv not installed currently; install if needed).
+- **Cold-start gated behind `--coldstart` flag** — disruptive (kills 122B for ~3min via `launchctl kickstart`). Per scope decision, deferred from default `--full`; reproducibility instructions in eval doc §10.
+- **Cloud comparison (Claude/GPT-4) explicit non-goal** — documented in eval doc §6.3 as deliberate boundary.
+- **Atomic commits per CLAUDE.md:** 5 task commits + plan-meta + final eval doc commit. Format: `chore(21-XX): {task-name}` for instrumentation; `docs(21-XX): write coding eval verdict doc` for the final doc.

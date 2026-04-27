@@ -10,19 +10,47 @@ v2.0 Persistence + Planning shipped 2026-04-27. Broke the process-lifetime const
 
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0}-ROADMAP.md`.
 
-## Next Milestone Goals
+## Current Milestone: v2.1 Empirical Qwen 3.5 122B Coding Evaluation
 
-v2.1 candidates well-stocked from v2.0 mid-milestone signals + the "now-meaningful" follow-ons that memory + planning unlock:
+**Goal:** Produce empirical answers to "is Qwen 3.5 122B-A10B-4bit MoE useful for daily coding?" — comprehensive measurement across correctness, performance, reliability, and coding-specific quality dimensions. Outcome is a single doc (`documentation/qwen35-122b-coding-eval.md`) ending with a 100-point scorecard verdict and KEEP / KEEP-WITH-CAVEATS / ESCALATE recommendation.
 
-- **Compaction (COMPACT-01)** — PERSIST-02 saves full session JSONL; long sessions hit the 80% context warning faster. Auto-compaction (drop oldest tool results, keep thoughts) is the natural follow-up.
-- **Slash commands (SLASH-01)** — `/sessions`, `/plan`, `/clear`. UX layer over the CLI flags now in place.
-- **Sub-agent delegation (SUBAG-01)** — Now meaningful since memory + planning land. Was OOS in v1 because flat loop wasn't proven across 50+ sessions; v2.0 ships that proof.
-- **Plan-mode bench fixture** — Deferred from Phase 16-03 (keystroke UX intractable for autonomous gate). Mocked-IKeyReader pattern would substitute.
-- **Thinking-mode-on (THINK-01)** — Consume `<think>` blocks; requires `max_tokens` bump 1024→2048-4096 + re-bench.
-- **Native OpenAI `tool_calls` (TOOLCALLS-01)** — Replaces custom JSON schema; rewrites `toLlmOutput` + all bench fixtures.
-- **Streaming output (STM-01)** — Deferred 7th cycle. UX win but not architectural; revisit if observation surfaces complaint.
+**Why now:** v2.0 made architectural assertions (3.4× speedup, MoE memory, multi-turn stability) backed by step-count + elapsed-time wall-clock measurements only. Anchor benchmarks (HumanEval+ pass@1, tokens/sec throughput, time-to-first-token, multi-turn degradation curve, long-context needle-in-haystack, multi-file refactoring, language coverage beyond F#) were never measured. v2.1 closes that empirical gap before observation-driven v2.2 scoping starts.
 
-v2.1 scoping should be observation-driven: daily-drive blueCode for 1-2 weeks; `/gsd:add-todo` from real coding sessions; v2.1 picks 2-3 of the above based on measured pain.
+**Target features (4 categories, 9 requirements):**
+
+- **Performance** — empirical tokens/sec throughput; SSE-stream TTFT measurement; cold-start wall-clock (deferred, gated behind `--coldstart` flag per scope decision)
+- **Correctness** — HumanEval+ pass@1 (chat + completion modes); multi-file F# refactoring fixture; algorithm-level F# bug-fix (binary search off-by-one); language coverage (Python type-error fixture + TypeScript async fixture)
+- **Reliability** — JSON schema compliance rate over 50 invocations; multi-turn degradation curve at N=1/3/5/7/10 turns; long-context needle-in-haystack at 8k/16k/32k
+- **Documentation** — single `documentation/qwen35-122b-coding-eval.md` (~600 lines) with 10 sections + numeric scorecard verdict
+
+**Scope (per pre-milestone Q&A 2026-04-27):**
+
+- Full eval minus cold-start (~2hr wall-clock; cold-start gated behind explicit `--coldstart` flag — disruptive launchctl kickstart)
+- Cloud comparison (Claude/GPT-4): explicit non-goal — documented as deliberate boundary in `§6.3`. Reasons: API key + cost, scope drift, user has muscle memory
+- Hybrid bash + Python(venv): pure-bash for performance/reliability/refactoring (reuses `bench/run.sh` patterns, calls `dotnet run` for full agent loop); Python(venv) for HumanEval+ scoring (`evalplus` library) and long-context needle (mlx-runner template adapted to HTTP)
+
+**Phase numbering:** continues at 21 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20).
+
+**Excluded** with explicit rationale (deferred to later milestones):
+- Cold-start measurement — disruptive (kills 122B for ~3min); gated behind `--coldstart` flag for ad-hoc later use
+- Cloud comparison (Claude/GPT-4) — explicit non-goal
+- Plan-mode bench fixture — already deferred in Phase 16; keystroke UX intractable for autonomous gate
+- Thinking-mode-on / native `tool_calls` / `additionalProperties` relaxation / `max_tokens` bump — Phase 20 deferred set; not in v2.1 scope
+- Compaction / slash commands / sub-agents — v2.0 follow-ons in `Deferred` section below; orthogonal to eval work
+
+**Detailed implementation plan:** [/Users/ohama/.claude/plans/async-weaving-pnueli.md](/Users/ohama/.claude/plans/async-weaving-pnueli.md) — 5-task structure, file map, reuse map, risk register, 100-point scorecard rubric, time budget. Approved 2026-04-27.
+
+## Future Milestone Goals (post-v2.1)
+
+After v2.1 produces empirical evidence, observation-driven v2.2 picks 2-3 candidates from the v2.0-deferred set based on measured pain:
+
+- **Compaction (COMPACT-01)** — PERSIST-02 saves full session JSONL; long sessions hit 80% context warning faster
+- **Slash commands (SLASH-01)** — `/sessions`, `/plan`, `/clear`. UX layer over CLI flags
+- **Sub-agent delegation (SUBAG-01)** — Now meaningful since memory + planning landed
+- **Plan-mode bench fixture** — Deferred from Phase 16; mocked-IKeyReader pattern
+- **Thinking-mode-on (THINK-01)** — Consume `<think>` blocks; `max_tokens` 1024→2048-4096
+- **Native OpenAI `tool_calls` (TOOLCALLS-01)** — Replaces custom JSON schema
+- **Streaming output (STM-01)** — Deferred 7th cycle
 
 ## Core Value
 
@@ -68,11 +96,27 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - ✓ Qwen 3.5 122B-A10B-4bit MoE single-model canonical; Qwen 2.5 32B/72B retired (-85 GB disk); 35B preserved as cold rollback via `--with-35b` opt-in — v2.0 (Phases 17-19)
 - ✓ Qwen 3.5 protocol alignment: sampling params per model card (temp=0.7, top_p=0.8, top_k=20, presence_penalty=0.0); HttpClient timeout 180→300s; `extractContent` `reasoning_content` fallback; `Role = User` invariant for ALL mid-conversation injections (Phase 20-03 probe REJECT verdict) — v2.0 (Phase 20)
 
-### Active
+### Active (v2.1 Empirical Qwen 3.5 122B Coding Evaluation)
 
-<!-- v2.0 shipped 2026-04-27. Next milestone scoping is observation-driven; daily-drive blueCode + /gsd:add-todo from real coding sessions before v2.1 commitment. -->
+<!-- v2.1 scope confirmed 2026-04-27 via plan-mode (full minus cold-start; no cloud). 9 requirements across 4 categories. -->
 
-(None — v2.0 just shipped. Observation window opens for v2.1 scoping.)
+#### Performance
+- [ ] **PERF-EVAL-01**: Empirical tokens/sec throughput measurement — 5 prompts × 3 trials median via `/v1/chat/completions` with `usage.completion_tokens`
+- [ ] **PERF-EVAL-02**: Time-to-first-token (TTFT) measurement — 10 trials via SSE streaming with awk-filtered first-content-chunk timing
+
+#### Correctness
+- [ ] **CORR-EVAL-01**: HumanEval+ pass@1 — both chat-mode (`/v1/chat/completions` wrapped) and completion-mode (`/v1/completions` raw); evalplus library scoring
+- [ ] **CORR-EVAL-02**: Multi-file refactoring fixture — F# directory with Calculator.fs/Main.fs/Tests.fs; rename `add` → `sum` task; agent must update all 3 coherently
+- [ ] **CORR-EVAL-03**: Algorithm-level F# bug-fix — binary search off-by-one in `bug_binsearch.fs`; harder than W1/W2's trivial off-by-one
+- [ ] **CORR-EVAL-04**: Language coverage — Python type-error fixture + TypeScript missing-await fixture; tests generalization beyond F#/.NET
+
+#### Reliability
+- [ ] **REL-EVAL-01**: JSON schema compliance rate — 50 single-turn invocations (T1+T6 mix); count `InvalidJsonOutput` errors
+- [ ] **REL-EVAL-02**: Multi-turn degradation curve — N=1,3,5,7,10 turns via `dotnet run --resume <id>` chained sessions; validates ml-explore/mlx-lm#1011 5-round claim
+- [ ] **REL-EVAL-03**: Long-context needle-in-haystack — 8k/16k/32k context (cap at `MaxModelLen`); inject `SECRET_KEY=abc123xyz` at random position; binary correctness + latency
+
+#### Documentation
+- [ ] **DOC-EVAL-01**: `documentation/qwen35-122b-coding-eval.md` (~600 lines, 10 sections); ends with `Total: NN/100, Recommendation: <KEEP|KEEP-WITH-CAVEATS|ESCALATE>` per scorecard rubric (Correctness 40 / Performance 25 / Reliability 25 / Coding-quality 10)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -203,6 +247,11 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 | v2.0 Phase 16: planSystemPromptSuffix `OVERRIDE — PLAN MODE ACTIVE` preamble | Base system prompt's tool-call enum caused 122B to ignore gentle `[PLAN MODE]` prefix entirely; OVERRIDE preamble forces compliance | ✓ Good — auto-fixed during 16-02 execution per Rule 3 deviation handling |
 | v2.0 mid-milestone scope expansion (3 phases → 7 via /gsd:add-phase) | Phase 17 added evaluation; Phase 18 single-model viability; Phase 19 retirement; Phase 20 protocol alignment — all sequenced BEFORE Phase 16 because bench fixtures needed canonical model pair settled | ✓ Good — milestone ships clean despite scope churn; 8/8 reqs closed; 6/6 E2E flows verified in audit; documentation drift acceptable |
 | v2.0 Phase 20 missing formal 20-VERIFICATION.md | Process gap, not code gap; per-plan SUMMARYs + bench gate 6/6 PASS post each + Phase 16 dependency on Phase 20-03 Role=User invariant serve as substitute verification | ⚠ Process drift — flagged in audit, non-blocking. Future phases should not skip the verifier step regardless of yolo mode |
+| v2.1: Formalize Qwen 3.5 122B coding eval as milestone (not ad-hoc tooling) | 5-task scope, ~400 lines of harness code + ~600-line verdict doc, multi-dimensional measurement → warrants proper GSD framing (REQUIREMENTS, phase verifier, atomic commits per task) | — Pending — milestone in progress; revisit at milestone close |
+| v2.1: Hybrid bash + Python(venv) approach | Pure-bash for performance/reliability/refactoring (reuses `bench/run.sh` patterns); Python(venv) only for HumanEval+ scoring (`evalplus` library is non-negotiable) and long-context needle (mlx-runner template adapted to HTTP). mlx-runner's in-process `mlx_lm.load()` would OOM the launchd-managed 122B service | — Pending — empirically measured by milestone close |
+| v2.1: HumanEval+ both modes (chat + completion) | Mode A (chat) is "useful for blueCode" headline; Mode B (completion) is direct compare-to-published. Reporting both surfaces chat-wrapping artifacts (explanation+code instead of raw code) | — Pending — empirically measured by milestone close |
+| v2.1: 100-point scorecard verdict (Correctness 40 / Performance 25 / Reliability 25 / Coding-quality 10) | Coarse PASS/FAIL hides which dimension is weak; numeric scorecard with explicit thresholds gives actionable specificity. KEEP ≥80; KEEP-WITH-CAVEATS 60-79 OR any dimension <60%; ESCALATE <60 OR multi-turn degrades before turn 5 OR HumanEval+ <30% | — Pending — final verdict at milestone close |
+| v2.1: Cloud comparison (Claude/GPT-4) explicit non-goal | Requires API key + cost; user has muscle memory from daily use; preserves reproducibility without external dependencies; documented in eval doc §6.3 as deliberate boundary | — Pending — boundary holds at milestone close |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -215,4 +264,4 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-27 after v2.0 milestone complete (Persistence + Planning shipped + Qwen 3.5 122B single-model canonical + protocol alignment; 7 phases, 19 plans, 8 reqs closed, 282/1/0 tests, bench gate 7/7 PASS, -85 GB disk)*
+*Last updated: 2026-04-27 after starting v2.1 Empirical Qwen 3.5 122B Coding Evaluation milestone (Phase 21, 5 plans expected; 9 reqs across 4 categories Performance/Correctness/Reliability/Documentation; ~2hr eval runtime + ~2hr analysis; verdict doc with 100-point scorecard; cold-start + cloud comparison explicit non-goals)*
