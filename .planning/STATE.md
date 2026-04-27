@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 in progress (16-01 ✓ 16-02 ✓) Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ✓ (20-01 ✓ 20-02 ✓ 20-03 ✓)
-Plan: 16-02 complete; Phase 16 in progress (16-03 remains)
-Status: 280/1/0 tests; bench gate 6/6 PASS (post-16-02); 16-02 complete (PlanGate.fs IKeyReader+render+promptUser, --plan Argu flag, Program.fs plan-mode loop, PlanGateTests 6 cases, SC1/SC2/SC4 live smoke PASS)
-Last activity: 2026-04-27 — Phase 16-02 complete (PlanGate.fs new, CliArgs.Plan, CliOptions.PlanMode, planSystemPromptSuffix, Program.fs plan-mode dispatch, PlanGateTests 280/1/0, bench gate 6/6 PASS)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 ✓ (16-01 ✓ 16-02 ✓ 16-03 ✓) Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ✓ (20-01 ✓ 20-02 ✓ 20-03 ✓)
+Plan: 16-03 complete; Phase 16 COMPLETE
+Status: 282/1/0 tests; bench gate 7/7 PASS (post-16-03); 16-03 complete (MT_122b bench fixture, runPlanTurnTests 2 cases, bench.md MT_122b + plan-mode DEFERRED v2.1+)
+Last activity: 2026-04-27 — Phase 16-03 complete (bench/fixtures/mt_followup.txt, bench/run.sh mt() helper + 7 labels + total=7, bench/baseline.json MT_122b appended empirical, AgentLoopTests runPlanTurnTests, bench.md updated)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ◆ (16-01 ✓ 16-02 ✓ 16-03 ░) Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ✓]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ✓ (16-01 ✓ 16-02 ✓ 16-03 ✓) Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ✓]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -88,8 +88,16 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 16-02-PLAN.md (PlanGate.fs, --plan Argu flag, Program.fs plan-mode dispatch, PlanGateTests 280/1/0, bench gate 6/6 PASS, SC1/SC2/SC4 live smoke PASS)
-Resume file: None — Phase 16-02 complete; next: Phase 16-03 (bench fixtures: MT_122b multi-turn + plan-mode baseline entries)
+Stopped at: Completed 16-03-PLAN.md (MT_122b bench fixture, runPlanTurnTests +2, bench.md MT_122b + plan-mode DEFERRED, bench gate 7/7 PASS, Phase 16 COMPLETE)
+Resume file: None — Phase 16 complete; next: /gsd:complete-phase 16 or /gsd:complete-milestone v2.0
+
+### New Decisions (16-03)
+
+- **v2.0 Phase 16-03 MT_122b single fixture** — Phase 19 retirement made 122B sole canonical. No MT_32b/MT_72b. One entry at bench gate tier.
+- **v2.0 Phase 16-03 gate metric = turn-1 step count** — Existing `head -1` parser on `[INF] Session ok: N steps` naturally picks turn 1. No parser changes. Turn 2 step count documented in baseline `note` only.
+- **v2.0 Phase 16-03 plan-mode bench DEFERRED to v2.1+** — PlanGate's `Console.ReadKey` UX intractable for autonomous regression gate. Coverage substitute: PlanGateTests + PlanParseTests + AgentLoopTests.runPlanTurnTests. Documented in bench.md with 4-point rationale.
+- **v2.0 Phase 16-03 MT_122b empirical baseline** — step_count=2 (list_dir+final), step_count_max=4, elapsed_median_s=7 (full 2-turn cycle on warm 122B). Turn 2 answers correctly from prior session context (exit 0 both turns).
+- **v2.0 Phase 16-03 AgentLoopTests in-place extension** — runPlanTurnTests sub-list appended to existing agentLoopTests aggregator. No new module, no fsproj/RouterTests.fs change. Test count 280→282.
 
 ### New Decisions (20-03)
 
