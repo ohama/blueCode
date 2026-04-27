@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B; architectural follow-ups deferred)
-Plan: 18-03 complete
-Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 complete (verdict: DROP-35B — 5/5 SC4 criteria PASS; eval doc on disk; reload skipped; architectural changes deferred to follow-up phase per ROADMAP §SC5)
-Last activity: 2026-04-27 — Phase 18 complete (verdict: DROP-35B; eval doc + 18-01 memory profile + 18-02 bench results all on disk; reload skipped per DROP-35B disposition; architectural changes deferred to follow-up phase per ROADMAP §SC5)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ◆ (19-01 ✓ 19-02 pending)
+Plan: 19-01 complete
+Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 complete (verdict: DROP-35B); Phase 19-01 complete (85 GiB reclaimed; qwen32b/qwen72b/qwen72b.3bit retired; 122B sole production model confirmed)
+Last activity: 2026-04-27 — Phase 19-01 complete (Qwen 2.5 physical retirement: 85 GiB reclaimed, 3 model dirs + 2 plists deleted, SC1 all PASS, 122B service unaffected)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ◆]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -54,6 +54,7 @@ Items relevant to v2.0 (architectural touch points):
 ### Roadmap Evolution
 
 - **2026-04-27**: Phase 17 (Qwen 3.5 Evaluation) added via `/gsd:add-phase`. Three deliverables: install/usage docs for 35B+122B, service swap with user help (autonomous: false, checkpoint), bench comparison vs current 32B/72B baseline. Should run BEFORE Phase 16 if model swap desired — Phase 16 bench fixtures reference current model ids.
+- **2026-04-27**: Phase 19 (Qwen 2.5 Retirement + 122B Single-Model Default) added via `/gsd:add-phase`. Two plans: 19-01 retire Qwen 2.5 from disk + launchd (autonomous: false, user checkpoint for `rm`); 19-02 code/bench/docs alignment (autonomous: true — Argu cleanup, `--with-35b` flag, `tryParseModelId` retirement guard, `bench/run.sh` rewrite absorbing `scripts/bench-122b-only.sh`, baseline halve, CLAUDE.md update). Key decisions: A=preserve 35B for future dual mode, B=remove `--model 32b/72b` aliases entirely (breaking), C=dual mode requires BOTH launchctl load + `--with-35b` flag, D=`bench/run.sh` in-place absorbs the 122B-only harness. Runs BEFORE Phase 16 (canonical baseline shape must be settled before 16-03 multi-turn fixtures).
 
 ### Pending Todos
 
@@ -73,8 +74,15 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 18-03-PLAN.md (single-model eval — verdict: DROP-35B; eval doc + STATE updated; reload skipped per DROP-35B; architectural follow-ups enumerated as deferred)
-Resume file: None — Phase 18 complete; run follow-up architectural-changes phase next (Router collapse, bench/baseline.json halve, CLAUDE.md update), then Phase 16 (note: follow-up should run BEFORE Phase 16 so 16-03 bench fixtures use the final canonical baseline keys)
+Stopped at: Completed 19-01-PLAN.md (Qwen 2.5 physical retirement; 85 GiB reclaimed; SC1 all PASS; RETIREMENT.md complete)
+Resume file: None — Phase 19-01 complete; 19-02 ready (Wave 2: code/bench/docs alignment for single-model 122B canonical state). Run Phase 19-02 before Phase 16.
+
+### New Decisions (19-01)
+
+- **v2.0 Phase 19-01 disk reclaim 85 GiB** — Pre-retirement 277 GiB used → post-retirement 192 GiB used. Delta 85 GiB (qwen32b 17G + qwen72b 38G + qwen72b.3bit 30G). Threshold >= 50 GB: PASS. Matches RESEARCH §Pitfall 5 expectation exactly.
+- **v2.0 Phase 19-01 data[0] HF fallback gotcha** — `mlx_lm.server` returns hardcoded `Qwen/Qwen2.5-Coder-32B` in `data[0]` regardless of which model is loaded. `data[1]` returns the actual local path (`/Users/ohama/llm-system/models/qwen122b`). Verification scripts must use `data[1]`, not `data[0]`. Mirrors `tryParseModelId` path-preference heuristic in `QwenHttpClient.fs` (CLAUDE.md §Key Seams). Worth a future `/howto` entry.
+- **v2.0 Phase 19-01 preserved state confirmed** — qwen35b/ (19G, cold rollback) + qwen122b/ (65G, production) preserved. qwen32b/, qwen72b/, qwen72b.3bit/ deleted. com.ohama.qwen35b.plist + com.ohama.qwen122b.plist retained; qwen32b.plist + qwen72b.plist deleted. 122B service (PID 44880, port 8001) unaffected throughout retirement. SC1 all three criteria PASS.
+- **v2.0 Phase 19-01 Wave 2 ready** — 19-02 depends_on: [19-01] is now satisfied. 19-02 scope: Argu cleanup, `--with-35b` flag, `tryParseModelId` retirement guard, bench/run.sh rewrite absorbing scripts/bench-122b-only.sh, baseline halve, CLAUDE.md Runtime Environment update.
 
 ### New Decisions (18-03)
 
