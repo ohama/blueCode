@@ -19,8 +19,9 @@ v2.0 makes two architectural investments simultaneously: session state persists 
 - [ ] **Phase 16: Planning Wiring + Bench** — --plan flag, approval gate UI, plan retry wiring, bench fixtures extended
 - [x] **Phase 17: Qwen 3.5 Evaluation** ✓ — SWITCH verdict 2026-04-27; 35B/122B replaces 32B/72B as canonical pair (3.4× speedup, no regressions, 8/8 gate)
 - [x] **Phase 18: Single-Model 122B Evaluation** ✓ — DROP-35B verdict 2026-04-27; all 5 §SC4 criteria PASS; 31/31 bench invocations exit=0; +19.42 GB PhysMem freed; B2 DivByZero preserved; Router collapse + baseline halve deferred to follow-up phase
+- [ ] **Phase 19: Qwen 2.5 Retirement + 122B Single-Model Default** — Retire Qwen 2.5 32B/72B from disk + launchd (~55 GB reclaimed); make 122B canonical; preserve 35B as cold rollback asset (unloaded); remove `--model 32b/72b` aliases; add `--with-35b` flag for future dual mode; absorb `scripts/bench-122b-only.sh` into `bench/run.sh`; halve `bench/baseline.json` (added 2026-04-27 via /gsd:add-phase; runs BEFORE Phase 16 — same canonical-baseline ordering rationale as Phase 17)
 
-**Note on phase ordering:** Phase 17 should run BEFORE Phase 16 if model swap is desired before bench fixtures are set. If 35B/122B replaces 32B/72B as canonical, Phase 16's bench baseline (T6_32b, W1_32b, B2_72b, etc.) needs new model ids. Phase 16 plans on disk remain valid for whichever model pair ends up canonical; user decides execution order after Phase 17 ships findings.
+**Note on phase ordering:** Phase 17 should run BEFORE Phase 16 if model swap is desired before bench fixtures are set. If 35B/122B replaces 32B/72B as canonical, Phase 16's bench baseline (T6_32b, W1_32b, B2_72b, etc.) needs new model ids. Phase 16 plans on disk remain valid for whichever model pair ends up canonical; user decides execution order after Phase 17 ships findings. **Phase 19 also runs BEFORE Phase 16** — once `bench/baseline.json` is halved to single-model `_122b` keys, Phase 16-03's multi-turn fixture additions (MT_*) must use the final canonical baseline shape.
 
 ---
 
@@ -160,6 +161,45 @@ Plans:
 
 ---
 
+### Phase 19: Qwen 2.5 Retirement + 122B Single-Model Default
+
+**Goal:** Make 122B the sole canonical runtime. Physically retire Qwen 2.5 32B/72B from disk + launchd (~55 GB reclaimed). Preserve Qwen 3.5 35B on disk as cold rollback asset (unloaded by default; reloadable for future dual mode if 122B latency becomes painful). Halve `bench/baseline.json` to single-model. Remove old CLI aliases entirely. Add explicit `--with-35b` opt-in flag for future dual mode.
+
+**Depends on:** Phase 18 ✓ (DROP-35B verdict is the justification for permanent retirement)
+
+**Requirements:** None new (operations + architectural cleanup; no v2.0 REQ-IDs)
+
+**Key architectural decisions:**
+
+- **A. 35B model files preserved** — `~/llm-system/models/qwen35b/` (~17 GB) stays on disk to support user's "future dual mode if 122B too slow" intent. Only Qwen 2.5 (32B + 72B, ~55 GB) is deleted.
+- **B. CLI aliases `--model 32b` and `--model 72b` REMOVED entirely** (breaking change). Canonical: `--model 122b` (default with no flag). Dual-mode addressable: `--model 35b` (only valid when 35B is loaded AND `--with-35b` flag set). Old aliases produce a clear error pointing to migration.
+- **C. Future dual-mode requires BOTH:** (1) `launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist` to bring 35B service back, AND (2) `--with-35b` CLI flag to explicitly opt blueCode into dual routing. Service-load alone does NOT change blueCode behavior — flag is the explicit opt-in. Default behavior stays predictable even if 35B is loaded for unrelated reasons.
+- **D. Bench harness consolidation:** `scripts/bench-122b-only.sh` is absorbed into `bench/run.sh` (in-place rewrite). The single-script becomes the canonical single-model bench. `bench/baseline.json` halves to single-model (`_122b` keys only). `scripts/bench-122b-only.sh` is deleted after absorption.
+
+**Success Criteria** (what must be TRUE when Phase 19 completes):
+
+1. `launchctl list | grep ohama` shows ONLY `com.ohama.qwen122b`. `~/llm-system/models/` contains ONLY `qwen35b/` and `qwen122b/`. `~/Library/LaunchAgents/` has ONLY `com.ohama.qwen{35b,122b}.plist`. Disk reclaimed ≥ 50 GB (verified by `df -h ~/` before/after).
+
+2. `bench/run.sh --gate` exits 0 against single-model 122B baseline (recomputed in this phase). `scripts/bench-122b-only.sh` no longer exists. `bench/baseline.json` contains only `_122b` keys (no `_32b`, `_72b`, or `_35b` keys).
+
+3. `blueCode --model 32b "..."` and `blueCode --model 72b "..."` produce a clear error referencing Phase 19 retirement and pointing to `--model 122b` as the canonical alias. `blueCode "..."` (no flag) defaults to 122B and works. `blueCode --model 122b "..."` works. `blueCode --model 35b "..."` errors with a clear "35B not loaded" message when 35B service is absent; works when both `launchctl load -w` is in effect AND `--with-35b` is passed.
+
+4. `tryParseModelId` rejects `qwen32b`/`qwen72b` paths as `PathRetired` error (or equivalent named variant); recognizes `qwen35b`/`qwen122b` paths.
+
+5. `CLAUDE.md` `## Runtime Environment` section reflects single-model 122B default; documents the dual-mode reactivation procedure (launchctl load + `--with-35b`); no Qwen 2.5 references remain. `documentation/qwen35-install.md` reframes 35B as standby/rollback asset (status badge updated). `documentation/single-model-eval.md` §7 cross-references this phase as the execution of the conditional follow-ups.
+
+6. All 258-264/1/0 tests pass (range reflects +4-7 net new test cases added in 19-02 Tasks 2 + 7: 4 ModelsProbeTests for `validateModelPath`, 2-3 net CliArgsTests for retirement errors + `--with-35b` parsing); no regression on `bench/run.sh --gate`.
+
+**Plans:** 2 plans expected
+
+Plans:
+- [ ] 19-01-PLAN.md — Retire Qwen 2.5 + disk reclamation (autonomous: false; user checkpoint required for `rm` of model files + launchd plists; cannot be automated). Captures `df -h ~/` before/after; verifies launchctl + filesystem state; produces `19-01-RETIREMENT.md` (≥ 40 lines, inventory + reclaim metrics + remaining-file map)
+- [ ] 19-02-PLAN.md — Code + bench + docs alignment (autonomous: true). Argu CLI: remove `--model 32b`/`72b`, add canonical `--model 122b`, add `--with-35b` BoolFlag (opt-in for dual mode). `tryParseModelId` retirement guard (`PathRetired` error variant). `Router.fs` flag-gated dual probe (default 122B-only; with `--with-35b`, also probes port 8000). `bench/run.sh` rewrite (absorbs `scripts/bench-122b-only.sh`; uses `--model 122b` exclusively). `bench/baseline.json` halve + recompute single-model baselines. `CLAUDE.md` `## Runtime Environment` update. `documentation/qwen35-install.md` reframe (35B → standby). `documentation/single-model-eval.md` §7 cross-reference. Verifies 254/1/0 tests + `bench/run.sh --gate` 0 exit.
+
+**Reversibility:** 35B is recoverable instantly (`launchctl load -w` + `--with-35b`) — model files preserved on disk. Qwen 2.5 retirement is irreversible without re-download (~50 GB), which is intended — the deletion is the point.
+
+---
+
 ## Progress
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
@@ -169,8 +209,9 @@ Plans:
 | 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 0/3 | Not started (plans on disk) | - |
 | 17. Qwen 3.5 Evaluation | v2.0 | (none — operations) | 3/3 | ✓ Complete (SWITCH) | 2026-04-27 |
 | 18. Single-Model 122B Eval | v2.0 | (none — operations + decision) | 3/3 | ✓ Complete (DROP-35B) | 2026-04-27 |
+| 19. Qwen 2.5 Retirement + 122B Default | v2.0 | (none — operations + cleanup) | 0/2 | Not started | - |
 
 ---
 
 *Roadmap created: 2026-04-26*
-*Last updated: 2026-04-27 — Phase 18 ✓ Complete (DROP-35B verdict; 31/31 bench invocations exit=0; +19.42 GB PhysMem freed; B2 DivByZero preserved; conditional 35B reload skipped per verdict; architectural follow-ups (Router collapse, baseline halve, CLAUDE.md update, scripts/bench-122b-only.sh promotion) deferred to a follow-up phase per §SC5)*
+*Last updated: 2026-04-27 — Phase 19 added via /gsd:add-phase (Qwen 2.5 retirement + 122B single-model default; 2 plans; 19-01 has user checkpoint for `rm` model files + plists; 19-02 autonomous code/bench/docs alignment; runs BEFORE Phase 16; key decisions: A=preserve 35B, B=remove `--model 32b/72b` aliases entirely, C=dual mode requires both launchctl load + `--with-35b` flag, D=`bench/run.sh` absorbs `scripts/bench-122b-only.sh`)*
