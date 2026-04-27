@@ -128,24 +128,37 @@ let private postAsync (url: string) (body: string) (ct: CancellationToken) : Tas
 
 // ── OpenAI envelope extraction ──────────────────────────────────────────────
 
+/// Pure helper: extract the content string from an OpenAI-style chat completion response.
+/// Returns Some content when choices[0].message.content is a non-empty string; None otherwise.
+/// Public for testability (analogous to tryParseModelId / tryParseMaxModelLen in this module).
+/// Phase 20-02 Task 2 extends this to fall back to reasoning_content.
+let extractContentFromJson (responseJson: string) : string option =
+    try
+        use doc = JsonDocument.Parse(responseJson)
+        let msg = doc.RootElement.GetProperty("choices").[0].GetProperty("message")
+        match msg.TryGetProperty("content") with
+        | true, el when el.ValueKind = JsonValueKind.String ->
+            let s = el.GetString()
+            if System.String.IsNullOrEmpty(s) then None else Some s
+        | _ -> None
+    with _ -> None
+
 /// Pull choices[0].message.content out of the vLLM response envelope.
 /// Any structural mismatch (missing choice, missing message, non-string
 /// content) maps to LlmUnreachable with 'malformed response' — this is a
 /// transport-layer failure, NOT a JSON content parse failure (which would
 /// be InvalidJsonOutput / SchemaViolation from parseLlmResponse).
 ///
-/// PRIVATE: internal envelope helper. Tests cover the happy path via the
-/// smoke test and the error path via CompleteAsync integration.
+/// Delegates to extractContentFromJson (public pure helper) and maps
+/// Some → Ok, None → Error(LlmUnreachable). Phase 20-02 Task 2 adds the
+/// reasoning_content fallback rung inside extractContentFromJson.
+///
+/// PRIVATE: internal envelope helper. Tests cover the public helper directly;
+/// the wrapper is tested indirectly via CompleteAsync integration.
 let private extractContent (url: string) (responseJson: string) : Result<string, AgentError> =
-    try
-        use doc = JsonDocument.Parse(responseJson)
-
-        let content =
-            doc.RootElement.GetProperty("choices").[0].GetProperty("message").GetProperty("content").GetString()
-
-        Ok content
-    with ex ->
-        Error(LlmUnreachable(url, sprintf "malformed response: %s" ex.Message))
+    match extractContentFromJson responseJson with
+    | Some content -> Ok content
+    | None -> Error(LlmUnreachable(url, "malformed response: missing or empty content"))
 
 // ── LlmStep -> LlmResponse mapping ──────────────────────────────────────────
 
