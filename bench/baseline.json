@@ -41,5 +41,12 @@
     "pass": true,
     "elapsed_median_s": 9,
     "note": "Same as W1: loop-injection holds 3 steps. Phase 18-02 W2=3 steps single-model."
+  },
+  "MT_122b": {
+    "step_count": 2,
+    "step_count_max": 4,
+    "pass": true,
+    "elapsed_median_s": 7,
+    "note": "Phase 16-03 multi-turn PERSIST-01 fixture. 2 sequential turns sharing a session via --resume <id>. Gate metric is turn-1 step count (parser uses head -1 on '[INF] Session ok: N steps' markers; turn 2 step count documented but not gate-asserted). Turn 1: 'List the files in bench/fixtures and tell me the count' uses list_dir + final = 2 steps; step_count_max=4 absorbs variance. Turn 2: follow-up referencing prior context (mt_followup.txt). Both turns must exit 0 (combined_exit checked in mt() helper). elapsed_median_s covers the full 2-turn cycle including session save/load round-trip."
   }
 }

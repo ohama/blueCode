@@ -4,7 +4,7 @@
 # All invocations use --model 122b. Dual-model loops removed.
 #
 # Usage: bench/run.sh <mode>
-#   --gate        Regression gate (6 invocations, ~2 min); exits non-zero on regression
+#   --gate        Regression gate (7 invocations, ~3-4 min); exits non-zero on regression
 #   --regression  Part 1 reproducibility: T1-T7 x 122B (7 runs, ~6 min)
 #   --canary      Quick smoke: T1, T5, T6x2 (4 runs, ~1.5 min)
 #   --b2          B2 divide-by-zero diagnose only (1 run, ~30 s)
@@ -55,7 +55,7 @@ bench/run.sh — blueCode regression harness (single-model 122B canonical)
 Usage: bench/run.sh <mode>
 
 Modes:
-  --gate        Regression gate (6 invocations, ~2 min); exits non-zero on regression
+  --gate        Regression gate (7 invocations, ~3-4 min); exits non-zero on regression
   --regression  Part 1 reproducibility: T1–T7 × 122B (7 runs, ~6 min)
   --canary      Quick smoke: T1, T5, T6×2 (4 runs, ~1.5 min)
   --b2          B2 divide-by-zero diagnose only (1 run, ~30 s)
@@ -102,9 +102,65 @@ b2_mode() {
 }
 
 # ---------------------------------------------------------------------------
-# gate() — Regression gate: 6-invocation subset, diff against bench/baseline.json
+# mt() — Multi-turn fixture: 2 turns sharing a session via --resume <id>
+# Validates PERSIST-01 end-to-end at the bench layer (Phase 16-03).
+# Turn 1 establishes context (lists files); turn 2 references prior context.
+# Both turns must exit 0; turn-1 step count is the gate metric (parser uses
+# head -1 on '[INF] Session ok: N steps' markers — matches single-turn semantics).
+# ---------------------------------------------------------------------------
+mt() {
+  local label="$1"
+  local out="$LOG_DIR/${label}.log"
+  local meta="$LOG_DIR/${label}.meta"
+  local fixture_dir="bench/fixtures"
+  local followup_prompt
+  followup_prompt=$(cat "$fixture_dir/mt_followup.txt")
+
+  echo "===== $label (multi-turn, model=122b) =====" | tee -a "$LOG_DIR/timeline.txt"
+  echo "TURN1_PROMPT: List the files in bench/fixtures and tell me the count." >> "$out"
+  echo "TURN2_PROMPT: $followup_prompt" >> "$out"
+  echo "----" >> "$out"
+
+  local start_ts=$(date +%s)
+
+  # Turn 1: capture session id from stderr (Phase 15-02 deliverable: 'Session: <id>' on stderr)
+  local turn1_stderr="$LOG_DIR/${label}_turn1.stderr"
+  /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "List the files in bench/fixtures and tell me the count." >> "$out" 2>"$turn1_stderr"
+  local turn1_exit=$?
+  cat "$turn1_stderr" >> "$out"
+  local sid=$(grep -oE "Session: [a-zA-Z0-9_-]+" "$turn1_stderr" | head -1 | awk '{print $2}')
+
+  if [ -z "$sid" ]; then
+    echo "  -> ERROR: session id not captured from turn 1 stderr" | tee -a "$LOG_DIR/timeline.txt"
+    echo "label=$label exit=99 elapsed=0s reason=missing-session-id" > "$meta"
+    return 99
+  fi
+
+  echo "  turn1: exit=$turn1_exit session=$sid" | tee -a "$LOG_DIR/timeline.txt"
+  echo "----" >> "$out"
+  echo "SESSION_ID: $sid" >> "$out"
+
+  # Turn 2: resume the session and ask the follow-up
+  /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b --resume "$sid" "$followup_prompt" >> "$out" 2>&1
+  local turn2_exit=$?
+  local end_ts=$(date +%s)
+  local elapsed=$((end_ts - start_ts))
+
+  # Combined exit code: max of the two turns (worst-case)
+  local combined_exit=$turn1_exit
+  if [ "$turn2_exit" -gt "$combined_exit" ]; then
+    combined_exit=$turn2_exit
+  fi
+
+  echo "label=$label model=122b exit=$combined_exit elapsed=${elapsed}s turn1_exit=$turn1_exit turn2_exit=$turn2_exit session=$sid" > "$meta"
+  echo "  turn2: exit=$turn2_exit  combined exit=$combined_exit elapsed=${elapsed}s" | tee -a "$LOG_DIR/timeline.txt"
+}
+
+# ---------------------------------------------------------------------------
+# gate() — Regression gate: 7-invocation subset, diff against bench/baseline.json
 # Added by Plan 10-02 (BENCH-04). Exits 0 on pass, 1 on regression, 2 on setup error.
 # Phase 19 (19-02): gate set reduced from 8 to 6 — all _122b labels.
+# Phase 16-03: gate extended from 6 to 7 — added MT_122b multi-turn fixture.
 # Verdict logic (3-branch):
 #   1. is_regression = true  → PASS (known regression; always PASS)
 #   2. actual_steps > baseline_max → FAIL (step-count regression)
@@ -129,7 +185,7 @@ gate() {
   fi
   echo "Pre-condition OK: port 8001 (122B) responsive." | tee -a "$LOG_DIR/timeline.txt"
 
-  echo "===== GATE: regression subset (6 invocations) =====" | tee -a "$LOG_DIR/timeline.txt"
+  echo "===== GATE: regression subset (7 invocations) =====" | tee -a "$LOG_DIR/timeline.txt"
 
   # 1. T6 x 122B
   run "gate_T6_122b" "122b" "What are the field names in the Step record in src/BlueCode.Core/Domain.fs?"
@@ -164,11 +220,14 @@ EOF
   # 6. B2 x 122B (diagnose-only, regression-tracked)
   run "gate_B2_122b" "122b" "Read bench/fixtures/bug_divide_zero.fs and identify the bug. Be specific about what input triggers it."
 
+  # 7. MT x 122B (multi-turn persistence fixture, Phase 16-03)
+  mt "gate_MT_122b"
+
   # ----- Compare each invocation against baseline.json -----
   echo "===== GATE: compare to baseline =====" | tee -a "$LOG_DIR/timeline.txt"
   local fail_count=0
   local pass_count=0
-  local labels="T6_122b W1_122b W2_122b T1_122b T5_122b B2_122b"
+  local labels="T6_122b W1_122b W2_122b T1_122b T5_122b B2_122b MT_122b"
 
   for key in $labels; do
     local logfile="$LOG_DIR/gate_${key}.log"
@@ -216,7 +275,7 @@ EOF
   done
 
   # ----- Verdict line -----
-  local total=6
+  local total=7
   if [ "$fail_count" -eq 0 ]; then
     echo "===== GATE PASS (${pass_count}/${total}) =====" | tee -a "$LOG_DIR/timeline.txt"
     exit 0
