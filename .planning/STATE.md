@@ -11,11 +11,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
 Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk (revision pending — _32b/_72b keys need re-keying to _35b/_122b) Phase 17 ✓ Phase 18 added (not planned yet)
-Plan: —
-Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 added 2026-04-27 (single-model 122B viability eval, runs BEFORE Phase 16 — same ordering rationale as 17); Phase 18 next, then Phase 16
-Last activity: 2026-04-27 — Phase 18 added to v2.0 (Single-Model 122B Evaluation: unload 35B, run --all-on-122b bench, decide DROP-35B / KEEP-DUAL / CONDITIONAL)
+Plan: 18-01 complete
+Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 in progress (18-01 done: 35B unloaded, memory profile PASS; 18-02 bench next); Phase 18 next, then Phase 16
+Last activity: 2026-04-27 — Phase 18-01 complete (35B unloaded CLEAN; PhysMem unused +19.42 GB freed; 122B RSS 45.42 GB stable; both SC4 memory criteria PASS; 18-02 READY)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ░]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ◆ (18-01 ✓ 18-02 ░ 18-03 ░)]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -73,8 +73,16 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 17-03-PLAN.md (bench --all comparison, SWITCH verdict, baseline re-keyed, CLAUDE.md updated, gate 8/8 PASS)
-Resume file: None — Phase 17 complete (SWITCH to 35B/122B); run Phase 16 next (note: Phase 16 plans reference _32b/_72b bench keys; mechanical re-key needed before 16-03 bench tasks execute)
+Stopped at: Completed 18-01-PLAN.md (35B unloaded, memory profile captured, 122B health smokes PASS, SC4 memory criteria both PASS, 18-02 READY)
+Resume file: None — 18-01 complete; run 18-02 (bench-122b-only.sh) next
+
+### New Decisions (18-01)
+
+- **v2.0 Phase 18-01 35B unload CLEAN** — `launchctl unload` released port 8000 and terminated PID 44878 cleanly. KeepAlive did not auto-restart because the launchd registration was removed first. No bootout/bootstrap fallback required. 122B (PID 44880, port 8001) was completely unaffected.
+- **v2.0 Phase 18-01 PhysMem freed +19.42 GB post-unload** — Pre-unload PhysMem unused 1.58 GB → post-unload 21 GB (+19.42 GB). ROADMAP §SC4 threshold (≥5 GB) PASS with 4× margin. Freed pages returned to PhysMem pool immediately (30s settle sufficient); not claimed by 122B.
+- **v2.0 Phase 18-01 122B RSS stable at 45.42 GB** — RSS held at exactly 45.42 GB post-unload (0 GB expansion). MoE sparse activation means 122B's resident expert pages are prompt-driven, not memory-availability-driven. Hypothesis CONFIRMED. ROADMAP §SC4 threshold (≤50 GB) PASS.
+- **v2.0 Phase 18-01 Compressor flat** — Compressor 463 MB pre → 454 MB post (-9 MB). 35B used file-backed mmap pages (not anonymous compressed memory), so its exit did not relieve compressor pressure. Compressor well below 1 GB SC4 threshold both before and after.
+- **v2.0 Phase 18-01 122B health post-unload confirmed** — Thinking-mode smoke (1s, no `<think>` tokens) and blueCode `--model 72b` JSON-schema smoke (7s, exit 0, clean FinalAnswer) both PASS after 35B unload. 18-02 test bed is READY.
 
 ### New Decision (15-03)
 
