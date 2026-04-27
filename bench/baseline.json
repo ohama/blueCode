@@ -1,67 +1,67 @@
 {
   "_meta": {
-    "created": "2026-04-26",
-    "binary_state": "post-09.1-05",
-    "description": "Post-Phase-9.1 baseline. Gate tests: T6 x 32B/72B, W1/W2 x 32B, T1/T5 canaries, B2 x 32B/72B regression status."
+    "created": "2026-04-27",
+    "binary_state": "post-17-03-switch",
+    "description": "Phase 17 SWITCH baseline. Gate tests: T6 x 35B/122B, W1/W2 x 35B, T1/T5 canaries, B2 x 35B/122B regression status."
   },
   "tests": {
-    "T6_32b": {
+    "T6_35b": {
       "step_count": 4,
       "step_count_max": 5,
       "pass": true,
-      "elapsed_median_s": 22,
-      "note": "Post-09.1 typical: 4 steps (read x3 + final). Gate fails if >5."
+      "elapsed_median_s": 6,
+      "note": "Post-17-03 SWITCH. 4 steps typical: read_file + grep_search + read_file (targeted) + final. Gate fails if >5."
     },
-    "T6_72b": {
+    "T6_122b": {
       "step_count": 4,
       "step_count_max": 5,
       "pass": true,
-      "elapsed_median_s": 45,
-      "note": "Post-09.1 typical: 4 steps. Gate fails if >5. (Live observed 4, not 5 as in research defaults.)"
+      "elapsed_median_s": 11,
+      "note": "Post-17-03 SWITCH. 4 steps typical: double grep_search + read_file + final. Gate fails if >5."
     },
-    "W1_32b": {
+    "W1_35b": {
       "step_count": 3,
-      "step_count_max": 3,
-      "pass": true,
-      "elapsed_median_s": 14,
-      "note": "Loop-injection enforces 3 steps: read+edit+final. >3 = regression in 09.1-05 fix."
-    },
-    "W2_32b": {
-      "step_count": 3,
-      "step_count_max": 3,
-      "pass": true,
-      "elapsed_median_s": 17,
-      "note": "Same as W1: directive wording + loop injection holds 3 steps."
-    },
-    "T1_32b": {
-      "step_count": 1,
       "step_count_max": 3,
       "pass": true,
       "elapsed_median_s": 5,
-      "note": "Canary. 1 step typical; 3 steps observed once (model variance, 09.1-03). 4+ = alarm."
+      "note": "Loop-injection enforces 3 steps: read+write+final. >3 = regression."
     },
-    "T5_72b": {
+    "W2_35b": {
+      "step_count": 3,
+      "step_count_max": 3,
+      "pass": true,
+      "elapsed_median_s": 6,
+      "note": "Same as W1: loop-injection holds 3 steps."
+    },
+    "T1_35b": {
+      "step_count": 1,
+      "step_count_max": 3,
+      "pass": true,
+      "elapsed_median_s": 2,
+      "note": "Canary. 1 step typical; 3 steps observed once in prior variance. 4+ = alarm."
+    },
+    "T5_122b": {
       "step_count": 3,
       "step_count_max": 4,
       "pass": true,
-      "elapsed_median_s": 18,
+      "elapsed_median_s": 6,
       "note": "Canary. glob_search + run_shell + final pattern."
     },
-    "B2_32b": {
+    "B2_35b": {
       "step_count": 2,
       "step_count_max": 3,
       "pass": true,
       "expected_diagnosis": "empty list causes DivideByZeroException",
-      "actual_diagnosis": "empty list causes DivideByZeroException",
-      "note": "Recovered post-PERF-01 prompt shrink (Plan 11-02, 1689→783 chars). Validates v1.2 audit's prompt-length attention-shift hypothesis. Thought: 'The bug is identified. It occurs when the function average is called with an empty list, leading to a division by zero error.' Updated by Plan 11-03 on 2026-04-26."
+      "actual_diagnosis": "empty list causes DivideByZeroException — 'The bug is in the average function which performs integer division by List.length xs without checking if the list is empty. When an empty list is passed, List.length returns 0, causing a DivideByZeroException at runtime.'",
+      "note": "Phase 17-03 SWITCH. 2 steps: read_file + final. Diagnosis accuracy confirmed."
     },
-    "B2_72b": {
+    "B2_122b": {
       "step_count": 2,
       "step_count_max": 3,
       "pass": true,
       "expected_diagnosis": "empty list causes DivideByZeroException",
-      "actual_diagnosis": "empty list causes DivideByZeroException",
-      "note": "Recovered post-PERF-01 prompt shrink (Plan 11-02, 1689→783 chars). Validates v1.2 audit's prompt-length attention-shift hypothesis. Thought: 'The bug is triggered when the function average is called with an empty list. This causes a division by zero because List.length xs returns 0 for an empty list.' Updated by Plan 11-03 on 2026-04-26."
+      "actual_diagnosis": "empty list causes DivideByZeroException — 'The bug is a division by zero when the input list is empty, because List.length [] returns 0, and dividing by zero raises a DivideByZeroException.'",
+      "note": "Phase 17-03 SWITCH. 2 steps: read_file + final. Diagnosis accuracy confirmed."
     }
   }
 }
