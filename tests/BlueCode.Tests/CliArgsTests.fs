@@ -89,24 +89,41 @@ let tests =
               Expect.equal (results.TryGetResult Model) (Some "72b") "--model 72b present"
               Expect.equal (results.TryGetResult Prompt) (Some [ "hi" ]) "Prompt = [\"hi\"]"
 
-          // 9. parseForcedModel round-trips (Task 3 signature; Task 7 replaces these with retirement tests)
+          // 9. parseForcedModel round-trips with Phase 19 retirement semantics
           testCase "parseForcedModel None defaults to Qwen122B"
           <| fun () -> Expect.equal (parseForcedModel None false) (Some Qwen122B) "None → Some Qwen122B (explicit single-model default)"
 
           testCase "parseForcedModel Some 122b returns Qwen122B"
           <| fun () -> Expect.equal (parseForcedModel (Some "122b") false) (Some Qwen122B) "\"122b\" string maps to Qwen122B"
 
-          testCase "parseForcedModel Some 32b throws retirement error (temporary; Task 7 elaborates)"
+          testCase "parseForcedModel Some 35b without dual flag throws retirement-style error"
           <| fun () ->
               Expect.throws
-                  (fun () -> parseForcedModel (Some "32b") false |> ignore)
-                  "32b is retired in Phase 19"
+                  (fun () -> parseForcedModel (Some "35b") false |> ignore)
+                  "35b without --with-35b should throw"
 
-          testCase "parseForcedModel Some 72b throws retirement error (temporary; Task 7 elaborates)"
+          testCase "parseForcedModel Some 35b with dual flag returns Qwen35B"
+          <| fun () -> Expect.equal (parseForcedModel (Some "35b") true) (Some Qwen35B) "\"35b\" with withDual=true maps to Qwen35B"
+
+          // (W4 LOAD-BEARING) — These retirement messages must contain "retired in Phase 19"
+          // AND "122b" to trigger the `with | ex when ex.Message.Contains "retired" -> exit 2`
+          // catch-block in Program.fs. The test is a proxy verification that the catch-block
+          // will fire for these exact messages.
+          testCase "parseForcedModel Some 32b throws retirement error mentioning Phase 19"
           <| fun () ->
-              Expect.throws
-                  (fun () -> parseForcedModel (Some "72b") false |> ignore)
-                  "72b is retired in Phase 19"
+              let thrown =
+                  try parseForcedModel (Some "32b") false |> ignore; ""
+                  with ex -> ex.Message
+              Expect.stringContains thrown "retired in Phase 19" "32b retirement message must mention Phase 19"
+              Expect.stringContains thrown "122b" "32b retirement message must mention 122b as the migration target"
+
+          testCase "parseForcedModel Some 72b throws retirement error mentioning Phase 19"
+          <| fun () ->
+              let thrown =
+                  try parseForcedModel (Some "72b") false |> ignore; ""
+                  with ex -> ex.Message
+              Expect.stringContains thrown "retired in Phase 19" "72b retirement message must mention Phase 19"
+              Expect.stringContains thrown "122b" "72b retirement message must mention 122b as the migration target"
 
           // 10. parseForcedModel on unknown raises
           testCase "parseForcedModel (Some \"unknown\") raises"
@@ -114,6 +131,12 @@ let tests =
               Expect.throws
                   (fun () -> parseForcedModel (Some "unknown") false |> ignore)
                   "invalid model string should raise an exception"
+
+          // 11. --with-35b / --withdual flag parsed by Argu
+          testCase "args parses --with-35b as WithDual flag"
+          <| fun () ->
+              let results = parse [| "--with-35b"; "hello" |]
+              Expect.isTrue (results.Contains WithDual) "--with-35b should be parsed as WithDual flag presence"
 
           // 11. --help raises ArguParseException (usage text in message)
           testCase "--help raises ArguParseException"
