@@ -129,18 +129,25 @@ let private postAsync (url: string) (body: string) (ct: CancellationToken) : Tas
 // ── OpenAI envelope extraction ──────────────────────────────────────────────
 
 /// Pure helper: extract the content string from an OpenAI-style chat completion response.
-/// Returns Some content when choices[0].message.content is a non-empty string; None otherwise.
-/// Public for testability (analogous to tryParseModelId / tryParseMaxModelLen in this module).
-/// Phase 20-02 Task 2 extends this to fall back to reasoning_content.
+/// Tries choices[0].message.content first; if that is null/empty/missing, falls back to
+/// choices[0].message.reasoning_content. Returns Some s on first non-empty match, None
+/// when both are absent or empty. Public for testability (analogous to tryParseModelId
+/// pattern in this module). The reasoning_content fallback handles a documented Qwen 3.5
+/// / mlx_lm.server response shape (qwen35-install.md §5.3); under enable_thinking=false
+/// the path is rare but defensively supported.
 let extractContentFromJson (responseJson: string) : string option =
-    try
-        use doc = JsonDocument.Parse(responseJson)
-        let msg = doc.RootElement.GetProperty("choices").[0].GetProperty("message")
-        match msg.TryGetProperty("content") with
+    let pickStringField (msg: JsonElement) (fieldName: string) : string option =
+        match msg.TryGetProperty(fieldName) with
         | true, el when el.ValueKind = JsonValueKind.String ->
             let s = el.GetString()
             if System.String.IsNullOrEmpty(s) then None else Some s
         | _ -> None
+    try
+        use doc = JsonDocument.Parse(responseJson)
+        let msg = doc.RootElement.GetProperty("choices").[0].GetProperty("message")
+        match pickStringField msg "content" with
+        | Some s -> Some s
+        | None -> pickStringField msg "reasoning_content"
     with _ -> None
 
 /// Pull choices[0].message.content out of the vLLM response envelope.
@@ -158,7 +165,7 @@ let extractContentFromJson (responseJson: string) : string option =
 let private extractContent (url: string) (responseJson: string) : Result<string, AgentError> =
     match extractContentFromJson responseJson with
     | Some content -> Ok content
-    | None -> Error(LlmUnreachable(url, "malformed response: missing or empty content"))
+    | None -> Error(LlmUnreachable(url, "malformed response: no content or reasoning_content"))
 
 // ── LlmStep -> LlmResponse mapping ──────────────────────────────────────────
 
