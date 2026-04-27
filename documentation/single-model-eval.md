@@ -263,3 +263,24 @@ Phase 18 SC4: PASS — 5 criteria evaluated; verdict named (above) — all 5 PAS
 Phase 18 SC5: PASS — architectural follow-ups enumerated as deferred (above); no code changes in this plan
 
 Phase 18 is shippable.
+
+## §7 Phase 19 Execution (follow-up to SC5 deferred work)
+
+The architectural follow-ups enumerated in §SC5 above were executed in Phase 19
+(planned and executed 2026-04-27):
+
+- **Router collapse** — `parseForcedModel None → Some Qwen122B` (explicit default, no
+  intent routing indirection in single-model mode). Router.intentToModel retained structurally
+  for future SHIP-BOTH evolution but dormant by default. See `19-02-PLAN.md` Task 3.
+- **baseline.json halve** — `bench/baseline.json` reduced from 8 entries (_35b/_32b/_72b)
+  to 6 entries (all _122b: T6/W1/W2/T1/T5/B2). See `19-02-PLAN.md` Task 6.
+- **CLAUDE.md update** — §Runtime Environment reframed to 122B-only canonical + dual-mode
+  reactivation procedure. See `19-02-PLAN.md` Task 8.
+- **scripts/bench-122b-only.sh promotion** — absorbed into `bench/run.sh` in-place.
+  See `19-02-PLAN.md` Task 5.
+- **Retirement guard** — `parseForcedModel` now rejects `--model 32b`/`--model 72b` with
+  exit 2 + Phase 19 reference. `validateModelPath` adds a probe-layer PathRetired guard.
+  See `19-02-PLAN.md` Tasks 1–3.
+
+Execution artifact: `.planning/phases/19-qwen25-retirement/19-02-PLAN.md`
+Summary: `.planning/phases/19-qwen25-retirement/19-02-SUMMARY.md`

@@ -1,9 +1,13 @@
-# Qwen 3.5 35B + 122B 설치 및 운영 가이드 (8000 / 8001 candidate)
+# Qwen 3.5 35B + 122B 설치 및 운영 가이드 (8000 / 8001)
 
-blueCode가 현재 Qwen 2.5 32B/72B 페어를 사용한다. 이 문서는 그 페어를 Qwen 3.5
-35B-A3B / 122B-A10B (둘 다 MoE, 둘 다 MLX 4-bit) 페어로 **평가하기 위한** 설치
-절차다. v2.0 Phase 17의 산출물이며, **교체를 확정하기 전에** 두 페어 모두 디스크에
-공존하는 시점이 존재한다 (롤백 가능).
+> **Status (Phase 19, 2026-04-27):** Qwen 3.5 35B is retained on disk as a
+> **STANDBY/ROLLBACK asset**. The canonical blueCode runtime is **122B alone**
+> (single-model default). To reactivate 35B for dual-mode use, see
+> §Dual-mode reactivation below.
+
+blueCode가 현재 Qwen 3.5 122B를 단독으로 사용한다 (Phase 19 확정). 이 문서는 그 결정에
+이르기까지 Qwen 3.5 35B-A3B / 122B-A10B 페어를 설치하고 평가한 절차를 담는다.
+v2.0 Phase 17의 산출물이며, Phase 18에서 단독 122B 운영이 검증되었다.
 
 > **핵심 차이 한 줄**: Qwen 3.5는 dense가 아니라 MoE (Mixture-of-Experts).
 > 35B-A3B = 35B total / 3B activated; 122B-A10B = 122B total / 10B activated.
@@ -1010,3 +1014,33 @@ combined steady-state is ~62 GB.
 
 Eval evidence: `documentation/benchmark-qwen35-eval.md` (per-test comparison + decision matrix).
 Empirical service-load record: `.planning/phases/17-qwen-3-5-evaluation/17-02-LOAD-TEST.md`.
+
+---
+
+## §Dual-mode reactivation (Phase 19 appendix)
+
+35B is on disk at `~/llm-system/models/qwen35b/` and its launchd plist exists at
+`~/Library/LaunchAgents/com.ohama.qwen35b.plist`. To bring it back:
+
+1. **Load the service:**
+   ```bash
+   launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist
+   ```
+2. **Wait for 35B to be ready** (RSS will climb toward ~17 GB):
+   ```bash
+   until curl -fsS http://127.0.0.1:8000/v1/models > /dev/null 2>&1; do sleep 5; done
+   echo "35B ready"
+   ```
+3. **Use with blueCode** (BOTH flags required):
+   ```bash
+   blueCode --model 35b --with-35b "your prompt"
+   ```
+   - `--with-35b` enables the 35B code path and triggers the eager bootstrap probe
+   - Without `--with-35b`, `--model 35b` is rejected at parse time with a usage error
+   - Default `blueCode "..."` still routes to 122B and does NOT probe port 8000
+4. **To unload 35B again:**
+   ```bash
+   launchctl unload ~/Library/LaunchAgents/com.ohama.qwen35b.plist
+   ```
+
+Memory budget with both models loaded: ~62 GB combined RSS (17 GB 35B + 45 GB 122B).

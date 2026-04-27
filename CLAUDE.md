@@ -124,15 +124,32 @@ Rendering.renderStep Verbose
 
 ## Runtime Environment
 
+**Single-model canonical mode (Phase 19, 2026-04-27):** Qwen 3.5 122B is the sole
+production model. Qwen 3.5 35B is retained on disk as a STANDBY/ROLLBACK asset but
+its launchd service is not loaded by default.
+
 - macOS only (Mac `ohama`)
-- Qwen 3.5 35B-A3B-4bit (MoE; ~3B activated/token) @ `localhost:8000` via `mlx_lm.server` + launchd (`com.ohama.qwen35b.plist`)
-- Qwen 3.5 122B-A10B-4bit (MoE; ~10B activated/token) @ `localhost:8001` same pattern
+- Qwen 3.5 122B-A10B-4bit (MoE; ~10B activated/token) @ `localhost:8001` via `mlx_lm.server` + launchd (`com.ohama.qwen122b.plist`) — **production**
+- Qwen 3.5 35B-A3B-4bit (MoE; ~3B activated/token) @ `localhost:8000` — **standby/rollback** (plist exists at `~/Library/LaunchAgents/com.ohama.qwen35b.plist`; service NOT loaded by default)
 - Model paths: `~/llm-system/models/qwen{35b,122b}/`
 - Setup docs: `documentation/qwen35-install.md` (legacy 32B/72B docs still on disk: `documentation/local-llm-services.md`, `documentation/qwen32b-base-to-instruct.md`)
 
 **Thinking-mode mitigation (critical):** Both launchd plists pass `--chat-template-args '{"enable_thinking": false}'` to `mlx_lm.server`. Without this flag, Qwen 3.5 emits `<think>...</think>` tokens that break blueCode's strict JSON schema validation. If this flag is unavailable in a future mlx_lm version, Path B fallback is documented in `documentation/qwen35-install.md` §6. See also: commit `54e54a9` (AgentLoop User role fix for mid-conversation hints — required for T6 to pass on Qwen 3.5).
 
-Unified memory is tighter than v1: 35B (~17GB) + 122B (~45GB) + OS / KV cache combined ~62 GB resident at steady state (MoE sparse routing keeps RSS well below disk size; bench-all confirmed flat at 62.4 GB). Periodic `launchctl kickstart` recommended for long sessions (KV cache accumulates). Old 32B/72B model files preserved at `~/llm-system/models/qwen{32b,72b}/` for rollback.
+**Single-model memory profile:** 122B alone: RSS ~45.4 GB (MoE sparse routing keeps resident pages well below disk size). OS/KV overhead ~17 GB. Total ~62 GB with both models; ~45-46 GB with 122B alone. Periodic `launchctl kickstart` recommended for long sessions (KV cache accumulates).
+
+### Dual-mode reactivation
+
+To use 35B alongside 122B (e.g., for SHIP-BOTH experiments or 35B validation):
+
+1. Load the 35B service: `launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist`
+2. Wait for 35B to load: `until curl -fsS http://127.0.0.1:8000/v1/models; do sleep 5; done`
+3. Invoke blueCode with both flags: `blueCode --model 35b --with-35b "your prompt"`
+   - `--with-35b` gates the eager bootstrap probe (fails fast if 35B service absent)
+   - Without `--with-35b`, `--model 35b` is rejected with a usage error
+4. To unload 35B again: `launchctl unload ~/Library/LaunchAgents/com.ohama.qwen35b.plist`
+
+The default invocation (`blueCode "..."` or `blueCode --model 122b "..."`) always routes to 122B and does NOT probe port 8000. No overhead for the default path.
 
 ## Common Gotchas
 
@@ -159,19 +176,20 @@ CI fails on any `async {}` literal in `src/BlueCode.Core/`. All Core CE use `tas
 - Don't add new NuGet packages without a corresponding decision in `.planning/PROJECT.md` Key Decisions
 - Don't assume Windows paths; `tryParseModelId`'s `StartsWith("/")` heuristic is Unix-only (v1 Mac-only permits this)
 - Don't commit `.claude/` or `localLLM/` — they're intentionally untracked
+- Don't reintroduce qwen32b/qwen72b path support — Phase 19 retirement; `PathRetired` guard in `validateModelPath` (QwenHttpClient.fs) catches these at the probe layer
 
 ## Bench
 
-`bench/run.sh` is the canonical regression harness — repo-tracked replacement for
-v1.2's ephemeral `/tmp/bench-v1.2/run.sh`. Run `bench/run.sh --gate` (added in
-Plan 10-02) to validate the current binary against `bench/baseline.json`.
+`bench/run.sh` is the canonical regression harness (single-model 122B, Phase 19).
+Run `bench/run.sh --gate` to validate the current binary against `bench/baseline.json`.
 
-- `--gate` — regression subset (~8 invocations, ~2 min); exits non-zero on regression
+- `--gate` — regression subset (6 invocations, ~2 min); exits non-zero on regression
 - `--canary` — quick smoke (4 invocations, ~1.5 min)
-- `--regression` — full Part 1 reproducibility (14 invocations)
+- `--regression` — full Part 1 reproducibility (7 invocations, 122B only)
 - `--all` — everything (~25 min)
-- `--b2` — B2 divide-by-zero diagnose only
+- `--b2` — B2 divide-by-zero diagnose only (1 invocation)
 
+Gate labels: T6_122b W1_122b W2_122b T1_122b T5_122b B2_122b (6 entries in baseline.json).
 Fixtures live in `bench/fixtures/`. Logs land in `bench/runs/<timestamp>/`
 (gitignored). See `documentation/bench.md` for full usage and fixture conventions.
 
@@ -184,4 +202,4 @@ Fixtures live in `bench/fixtures/`. Logs land in `bench/runs/<timestamp>/`
 
 ---
 
-*Last updated: 2026-04-24 after v1.1 milestone complete*
+*Last updated: 2026-04-27 after Phase 19 (Qwen 2.5 retirement + 122B single-model canonical)*

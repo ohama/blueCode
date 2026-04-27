@@ -33,13 +33,15 @@ If the gate fails, inspect the per-test diff lines in the console output and the
 
 ## Mode Flags
 
+All invocations use `--model 122b` (single-model canonical, Phase 19).
+
 | Flag | Invocations | Wall-clock | Purpose |
 |------|-------------|------------|---------|
-| `--gate` | 8 | ~2 min | Regression gate (CI/pre-commit). Exits non-zero on regression. |
+| `--gate` | 6 | ~2 min | Regression gate (CI/pre-commit). Exits non-zero on regression. Labels: T6/W1/W2/T1/T5/B2 all _122b. |
 | `--canary` | 4 | ~1.5 min | Quick smoke for ad-hoc development. |
-| `--regression` | 14 | ~6 min | Part 1 reproducibility (T1–T7 × both models). |
-| `--b2` | 2 | ~30 s | B2 divide-by-zero diagnose only — useful for prompt-shrink hypothesis testing (originally Phase 11 PERF-03's iteration tool). |
-| `--all` | 30+ | ~25 min | Full re-bench equivalent. |
+| `--regression` | 7 | ~6 min | Part 1 reproducibility (T1–T7 × 122B). |
+| `--b2` | 1 | ~30 s | B2 divide-by-zero diagnose only — useful for prompt-shrink hypothesis testing. |
+| `--all` | 20+ | ~25 min | Full re-bench equivalent (122B only). |
 | `--help` | 0 | — | Print usage. |
 
 ## Fixture Naming Convention
@@ -136,17 +138,17 @@ generalizes to any future intentional behavior change:
 783 chars) recovered correct empty-list diagnosis on both models. See
 `documentation/benchmark-32b-vs-72b.md` Part 4 §21.3 for the diff and rationale.
 
-## Hang Contingency for `mlx_lm.server` 32B
+## Hang Contingency for `mlx_lm.server` 122B
 
-**Symptom:** A 32B run shows no console output progress for >90 s. The blueCode HTTP
+**Symptom:** A 122B run shows no console output progress for >90 s. The blueCode HTTP
 client itself times out at 180 s, but the gate will appear "hung" earlier because the
 spinner stops moving.
 
 **Recovery:**
 
 ```bash
-launchctl kickstart -k gui/$(id -u)/com.ohama.qwen32b
-# wait ~30 s for weights to reload (~17 GB)
+launchctl kickstart -k gui/$(id -u)/com.ohama.qwen122b
+# wait ~60-90 s for weights to reload (~45 GB for 122B)
 # manually re-run the failed test
 bash bench/run.sh --gate    # or just the failed sub-test invocation
 ```
@@ -156,8 +158,8 @@ bash bench/run.sh --gate    # or just the failed sub-test invocation
 **Last resort (if `kickstart -k` itself hangs):**
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.ohama.qwen32b.plist
-launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen32b.plist
+launchctl unload ~/Library/LaunchAgents/com.ohama.qwen122b.plist
+launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen122b.plist
 ```
 
 See [`documentation/local-llm-services.md`](local-llm-services.md) §5 for the full
@@ -170,38 +172,34 @@ plan can revisit this trade-off.
 
 ## Interpreting Gate Output
 
-A passing gate looks like:
+A passing gate looks like (Phase 19 single-model 122B, 6/6 format):
 
 ```
-===== GATE: regression subset (8 invocations) =====
+Pre-condition OK: port 8001 (122B) responsive.
+===== GATE: regression subset (6 invocations) =====
 ... per-test run logs ...
 ===== GATE: compare to baseline =====
-  PASS T6_32b     steps=3/5 exit=0
-  PASS T6_72b     steps=3/5 exit=0
-  PASS W1_32b     steps=3/3 exit=0
-  PASS W2_32b     steps=3/3 exit=0
-  PASS T1_32b     steps=3/3 exit=0
-  PASS T5_72b     steps=3/4 exit=0
-  PASS B2_32b     steps=2/3 exit=0
-  PASS B2_72b     steps=2/3 exit=0
-===== GATE PASS (8/8) =====
+  PASS T6_122b    steps=4/5 exit=0
+  PASS W1_122b    steps=3/3 exit=0
+  PASS W2_122b    steps=3/3 exit=0
+  PASS T1_122b    steps=1/3 exit=0
+  PASS T5_122b    steps=3/4 exit=0
+  PASS B2_122b    steps=2/3 exit=0
+===== GATE PASS (6/6) =====
 ```
 
-(Step counts above are post-v1.3 actuals; T6 went from 4-5 steps to deterministic 3
-after the prompt shrink moved the 32B/72B toward `grep_search → read_file → final` as
-the canonical pattern.)
-
 A failing gate prints `FAIL <key> ... — <reason>` lines, and ends with
-`GATE FAIL (N/8 regressed)` with exit code 1.
+`GATE FAIL (N/6 regressed)` with exit code 1.
 
 ## Known Regressions (Baseline State)
 
-**Current state (post-v1.3 close, 2026-04-26):** zero entries marked `regression: true`
-in `bench/baseline.json`. All 8 baseline entries (T6 × 32B/72B, W1/W2 × 32B, T1/T5
-canaries, B2 × 32B/72B) validate against real step counts and pass states.
+**Current state (post-Phase-19, 2026-04-27):** zero entries marked `regression: true`
+in `bench/baseline.json`. All 6 baseline entries (T6/W1/W2/T1/T5/B2 × 122B) validate
+against real step counts and pass states.
 
 **Historical:** `B2_32b` and `B2_72b` were recorded as `pass: false, regression: true`
-from Phase 10 close through Phase 11 mid-execution. Both models misdiagnosed the
+from Phase 10 close through Phase 11 mid-execution (historical — Qwen 2.5 retired in
+Phase 19; current B2_122b preserves diagnose accuracy). Both models misdiagnosed the
 divide-by-zero fixture as "integer truncation" instead of "empty list → DivideByZeroException"
 — the v1.2 audit's prompt-length attention-shift hypothesis materialized. Phase 11 PERF-03
 recovered correct diagnosis on both models after the 54% prompt shrink (1689 → 783 chars);
