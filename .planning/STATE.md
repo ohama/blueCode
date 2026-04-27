@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓)
-Plan: 19-02 complete
-Status: 262/1/0 tests; bench gate 6/6 PASS (single-model 122B baseline); Phase 19 complete (Qwen 2.5 fully retired — physical disk + code + bench + docs); 122B sole production model, 35B standby/rollback
-Last activity: 2026-04-27 — Phase 19-02 complete (code/bench/docs alignment: Model DU rename, PathRetired guard, --with-35b flag, bench/run.sh rewrite, baseline 6-entry, docs updated)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B) Phase 19 ✓ (19-01 ✓ 19-02 ✓) Phase 20 ░ (20-01 ✓ 20-02 pending 20-03 pending)
+Plan: 20-01 complete
+Status: 262/1/0 tests; bench gate 6/6 PASS; Phase 20-01 complete (SamplingParams record, modelToSamplingParams, timeout 180→300s, docs updated)
+Last activity: 2026-04-27 — Phase 20-01 complete (sampling params aligned to Qwen 3.5 model card: temp=0.7/top_p=0.8/top_k=20/presence_penalty=0.0; HttpClient timeout 180→300s)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ✓]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓ Phase 19 ✓ Phase 20 ░ (20-01 ✓)]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -55,6 +55,7 @@ Items relevant to v2.0 (architectural touch points):
 
 - **2026-04-27**: Phase 17 (Qwen 3.5 Evaluation) added via `/gsd:add-phase`. Three deliverables: install/usage docs for 35B+122B, service swap with user help (autonomous: false, checkpoint), bench comparison vs current 32B/72B baseline. Should run BEFORE Phase 16 if model swap desired — Phase 16 bench fixtures reference current model ids.
 - **2026-04-27**: Phase 19 (Qwen 2.5 Retirement + 122B Single-Model Default) added via `/gsd:add-phase`. Two plans: 19-01 retire Qwen 2.5 from disk + launchd (autonomous: false, user checkpoint for `rm`); 19-02 code/bench/docs alignment (autonomous: true — Argu cleanup, `--with-35b` flag, `tryParseModelId` retirement guard, `bench/run.sh` rewrite absorbing `scripts/bench-122b-only.sh`, baseline halve, CLAUDE.md update). Key decisions: A=preserve 35B for future dual mode, B=remove `--model 32b/72b` aliases entirely (breaking), C=dual mode requires BOTH launchctl load + `--with-35b` flag, D=`bench/run.sh` in-place absorbs the 122B-only harness. Runs BEFORE Phase 16 (canonical baseline shape must be settled before 16-03 multi-turn fixtures).
+- **2026-04-27**: Phase 20 (Qwen 3.5 Protocol Alignment) added via `/gsd:add-phase`. Three plans: 20-01 sampling parameter alignment (`temp=0.7, top_p=0.8, top_k=20, presence_penalty=0.0` per Qwen 3.5 model card) + HttpClient timeout 180→300s; 20-02 `extractContent` `reasoning_content` fallback (latent qwen35-install §5.3 gotcha); 20-03 122B mid-conversation `Role = System` probe + conditional restore (Phase 17-02 fix may be unnecessary for 122B alone). Key decisions: A=single-model 122B is the only target, B=bench gate is regression authority (6/6 PASS post-each-plan), C=thinking mode stays OFF (`<think>` consumption deferred), D=`additionalProperties: false` stays, E=Role=System restoration is probe-driven (ACCEPT or REJECT documented in 20-03-SUMMARY.md). Out of scope (v2.1+ candidates): thinking-mode-on, native `tool_calls`, `additionalProperties` relaxation, `max_tokens` budget bump. Surfaced from post-Phase-19 codebase survey identifying 7 Qwen-2.5-era assumptions still in code (Router temperature 0.2/0.4, presence_penalty 1.5, missing top_p/top_k, 180s timeout, no reasoning_content fallback, User-role workaround possibly unneeded for 122B, stale howto F# snippets).
 
 ### Pending Todos
 
@@ -74,8 +75,16 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 19-02-PLAN.md (code/bench/docs alignment; 262/1/0 tests; bench gate 6/6 PASS)
-Resume file: None — Phase 19 complete; next: `/gsd:plan-phase 16` (Phase 16 is the next pending phase per ROADMAP; bench baseline now settled as single-model 122B)
+Stopped at: Completed 20-01-PLAN.md (sampling params + timeout; 262/1/0 tests; bench gate 6/6 PASS)
+Resume file: None — Phase 20-01 complete; next: run 20-02 (extractContent reasoning_content fallback) then 20-03 (Role=System probe), then Phase 16
+
+### New Decisions (20-01)
+
+- **v2.0 Phase 20-01 SamplingParams record location** — Domain.fs (pure data, after `Message` type). Consistent with `LlmRequest`/`Step`/`Plan` pattern. No HTTP knowledge in Core.
+- **v2.0 Phase 20-01 modelToSamplingParams uniformity** — Both Qwen35B and Qwen122B return identical record (`temp=0.7, top_p=0.8, top_k=20, presence_penalty=0.0`) per Qwen 3.5 model card non-thinking coding mode. Explicit two-case match (not wildcard) preserves compile-time exhaustiveness for future per-model tuning.
+- **v2.0 Phase 20-01 modelToTemperature deleted** — No tests reference it (RouterTests covers classifyIntent/intentToModel/modelToEndpoint/endpointToUrl only). Single call site in QwenHttpClient.fs:68 rewired to consume `modelToSamplingParams` directly.
+- **v2.0 Phase 20-01 timeout 300s rationale** — 122B cold-start observed at 240s after `launchctl kickstart`. 300s provides comfortable margin. Error string "request timed out after 300s" updated to match. CLAUDE.md and qwen35-install.md §8 updated.
+- **v2.0 Phase 20-01 Appendix A row added** — Sampling-parameter mismatch gotcha documented in qwen35-install.md Appendix A as RESOLVED Phase 20-01. Symptom: Qwen 2.5-era values (temp=0.2-0.4, presence_penalty=1.5, no top_p/top_k) in POST body.
 
 ### New Decisions (19-02)
 
