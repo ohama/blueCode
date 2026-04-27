@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk (revision pending — _32b/_72b keys need re-keying to _35b/_122b) Phase 17 ✓
-Plan: 17-03 complete (Phase 17 SHIPPED)
-Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 16 next
-Last activity: 2026-04-27 — Completed 17-03-PLAN.md (bench --all comparison, SWITCH verdict, baseline re-keyed, CLAUDE.md updated)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk (revision pending — _32b/_72b keys need re-keying to _35b/_122b) Phase 17 ✓ Phase 18 added (not planned yet)
+Plan: —
+Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 added 2026-04-27 (single-model 122B viability eval, runs BEFORE Phase 16 — same ordering rationale as 17); Phase 18 next, then Phase 16
+Last activity: 2026-04-27 — Phase 18 added to v2.0 (Single-Model 122B Evaluation: unload 35B, run --all-on-122b bench, decide DROP-35B / KEEP-DUAL / CONDITIONAL)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ░]
 
 ## Performance Metrics (cumulative, frozen)
 

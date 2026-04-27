@@ -18,6 +18,7 @@ v2.0 makes two architectural investments simultaneously: session state persists 
 - [x] **Phase 15: Persistence Wiring** ✓ — REPL session threading, JSONL adapter, --resume, --new-session
 - [ ] **Phase 16: Planning Wiring + Bench** — --plan flag, approval gate UI, plan retry wiring, bench fixtures extended
 - [x] **Phase 17: Qwen 3.5 Evaluation** ✓ — SWITCH verdict 2026-04-27; 35B/122B replaces 32B/72B as canonical pair (3.4× speedup, no regressions, 8/8 gate)
+- [ ] **Phase 18: Single-Model 122B Evaluation** — unload 35B and verify 122B-alone viability (latency + quality + memory profile); decide DROP-35B / KEEP-DUAL / CONDITIONAL (added 2026-04-27 via /gsd:add-phase; runs BEFORE Phase 16, same reason as 17)
 
 **Note on phase ordering:** Phase 17 should run BEFORE Phase 16 if model swap is desired before bench fixtures are set. If 35B/122B replaces 32B/72B as canonical, Phase 16's bench baseline (T6_32b, W1_32b, B2_72b, etc.) needs new model ids. Phase 16 plans on disk remain valid for whichever model pair ends up canonical; user decides execution order after Phase 17 ships findings.
 
@@ -128,6 +129,37 @@ Plans:
 
 ---
 
+### Phase 18: Single-Model 122B Evaluation
+
+**Goal:** Decide whether 35B can be dropped and 122B alone serves as the canonical model for blueCode, with empirical evidence on latency, quality, and memory across the bench's task spectrum. Single-model would collapse the dual-model `Router` to dead code, halve `bench/baseline.json`, free ~17 GB RSS, and reduce operational surface to one launchd plist.
+
+**Depends on:** Phase 17 SWITCH (35B/122B already canonical; Phase 18 evaluates whether dropping 35B is viable). Orthogonal to Phase 16's `--plan` work.
+
+**Requirements:** None new (operations + decision phase; no v2.0 REQ-IDs)
+
+**Success Criteria** (what must be TRUE when Phase 18 completes):
+
+1. `documentation/single-model-eval.md` exists (≥ 150 lines), contains "Decision". Per-test comparison table covers latency + step counts + diagnose accuracy for 122B-only vs Phase 17 dual-loaded baseline. Decision matrix has explicit pass/fail criteria, not "use judgment". Verdict named: **DROP-35B** / **KEEP-DUAL** / **CONDITIONAL** (e.g., drop only with explicit user opt-in).
+
+2. 35B service was unloaded via `launchctl unload` (NOT killed) prior to bench run. Memory snapshot captured before/after unload: PhysMem used/free, Compressor delta, 122B RSS (mmap may expand to fill freed pages). 35B unload verified via `launchctl list | grep ohama` showing only `qwen122b` registered.
+
+3. `bench/run.sh` (or a derived script in `scripts/`) executes the equivalent of `--all` against port 8001 only — every test routed to 122B regardless of `32b`/`72b` alias. 30+ invocations across regression/variance/diagnose/write phases. Results captured to `bench/runs/<ts>/`. No `LlmUnreachable` storms; all tests complete with exit codes recorded.
+
+4. Latency thresholds applied per Decision criteria: T1/T2 (simple tasks) median ≤ 6s on 122B-only — currently 3-4s on 35B; doubling is the documented UX threshold. T6/W1/W2/B2 step counts match Phase 17 baseline (no degradation in routing pattern). B2 actual_diagnosis text preserved (DivByZero on empty list).
+
+5. If verdict is **DROP-35B**: `documentation/single-model-eval.md` enumerates the architectural changes needed (Router collapse, baseline.json halve, bench script simplify, CLAUDE.md update) but does NOT execute them in this phase. A separate follow-up plan handles the code changes. If **KEEP-DUAL**: 35B is reloaded post-bench; findings recorded as "evaluated, deferred". If **CONDITIONAL**: documented opt-in mechanism (e.g., env var or CLI flag) sketched; full implementation OOS.
+
+**Plans:** 3 plans (estimated)
+
+Plans:
+- [ ] 18-01-PLAN.md — Service unload + memory profile (CHECKPOINT — `autonomous: false`): launchctl unload 35B with user help, capture before/after PhysMem/Compressor/122B-RSS, verify 122B stays responsive via §5.3 smoke
+- [ ] 18-02-PLAN.md — 122B-only bench: create `scripts/bench-122b-only.sh` (or extend `bench/run.sh` with a `--all-on-122b` mode) that routes every test to port 8001; run full bench (~25 min); capture per-test latency + step counts + B2 diagnoses
+- [ ] 18-03-PLAN.md — `documentation/single-model-eval.md`: per-test comparison vs Phase 17 dual-loaded numbers; decision matrix; named verdict; if DROP-35B verdict, enumerate follow-up architectural changes (no code changes in this plan)
+
+**Reversibility note:** Phase 18 makes ZERO permanent changes if verdict is KEEP-DUAL — just unload + bench + reload. The architectural changes (Router collapse etc.) are deferred to a follow-up phase regardless of verdict, so this phase is safe to run.
+
+---
+
 ## Progress
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
@@ -136,8 +168,9 @@ Plans:
 | 15. Persistence Wiring | v2.0 | PERSIST-01, PERSIST-02, PERSIST-03, PERSIST-04 | 3/3 | ✓ Complete | 2026-04-27 |
 | 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 0/3 | Not started (plans on disk) | - |
 | 17. Qwen 3.5 Evaluation | v2.0 | (none — operations) | 3/3 | ✓ Complete (SWITCH) | 2026-04-27 |
+| 18. Single-Model 122B Eval | v2.0 | (none — operations + decision) | 0/3 | Not started | - |
 
 ---
 
 *Roadmap created: 2026-04-26*
-*Last updated: 2026-04-27 — Phase 17 plans created via /gsd:plan-phase (3 plans, 3 sequential waves; 17-02 has user checkpoints; 17-03 conditional on KEEP/SWITCH verdict)*
+*Last updated: 2026-04-27 — Phase 18 added via /gsd:add-phase (single-model 122B viability eval; 3 plans; 18-01 has user checkpoint for unload; 18-03 conditional on DROP-35B/KEEP-DUAL/CONDITIONAL verdict)*
