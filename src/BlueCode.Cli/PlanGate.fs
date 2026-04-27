@@ -25,11 +25,19 @@ type IKeyReader =
 /// Production reader: blocking Console.ReadKey + Console.In.ReadLine.
 /// CLAUDE.md note: ReadKey(intercept=true) prevents the typed char from
 /// being echoed; we manually echo a newline via stdout for readability.
+/// When stdin is redirected (e.g. `printf 'a\n' | blueCode --plan ...`),
+/// Console.ReadKey throws InvalidOperationException; we fall back to
+/// Console.In.ReadLine() in that case so pipe-based smoke tests work.
 let realKeyReader : IKeyReader =
     { new IKeyReader with
         member _.ReadKey () =
-            let info = Console.ReadKey(intercept = true)
-            Char.ToLowerInvariant info.KeyChar
+            try
+                let info = Console.ReadKey(intercept = true)
+                Char.ToLowerInvariant info.KeyChar
+            with :? System.InvalidOperationException ->
+                // stdin is redirected — read a character from Console.In instead
+                let line = Console.In.ReadLine() |> Option.ofObj |> Option.defaultValue ""
+                if line.Length > 0 then Char.ToLowerInvariant line.[0] else 'q'
         member _.ReadLine () =
             // Use Console.In rather than Console.ReadLine() so SetIn redirection in tests works.
             Console.In.ReadLine() |> Option.ofObj |> Option.defaultValue "" }

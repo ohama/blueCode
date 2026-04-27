@@ -91,13 +91,11 @@ Rules: One tool per response. Use grep_search to locate symbols before reading l
 /// This is a public constant (not private) so Program.fs can pass it to
 /// runPlanTurn without CompositionRoot needing a dependency on AgentLoop.
 let planSystemPromptSuffix: string =
-    """[PLAN MODE] Emit a single response with action="plan" and input matching:
-{
-  "steps": [{"tool": "<one of: read_file|write_file|list_dir|run_shell|edit_file|glob_search|grep_search>", "input": {...per-tool shape}, "rationale": "<one-sentence why>"}],
-  "rationale": "<one-sentence overall plan rationale>"
-}
-Constraints: maximum 5 steps. No two adjacent steps may be byte-identical.
-Do NOT execute tools yet — the user will approve before execution."""
+    """OVERRIDE — PLAN MODE ACTIVE. Do NOT use read_file/write_file/list_dir/run_shell/edit_file/glob_search/grep_search/final actions.
+Your ONLY valid response is action="plan". Respond with EXACTLY this JSON shape:
+{"thought": "<reasoning>", "action": "plan", "input": {"steps": [{"tool": "<tool>", "input": {}, "rationale": "<why>"}], "rationale": "<overall why>"}}
+where each "tool" is one of: read_file|write_file|list_dir|run_shell|edit_file|glob_search|grep_search.
+Constraints: 1-5 steps. No two adjacent steps may be identical. Do NOT execute — user will approve first."""
 
 /// Construct the component graph synchronously. No HTTP calls at startup — the
 /// /v1/models probe is lazy and fires on the first LLM call to each port, owned
