@@ -46,6 +46,100 @@ let private captureSteps () =
     let sink (s: Step) = captured.Add(s)
     sink, captured
 
+// ── Phase 16-03: runPlanTurn end-to-end (mocked LLM) ────────────────────────
+
+let private planTurnPlan : Plan =
+    { Steps =
+        [ BlueCode.Tests.MockHelpers.makePlannedStep "list_dir" "{\"path\":\"src\"}" "enumerate sources"
+          BlueCode.Tests.MockHelpers.makePlannedStep "grep_search" "{\"pattern\":\"runPlanTurn\"}" "find plan-mode entry" ]
+      Rationale = "explore then locate" }
+
+let private planTurnConfig : AgentConfig =
+    { MaxLoops = 5
+      ContextCapacity = 3
+      SystemPrompt = "You are blueCode."
+      ForcedModel = Some Qwen122B }
+
+let private planTurnSuffix = "[PLAN MODE] Emit action=plan."
+
+let private runPlanTurnTests =
+    testList
+        "AgentLoop.runPlanTurn (end-to-end mocked)"
+        [ testCase "happy-path: scripted plan response yields validated Plan with expected step count"
+          <| fun () ->
+              let mutable callCount = 0
+
+              let client =
+                  { new BlueCode.Core.Ports.ILlmClient with
+                      member _.CompleteAsync _msgs _model _ct =
+                          callCount <- callCount + 1
+                          Tasks.Task.FromResult(
+                              BlueCode.Tests.MockHelpers.makePlanResponse "I have a plan" planTurnPlan
+                          ) }
+
+              let task =
+                  runPlanTurn
+                      planTurnConfig
+                      client
+                      Qwen122B
+                      [] // no priorSteps
+                      "explore the codebase"
+                      planTurnSuffix
+                      Threading.CancellationToken.None
+
+              match task.GetAwaiter().GetResult() with
+              | Ok plan ->
+                  Expect.equal plan.Steps.Length 2 "plan has 2 steps as scripted"
+                  Expect.equal plan.Rationale "explore then locate" "rationale round-trips through Domain"
+                  let s0 = plan.Steps.[0]
+                  let (ToolName n0) = s0.Tool
+                  Expect.equal n0 "list_dir" "first step tool name"
+                  Expect.equal callCount 1 "LLM called exactly once (no retry needed)"
+              | Error e -> failtestf "expected Ok plan, got %A" e
+
+          testCase "priorSteps are propagated: scripted client receives messages including assistant turns from prior steps"
+          <| fun () ->
+              let priorStep : Step =
+                  { StepNumber = 1
+                    Thought = Thought "earlier"
+                    Action = FinalAnswer "earlier answer"
+                    ToolResult = None
+                    Status = StepSuccess
+                    ModelUsed = Qwen122B
+                    StartedAt = DateTimeOffset.UtcNow.AddMinutes(-1.0)
+                    EndedAt = DateTimeOffset.UtcNow.AddMinutes(-1.0)
+                    DurationMs = 100L }
+
+              let mutable lastMessages : Message list = []
+
+              let client =
+                  { new BlueCode.Core.Ports.ILlmClient with
+                      member _.CompleteAsync msgs _model _ct =
+                          lastMessages <- msgs
+                          Tasks.Task.FromResult(
+                              BlueCode.Tests.MockHelpers.makePlanResponse "ok" planTurnPlan
+                          ) }
+
+              let task =
+                  runPlanTurn
+                      planTurnConfig
+                      client
+                      Qwen122B
+                      [ priorStep ]
+                      "follow-up question"
+                      planTurnSuffix
+                      Threading.CancellationToken.None
+
+              let _ = task.GetAwaiter().GetResult()
+              // System prompt + user input + assistant turn for the prior step = >2 messages
+              Expect.isGreaterThan lastMessages.Length 2 "messages include system + user + prior step replay"
+
+              let priorAssistant =
+                  lastMessages
+                  |> List.exists (fun m -> m.Role = Assistant && m.Content.Contains("earlier answer"))
+
+              Expect.isTrue priorAssistant "prior step's FinalAnswer surfaces in assistant message replay" ]
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 [<Tests>]
@@ -246,5 +340,7 @@ let agentLoopTests =
                   Expect.isFalse (firstCallText.Contains("[POST-READ HINT]"))
                       "first LLM call (no prior read) must not contain the marker"
           }
+
+          runPlanTurnTests
 
           ]
