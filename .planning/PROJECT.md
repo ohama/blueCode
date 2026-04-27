@@ -4,35 +4,29 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current State (post-v1.4)
+## Current State (post-v2.0)
 
-v1.4 Test Hygiene + Bench Polish shipped 2026-04-26 (Path B). Two pieces of cited tech debt cleared: TST-01 (shared `MockHelpers.fs` consolidates the 3-milestone-old `makeMockResponse` duplication) + BENCH-06 (EXIT trap in `bench/run.sh` auto-resets W1/W2 fixtures so `git status` stays clean). Zero `src/` diff. 243/1/0 tests preserved. Bench gate 8/8 PASS. Five milestones shipped: v1.0 MVP, v1.1 Refinement, v1.2 Tool Expansion, v1.3 Bench-Driven Quality Gates, v1.4 Test Hygiene + Bench Polish. Daily-driver use ongoing as the user's primary Mac coding agent.
+v2.0 Persistence + Planning shipped 2026-04-27. Broke the process-lifetime constraint v1 deliberately accepted: multi-turn REPL memory + JSONL session persistence + `--resume <id>` (PERSIST-01..04); plan-then-execute mode + Spectre approval gate (a/r/e/q) + 2-attempt retry path (PLAN-01..04). Mid-milestone scope expanded from 3 phases (14-16) to 7 phases via `/gsd:add-phase` covering Qwen 3.5 model upgrade — SWITCH from Qwen 2.5 32B/72B to Qwen 3.5 122B-A10B-4bit MoE single-model canonical (Phases 17-19); Qwen 3.5 protocol alignment (sampling params, 300s timeout, reasoning_content fallback, Role=User probe verdict — Phase 20). 282/1/0 tests; bench gate 7/7 PASS. -85 GB disk reclaimed (Qwen 2.5 retired). Six milestones shipped. Daily-driver use ongoing as the user's primary Mac coding agent.
 
-Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4}-ROADMAP.md`.
+Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0}-ROADMAP.md`.
 
-## Current Milestone: v2.0 Persistence + Planning
+## Next Milestone Goals
 
-**Goal:** Break the process-lifetime constraint that v1 deliberately accepted — bundle cross-turn memory (multi-turn REPL keeps context, `--resume <id>`) with plan-then-execute mode (agent emits a typed plan, user approves, agent executes). The two features share an architectural root (state outside a single `runSession`) and shouldn't ship separately: memory without planning gives long-context drift; planning without memory gives brilliant single-turn agents that forget yesterday.
+v2.1 candidates well-stocked from v2.0 mid-milestone signals + the "now-meaningful" follow-ons that memory + planning unlock:
 
-**Target features (2 categories):**
+- **Compaction (COMPACT-01)** — PERSIST-02 saves full session JSONL; long sessions hit the 80% context warning faster. Auto-compaction (drop oldest tool results, keep thoughts) is the natural follow-up.
+- **Slash commands (SLASH-01)** — `/sessions`, `/plan`, `/clear`. UX layer over the CLI flags now in place.
+- **Sub-agent delegation (SUBAG-01)** — Now meaningful since memory + planning land. Was OOS in v1 because flat loop wasn't proven across 50+ sessions; v2.0 ships that proof.
+- **Plan-mode bench fixture** — Deferred from Phase 16-03 (keystroke UX intractable for autonomous gate). Mocked-IKeyReader pattern would substitute.
+- **Thinking-mode-on (THINK-01)** — Consume `<think>` blocks; requires `max_tokens` bump 1024→2048-4096 + re-bench.
+- **Native OpenAI `tool_calls` (TOOLCALLS-01)** — Replaces custom JSON schema; rewrites `toLlmOutput` + all bench fixtures.
+- **Streaming output (STM-01)** — Deferred 7th cycle. UX win but not architectural; revisit if observation surfaces complaint.
 
-- **Persistence** — Multi-turn REPL retains conversation history within a session; session state persists to `~/.bluecode/sessions/<id>.jsonl` between turns; `--resume <id>` loads and continues a prior session.
-- **Planning** — Agent can produce a plan DU before executing; `--plan` flag enables plan-then-execute mode; user approval/reject gate between plan emission and execution; plan validation (tool names + inputs schema-checked) before user sees approval prompt.
-
-**Why now (over observation):** The v1.4 close opened a 2-week observation window for v1.5; v2.0 is the longer-horizon answer to "what's the architectural ceiling of v1?" Per discussion, the ceiling is the 5-step max + process-lifetime statelessness — both load-bearing for stability with Qwen, both capping what blueCode can take on. v2.0 invests in deliberate state management to unlock longer-horizon work; observation continues in parallel and will inform v2.1+ scope.
-
-**Phase numbering:** continues at 14+ (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13).
-
-**Excluded** with explicit rationale (deferred to v2.1+ unless observation surfaces them):
-- Sub-agent delegation — only useful once memory + planning land; without them, sub-agents repeat v1's stateless pain
-- Slash commands (`/sessions`, `/plan`) — UX layer, not architectural; can layer on after CLI flags work
-- Streaming (STM-01) — deferred 7th time; UX win but not architectural
-- LLM-aware context compaction — natural follow-up to persistence; risk-isolate as v2.1
-- MCP / LSP integration — breaks local-only ethos; v2 keeps Mac-local boundary
+v2.1 scoping should be observation-driven: daily-drive blueCode for 1-2 weeks; `/gsd:add-todo` from real coding sessions; v2.1 picks 2-3 of the above based on measured pain.
 
 ## Core Value
 
-Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌린다. v1.0 UAT 검증 완료: 로컬 Qwen이 agent 루프 안에서 예측 가능하게 동작하며, JSON 스키마 검증 + 2회 재시도 + 5-step 루프 가드가 unstable LLM 응답을 전부 타입화된 `AgentError`로 수렴시킨다.
+Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** 돌린다 (single-model canonical post-v2.0; switched from Qwen 2.5 32B/72B in Phase 17 SWITCH; Qwen 3.5 35B retained as cold rollback via `--with-35b`). v1.0 UAT 검증 완료: 로컬 Qwen이 agent 루프 안에서 예측 가능하게 동작하며, JSON 스키마 검증 + 2회 재시도 + 5-step 루프 가드 + (v2.0 추가) Session 기반 cross-turn memory + plan-then-execute 모드가 unstable LLM 응답을 전부 타입화된 `AgentError`로 수렴시킨다.
 
 ## Requirements
 
@@ -63,21 +57,22 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - ✓ Shared `BlueCode.Tests.MockHelpers` module with single canonical `makeMockResponse` — consolidates 3-milestone-old duplication; 243/1/0 preserved; zero `src/` diff — v1.4 (TST-01)
 - ✓ `bench/run.sh` EXIT trap auto-resets W1/W2 write-task fixtures (`bug_lastchar.fs`, `bug_average.fs`) — `bug_divide_zero.fs` excluded; defense-in-depth with existing heredoc-restore blocks; bash 3.2 compatible, exit-code preserving — v1.4 (BENCH-06)
 
-### Active (v2.0 Persistence + Planning)
+- ✓ Multi-turn REPL maintains conversation history within a session — `runSession priorSteps: Step list` parameter; REPL threads `Session` across turns — v2.0 (PERSIST-01)
+- ✓ Session state persists to `~/.bluecode/sessions/<id>.jsonl` between turns — `version: 2` JSONL header + per-turn `TurnComplete` envelopes; coexists with v1 per-step crash log — v2.0 (PERSIST-02)
+- ✓ `--resume <id>` loads prior session + continues; unknown id → exit 1 + `SessionNotFound`; corrupt JSONL → exit 1 + `SessionCorrupt` (no stack trace) — v2.0 (PERSIST-03)
+- ✓ `--new-session` forces fresh id; `--resume X --new-session` rejected at startup with exit 2 + "conflicting flags" stderr — v2.0 (PERSIST-04)
+- ✓ Plan DU as new `LlmOutput` variant (`Plan = { Steps: PlannedStep list; Rationale: string }`); JSON parse layer in Json.fs `llmStepSchema "plan"` + `toLlmOutput` Plan branch (4th PlanInvalid mode at parse time) — v2.0 (PLAN-01)
+- ✓ `--plan` CLI flag enables plan-then-execute mode (single-turn only; `--plan --resume <id>` valid; `--plan --with-35b` exit 2; `--plan` no-prompt exit 2) — v2.0 (PLAN-02)
+- ✓ User approval gate (Spectre numbered table + `IKeyReader` port + a/r/e/q dispatch); `[PLAN REJECTED]` Role=User re-prompt — v2.0 (PLAN-03)
+- ✓ Plan validation: 3 structural rules in pure `validatePlan` (length≤5, unknown tool, duplicate adjacent) + schema-invalid at JSON parse layer; 2-attempt retry on either path — v2.0 (PLAN-04)
+- ✓ Qwen 3.5 122B-A10B-4bit MoE single-model canonical; Qwen 2.5 32B/72B retired (-85 GB disk); 35B preserved as cold rollback via `--with-35b` opt-in — v2.0 (Phases 17-19)
+- ✓ Qwen 3.5 protocol alignment: sampling params per model card (temp=0.7, top_p=0.8, top_k=20, presence_penalty=0.0); HttpClient timeout 180→300s; `extractContent` `reasoning_content` fallback; `Role = User` invariant for ALL mid-conversation injections (Phase 20-03 probe REJECT verdict) — v2.0 (Phase 20)
 
-<!-- v2.0 scope confirmed 2026-04-26 — major version step (architectural shift, breaks process-lifetime constraint). Bundle of memory + planning is intentional; see Current Milestone section. -->
+### Active
 
-#### Persistence
-- [ ] **PERSIST-01**: Multi-turn REPL maintains conversation history within a single session (currently each turn calls `runSession` independently, losing context).
-- [ ] **PERSIST-02**: Session state persisted to `~/.bluecode/sessions/<id>.jsonl` between turns (extends existing JSONL log into a resumable format).
-- [ ] **PERSIST-03**: `--resume <id>` flag loads a prior session and continues from its last step.
-- [ ] **PERSIST-04**: Sessions get a fresh id automatically; `--new-session` flag explicitly forces a new session even mid-REPL.
+<!-- v2.0 shipped 2026-04-27. Next milestone scoping is observation-driven; daily-drive blueCode + /gsd:add-todo from real coding sessions before v2.1 commitment. -->
 
-#### Planning
-- [ ] **PLAN-01**: Agent loop supports a Plan DU (`Plan = { Steps: PlannedStep list; Rationale: string }`) — extension of `LlmOutput`, validated against tool schema.
-- [ ] **PLAN-02**: `--plan` CLI flag enables plan-then-execute mode for the next turn.
-- [ ] **PLAN-03**: User approval gate between plan emission and execution — accept / reject / edit-and-retry.
-- [ ] **PLAN-04**: Plan validation: tool names exist in registry, inputs match schema, declared step count ≤ MaxLoops (5). Validation runs BEFORE the user is shown the approval prompt.
+(None — v2.0 just shipped. Observation window opens for v2.1 scoping.)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -93,11 +88,11 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 
 <!-- v1 OOS 유지. v1.1도 동일 경계. -->
 
-- **세션 영속화 / 히스토리 / 재개** — v2.0 IN SCOPE (PERSIST-01..04). Was v1 OOS.
-- **Cross-turn memory** in multi-turn REPL — v2.0 IN SCOPE (PERSIST-01). Was v1 OOS.
-- **서브에이전트 / 위임** — Still v2.1+. Useful only after memory + planning land.
-- **Slash commands** (`/context`, `/compact`, `/agents`) — Still v2.1+. UX layer over the CLI flags.
-- **Context compaction / auto-snip** — Still v2.1+. Natural follow-up to PERSIST-02 once we have real session lengths to compact against.
+- **세션 영속화 / 히스토리 / 재개** — ✓ Resolved by v2.0 (PERSIST-01..04). FileSessionStore + `--resume <id>` + `--new-session` shipped.
+- **Cross-turn memory** in multi-turn REPL — ✓ Resolved by v2.0 (PERSIST-01). `runSession priorSteps: Step list` threads Session across turns.
+- **서브에이전트 / 위임** — Now meaningful for v2.1+ — memory + planning landed in v2.0; sub-agents are the natural next architectural layer.
+- **Slash commands** (`/sessions`, `/plan`, `/clear`) — v2.1+ candidate. UX layer over the CLI flags shipped in v2.0.
+- **Context compaction / auto-snip** — v2.1+ candidate. Natural follow-up to PERSIST-02; long sessions hit 80% context warning faster without compaction.
 - **MCP / LSP / Plugin / Hook / Remote / Worktree** — Permanent OOS. Local-only ethos preserved across v1.x and v2.0.
 - **GUI (웹/TUI)** — CLI stdout만
 - **Windows / Linux** — Mac only
@@ -193,6 +188,21 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 | v1.4 (TST-01): REQUIREMENTS.md count discrepancy discovered | Spec said "3 instances" but actual was 2 definitions (one per file); spec conflated definition sites with use sites | — Note — no scope impact; correction documented in v1.4 archive. Lesson: count code locations, not natural-language references, when defining cleanup scope |
 | v1.4 (BENCH-06): EXIT trap with defense-in-depth | Existing heredoc-restore blocks preserved unchanged; trap is exit-time safety net, heredoc is between-invocation reset; either alone sufficient; together they cover every failure mode | ✓ Good — bash 3.2 compatible, exit-code preserving (no `exit N` in trap body); `bug_divide_zero.fs` deliberately excluded as B2 read-only diagnose fixture |
 | v1.4: Path B chosen over A (streaming) and C (observation-only) | Middle path threads "discipline preserved" with "small wins shipped"; STM-01 deferred 6th cycle; observation window is load-bearing | ✓ Good — both REQs closed in ~1 day with zero `src/` diff; v1.5 scoping will come from observation-window `/gsd:add-todo` entries, not deferred-list draining |
+| v2.0: Bundle persistence + planning together | Memory without planning gives long-context drift; planning without memory gives brilliant single-turn agents that forget yesterday | ✓ Good — Phase 16 SC4 (`--plan --resume <id>`) verifies the bundle works end-to-end. Both architectural investments delivered atomically across 7 phases |
+| v2.0 Phase 14: Atomic Domain shift | Single Phase 14 commit captured all v2.0 type-level work (Session, Plan, ISessionStore, AgentError variants); F# big-bang compile cascade pattern (mirrors v1.1 LlmResponse) | ✓ Good — Phase 14 verified passed 5/5; Phases 15-16 worked purely at Cli layer without revisiting Core |
+| v2.0 Phase 14: Validator scope (3 structural rules in Core; schema-invalid in Cli parse layer) | JsonSchema.Net lives in BlueCode.Cli/Adapters/Json.fs (Cli-side); Core purity preserved by deferring schema validation to parse time | ✓ Good — ROADMAP SC3/SC4 corrected mid-verification to match implementation; PlanValidator handles 3 rules; Phase 16 wires the 4th at JSON parse |
+| v2.0 Phase 17 SWITCH: Qwen 3.5 35B/122B replaces 32B/72B | 3.4× speedup (T6_72b: 4.1×; T6_32b: 3.7×); zero `<think>` leakage; B2 accuracy preserved; combined RSS 62.4 GB vs 95 GB threshold; all 8 gate tests PASS | ✓ Good — daily-driver perf jump material; bench gate empirically confirmed canonical replacement viable |
+| v2.0 Phase 17-02 critical discovery: Qwen 3.5 chat template REJECTS mid-conversation Role=System (HTTP 404) | mlx_lm.server enforces "System message must be at the beginning"; Phase 17-02 flipped POST-EDIT CONSTRAINT + POST-READ HINT to Role=User; Phase 20-03 re-probed 122B alone and confirmed REJECT | ✓ Good (load-bearing) — invariant documented in `scripts/probe-system-role.sh` + 3-line comments at AgentLoop.fs:249/260/266; applies to Phase 16's [PLAN REJECTED] re-prompt too |
+| v2.0 Phase 18 DROP-35B: 122B alone is canonical | All 5 SC4 criteria PASS (T1/T2 median 3s; T6/W1/W2/B2 step counts within baseline_max; PhysMem +19.42 GB freed; Compressor 454 MB; B2 DivByZero preserved); MoE expert routing converges on stable subset under bench load (RSS flat +1.4 MB) | ✓ Good — single-model viability empirically proven; -17 GB RSS + simpler operational surface |
+| v2.0 Phase 19: Breaking CLI changes (32b/72b → exit 2; --with-35b opt-in flag) | Single-model default predictable; 35B reactivation requires explicit opt-in (launchctl load + --with-35b) so service-load alone doesn't change blueCode behavior | ✓ Good — `bench/run.sh` absorbed `scripts/bench-122b-only.sh`; baseline halved 8→6; -85 GB disk reclaimed; 4 new ModelsProbeTests for `validateModelPath` PathRetired |
+| v2.0 Phase 19: data[0] HF Hub fallback gotcha | mlx_lm.server returns hardcoded `Qwen/Qwen2.5-Coder-32B` in data[0] regardless of loaded model; data[1] returns actual local path | ✓ Good — verification scripts must use `data[1]`; mirrors `tryParseModelId` path-preference heuristic (CLAUDE.md §Key Seams); worth a future `/howto` entry |
+| v2.0 Phase 20-03 probe-driven Role=User decision | Live curl to 122B (port 8001) with 3-message system/user/system POST returned HTTP 404; AgentLoop.fs Role stays User | ✓ Good — empirical evidence preserved at `20-03-PROBE-OUTPUT.md`; in-code 3-line comments cite probe date + HTTP code; howto F# snippets synced |
+| v2.0 Phase 16 replan-from-scratch | Original Phase 16 plans (pre-Phase-17) assumed 32B/72B dual-model + 8-entry baseline + MT_32b/MT_72b fixtures; after Phases 17-20 shifted premises, surgical re-key would leave subtle drift; replan was cleaner | ✓ Good — stale `.stale` siblings preserved as forensic reference; new plans single-model + Role=User aware from start |
+| v2.0 Phase 16: Plan-mode bench fixture DEFERRED to v2.1+ | Console.ReadKey-based UX intractable for autonomous regression gate; PlanParseTests + PlanGateTests + AgentLoopTests substitute via mocked IKeyReader | ✓ Good — single MT_122b fixture covers PERSIST-01 end-to-end; bench gate 7/7 PASS final |
+| v2.0 Phase 16: IKeyReader port abstraction | `Console.ReadKey(intercept=true)` real impl + scripted reader for tests; gained stdin-redirect fallback in 16-02 for piped smoke tests | ✓ Good — testable keystroke dispatch without interactive harness; deviations auto-fixed during execution |
+| v2.0 Phase 16: planSystemPromptSuffix `OVERRIDE — PLAN MODE ACTIVE` preamble | Base system prompt's tool-call enum caused 122B to ignore gentle `[PLAN MODE]` prefix entirely; OVERRIDE preamble forces compliance | ✓ Good — auto-fixed during 16-02 execution per Rule 3 deviation handling |
+| v2.0 mid-milestone scope expansion (3 phases → 7 via /gsd:add-phase) | Phase 17 added evaluation; Phase 18 single-model viability; Phase 19 retirement; Phase 20 protocol alignment — all sequenced BEFORE Phase 16 because bench fixtures needed canonical model pair settled | ✓ Good — milestone ships clean despite scope churn; 8/8 reqs closed; 6/6 E2E flows verified in audit; documentation drift acceptable |
+| v2.0 Phase 20 missing formal 20-VERIFICATION.md | Process gap, not code gap; per-plan SUMMARYs + bench gate 6/6 PASS post each + Phase 16 dependency on Phase 20-03 Role=User invariant serve as substitute verification | ⚠ Process drift — flagged in audit, non-blocking. Future phases should not skip the verifier step regardless of yolo mode |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -205,4 +215,4 @@ Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 **안정적으로** 돌
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-26 after starting v2.0 milestone (Persistence + Planning — major version, architectural shift breaking v1's process-lifetime constraint)*
+*Last updated: 2026-04-27 after v2.0 milestone complete (Persistence + Planning shipped + Qwen 3.5 122B single-model canonical + protocol alignment; 7 phases, 19 plans, 8 reqs closed, 282/1/0 tests, bench gate 7/7 PASS, -85 GB disk)*

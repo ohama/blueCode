@@ -1,5 +1,52 @@
 # Project Milestones: blueCode
 
+## v2.0 Persistence + Planning (Shipped: 2026-04-27)
+
+**Delivered:** Broke the process-lifetime constraint that v1 deliberately accepted. Bundled cross-turn REPL memory + `--resume <id>` (PERSIST-01..04) with plan-then-execute mode + user approval gate (PLAN-01..04). Mid-milestone scope expansion: shipped Qwen 3.5 122B as single-model canonical (32B/72B retired; 35B preserved as cold rollback) + Qwen 3.5 protocol alignment (sampling params, 300s timeout, reasoning_content fallback, Role=User probe verdict).
+
+**Phases completed:** 14 - 20 (7 phases, 19 plans total — 3 added mid-milestone via `/gsd:add-phase`)
+
+**Key accomplishments:**
+
+- **Persistence shipped (PERSIST-01..04):** Multi-turn REPL maintains conversation history within a session; every turn writes to `~/.bluecode/sessions/<id>.jsonl` (version: 2 header + per-turn TurnComplete envelopes); `--resume <id>` reconstructs prior context; `--new-session` forces fresh; conflicting flags rejected at startup with exit 2. `runSession` extended with `priorSteps: Step list` parameter; v1 per-step crash log coexists with new per-turn session log.
+
+- **Planning shipped (PLAN-01..04):** `Plan` DU added to `LlmOutput` (Phase 14); pure `validatePlan` covers 3 structural rules (length≤5, unknown tool, duplicate adjacent); `--plan` CLI flag triggers plan-then-execute mode (Phase 16); PlanGate.fs renders Spectre numbered table + a/r/e/q dispatch via `IKeyReader` port abstraction; `[PLAN REJECTED]` re-prompt is `Role = User` (Phase 20-03 invariant); 2-attempt retry path on either schema-invalid (parse-time) or structural-invalid (validator-time) PlanInvalid; `--plan --resume <id>` valid combination.
+
+- **Qwen 3.5 122B canonical (Phases 17-19):** SWITCH from Qwen 2.5 32B/72B to 35B/122B (3.4× speedup, no regressions). DROP-35B verdict (122B alone is viable; PhysMem +19.42 GB freed; T1/T2 median 3s). Qwen 2.5 fully retired (-85 GB disk; 32B/72B + qwen72b.3bit deleted; launchd plists removed). 35B preserved as cold rollback via `--with-35b` opt-in flag. `bench/run.sh` absorbed `scripts/bench-122b-only.sh`; `bench/baseline.json` halved 8→6 entries; gate 6/6 PASS.
+
+- **Qwen 3.5 protocol alignment (Phase 20):** Sampling params per Qwen 3.5 model card (temp=0.7, top_p=0.8, top_k=20, presence_penalty=0.0). HttpClient timeout 180→300s for 122B cold-start. `extractContent` `reasoning_content` fallback (defensive against future thinking-mode-on). `Role = User` invariant probed and confirmed for 122B (HTTP 404 on mid-conversation Role=System; AgentLoop.fs:249/260/266 stay Role=User; documented via `scripts/probe-system-role.sh` + 3-line in-code comments).
+
+- **Phase 16 replan-from-scratch:** Original Phase 16 plans (pre-Phase-17) were too stale to surgically re-key after Phases 17-20 shifted premises (32B/72B → 122B; 8→6 baseline; sampling params; Role=User invariant). Replanned cleanly. Stale `.stale` siblings preserved in phase dir as forensic reference. New plans add MT_122b multi-turn bench fixture (PERSIST-01 end-to-end via `--resume`); baseline 6→7 entries.
+
+- **Critical mid-execution discovery:** Qwen 3.5 chat template REJECTS mid-conversation `Role = System` with HTTP 404 ("System message must be at the beginning"). Phase 17-02 flipped all mid-conversation injections (POST-EDIT CONSTRAINT, POST-READ HINT, [PLAN REJECTED]) to `Role = User`. Phase 20-03 re-probed 122B alone and confirmed REJECT verdict — invariant is load-bearing for v2.0+ work.
+
+**Stats:**
+
+- 7 phases (14-20), 19 plans, 8 requirements (100% closure)
+- 282/1/0 tests (was 243 pre-v2.0; +39 across milestone)
+- 41 files changed (+3,993/-335 LOC)
+- 106 commits in milestone range
+- Bench gate trajectory: 8/8 (Phase 17) → 6/6 (Phase 19 single-model) → 7/7 (Phase 16 MT_122b added)
+- Disk: -85 GB (Qwen 2.5 retirement)
+- Wall-clock: ~2 days (2026-04-26 milestone start → 2026-04-27 Phase 16 verified)
+
+**Git range:** `31f846e` (v2.0 milestone start) → `9fe7714` (Phase 16 phase-completion)
+
+**What's next:**
+
+v2.1 candidates well-stocked from observation + v2.0 mid-milestone signals:
+- Compaction (PERSIST-02 saves full session JSONL; long sessions hit 80% context warning faster)
+- Slash commands (`/sessions`, `/plan`, `/clear`) — UX layer over CLI flags
+- Sub-agent delegation — meaningful now that memory + planning land
+- Plan-mode bench fixture (deferred from Phase 16-03; mocked-IKeyReader pattern)
+- Thinking-mode-on + `<think>` consumption (requires `max_tokens` 1024→2048-4096 + re-bench)
+- Native OpenAI `tool_calls` replacing custom JSON schema
+- Streaming output (STM-01) — deferred 7th cycle
+
+**Audit note:** v2.0 ran `/gsd:audit-milestone` post-Phase-16 (status: passed). 8/8 requirements satisfied; 6/6 E2E flows verified; cross-phase wiring confirmed. Documentation drift noted but non-blocking: Phase 20 missing formal `20-VERIFICATION.md` (per-plan SUMMARYs + bench gate substitute); ROADMAP Phase 20 row stale (functional state was complete). Tech debt aggregated into v2.0-MILESTONE-AUDIT.md.
+
+---
+
 ## v1.4 Test Hygiene + Bench Polish (Shipped: 2026-04-26)
 
 **Delivered:** Two pieces of cited tech debt cleared (3-milestone-old shared `makeMockResponse` helper + bench fixture working-tree drift surfaced in v1.3 Part 4), then opens a 2-week observation window for v1.5 scoping. Path B from the v1.3 close — discipline preserved, small wins shipped, observation-driven scoping (not deferred-list draining).
