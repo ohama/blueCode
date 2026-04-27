@@ -45,31 +45,31 @@ let intentToModelTests =
         "Router.intentToModel"
         [
 
-          testCase "Debug -> Qwen72B (Success Criterion 3)"
-          <| fun () -> Expect.equal (intentToModel Debug) Qwen72B "Debug intent routes to 72B model"
+          testCase "Debug -> Qwen35B (Success Criterion 3; Phase 19: 35B replaces 72B as the smaller/faster model)"
+          <| fun () -> Expect.equal (intentToModel Debug) Qwen35B "Debug intent routes to 35B model"
 
-          testCase "Design -> Qwen72B"
-          <| fun () -> Expect.equal (intentToModel Design) Qwen72B ""
+          testCase "Design -> Qwen35B"
+          <| fun () -> Expect.equal (intentToModel Design) Qwen35B ""
 
-          testCase "Analysis -> Qwen72B"
-          <| fun () -> Expect.equal (intentToModel Analysis) Qwen72B ""
+          testCase "Analysis -> Qwen35B"
+          <| fun () -> Expect.equal (intentToModel Analysis) Qwen35B ""
 
-          testCase "Implementation -> Qwen32B"
-          <| fun () -> Expect.equal (intentToModel Implementation) Qwen32B ""
+          testCase "Implementation -> Qwen122B"
+          <| fun () -> Expect.equal (intentToModel Implementation) Qwen122B ""
 
-          testCase "General -> Qwen32B"
-          <| fun () -> Expect.equal (intentToModel General) Qwen32B "" ]
+          testCase "General -> Qwen122B"
+          <| fun () -> Expect.equal (intentToModel General) Qwen122B "" ]
 
 let modelToEndpointTests =
     testList
         "Router.modelToEndpoint"
         [
 
-          testCase "Qwen32B -> Port8000"
-          <| fun () -> Expect.equal (modelToEndpoint Qwen32B) Port8000 "32B serves on port 8000"
+          testCase "Qwen35B -> Port8000"
+          <| fun () -> Expect.equal (modelToEndpoint Qwen35B) Port8000 "35B serves on port 8000"
 
-          testCase "Qwen72B -> Port8001"
-          <| fun () -> Expect.equal (modelToEndpoint Qwen72B) Port8001 "72B serves on port 8001" ]
+          testCase "Qwen122B -> Port8001"
+          <| fun () -> Expect.equal (modelToEndpoint Qwen122B) Port8001 "122B serves on port 8001" ]
 
 let endpointToUrlTests =
     testList

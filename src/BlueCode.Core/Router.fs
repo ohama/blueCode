@@ -30,6 +30,10 @@ let classifyIntent (userInput: string) : Intent =
     else
         General
 
+/// Intent routing: dormant in single-model default mode (ForcedModel = Some Qwen122B).
+/// Active when both --with-35b and explicit dual-mode invocation are set.
+/// Phase 19: retained for future SHIP-BOTH evolution.
+///
 /// Maps an Intent to the Qwen model that should handle it (ROU-02).
 /// Exhaustive match — adding a new Intent case without updating this
 /// function is a compile error (FS0025). NEVER add `| _ ->` here.
@@ -37,16 +41,16 @@ let intentToModel: Intent -> Model =
     function
     | Debug
     | Design
-    | Analysis -> Qwen72B
+    | Analysis -> Qwen35B
     | Implementation
-    | General -> Qwen32B
+    | General -> Qwen122B
 
 /// Maps a Model to its serving endpoint (ROU-03).
-/// Port 8000 hosts 32B; Port 8001 hosts 72B (PROJECT.md Context).
+/// Port 8000 hosts 35B (smaller); Port 8001 hosts 122B (larger). Phase 19: renamed from 32B/72B.
 let modelToEndpoint: Model -> Endpoint =
     function
-    | Qwen32B -> Port8000
-    | Qwen72B -> Port8001
+    | Qwen35B -> Port8000
+    | Qwen122B -> Port8001
 
 /// Resolves an Endpoint to a concrete HTTP URL. Phase 2 consumes this.
 let endpointToUrl: Endpoint -> string =
@@ -55,9 +59,9 @@ let endpointToUrl: Endpoint -> string =
     | Port8001 -> "http://127.0.0.1:8001/v1/chat/completions"
 
 /// Per-model sampling temperature (LLM-05). Hardcoded; MUST NOT be
-/// exposed to users via CLI flags. 32B uses 0.2 (precise code edits);
-/// 72B uses 0.4 (more exploratory reasoning for Debug/Design/Analysis).
+/// exposed to users via CLI flags. 35B uses 0.2 (precise code edits);
+/// 122B uses 0.4 (more exploratory reasoning for Debug/Design/Analysis).
 let modelToTemperature: Model -> float =
     function
-    | Qwen32B -> 0.2
-    | Qwen72B -> 0.4
+    | Qwen35B -> 0.2
+    | Qwen122B -> 0.4

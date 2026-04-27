@@ -14,9 +14,10 @@ type Intent =
     | General
 
 /// Qwen model identifier. No URL or port fields — those belong to Endpoint.
+/// canonical 122B; opt-in 35B via --with-35b flag (Phase 19).
 type Model =
-    | Qwen32B
-    | Qwen72B
+    | Qwen122B
+    | Qwen35B
 
 /// Port-typed endpoint. Using a DU (instead of `int` or `string`) forces
 /// modelToEndpoint to be exhaustive: adding a third model is a compile error
@@ -149,6 +150,7 @@ type AgentError =
     | SessionNotFound of SessionId
     | SessionCorrupt of detail: string
     | PlanInvalid of detail: string
+    | PathRetired of modelPath: string // v2.0 Phase 19: qwen32b/qwen72b path detected post-retirement
 
 // ── Step record ──────────────────────────────────────────────────────────────
 

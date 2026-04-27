@@ -37,14 +37,17 @@ let defaultCliOptions: CliOptions =
       ResumeSessionId = None
       NewSession = false }
 
-/// Convert the CLI string ("32b"|"72b") to a Model. Raises on invalid input
+/// Convert the CLI string ("32b"|"72b"|"122b"|"35b") to a Model. Raises on invalid input
 /// so Argu-level catch in Program.fs can surface it as a usage error (exit 2).
+/// NOTE: Task 3 replaces this with the full retirement-guarded version including exit-2 errors.
 let parseForcedModel (s: string option) : BlueCode.Core.Domain.Model option =
     match s with
     | None -> None
-    | Some "32b" -> Some BlueCode.Core.Domain.Qwen32B
-    | Some "72b" -> Some BlueCode.Core.Domain.Qwen72B
-    | Some other -> failwithf "Unknown model: %s (valid values: 32b, 72b)" other
+    | Some "122b" -> Some BlueCode.Core.Domain.Qwen122B
+    | Some "35b"  -> Some BlueCode.Core.Domain.Qwen35B
+    | Some "32b"  -> Some BlueCode.Core.Domain.Qwen122B // placeholder until Task 3 retirement guard
+    | Some "72b"  -> Some BlueCode.Core.Domain.Qwen35B  // placeholder until Task 3 retirement guard
+    | Some other -> failwithf "Unknown model: %s (valid values: 122b; 35b requires --with-35b)" other
 
 /// Default system prompt for Phase 4. Tells Qwen to respond with strict JSON
 /// matching the LLM step schema. Phase 5 may extend this (include CLAUDE.md

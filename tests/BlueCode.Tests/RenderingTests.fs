@@ -11,7 +11,7 @@ let private toolStep: Step =
       Action = ToolCall(ToolName "read_file", ToolInput(Map.ofList [ ("_raw", "{\"path\":\"README.md\"}") ]))
       ToolResult = Some(Success "hello world")
       Status = StepSuccess
-      ModelUsed = Qwen32B
+      ModelUsed = Qwen122B
       StartedAt = DateTimeOffset(2026, 4, 22, 12, 0, 0, TimeSpan.Zero)
       EndedAt = DateTimeOffset(2026, 4, 22, 12, 0, 0, TimeSpan.Zero).AddMilliseconds(423.0)
       DurationMs = 423L }
@@ -22,7 +22,7 @@ let private finalStep: Step =
       Action = FinalAnswer "The answer is 42."
       ToolResult = None
       Status = StepSuccess
-      ModelUsed = Qwen32B
+      ModelUsed = Qwen122B
       StartedAt = DateTimeOffset.MinValue
       EndedAt = DateTimeOffset.MinValue
       DurationMs = 0L }
@@ -63,7 +63,7 @@ let tests =
                   { FinalAnswer = "done"
                     Steps = []
                     LoopCount = 1
-                    Model = Qwen32B }
+                    Model = Qwen122B }
 
               let out = renderResult r
               Expect.stringContains out "done" "answer shown"

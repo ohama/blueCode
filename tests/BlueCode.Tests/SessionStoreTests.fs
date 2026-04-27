@@ -24,7 +24,7 @@ let private mkStep (n: int) (action: LlmOutput) : Step =
         | ToolCall _ -> Some (Success (sprintf "stub output %d" n))
         | Plan _ -> None
       Status = StepSuccess
-      ModelUsed = Qwen32B
+      ModelUsed = Qwen122B
       StartedAt = t0
       EndedAt = t1
       DurationMs = 50L }

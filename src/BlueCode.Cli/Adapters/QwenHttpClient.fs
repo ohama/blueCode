@@ -389,7 +389,8 @@ let create () : ILlmClient =
         member _.CompleteAsync messages model ct =
             task {
                 let url = model |> modelToEndpoint |> endpointToUrl
-                let probe = if model = Qwen32B then probe8000 else probe8001
+                // probe8000: only fired when model = Qwen35B (--with-35b mode); harmless to allocate as unfired Lazy<>.
+                let probe = if model = Qwen35B then probe8000 else probe8001
                 // First call to each port triggers GET /v1/models; subsequent calls
                 // on the same port reuse the cached Task result.
                 let! info = probe.Value
@@ -402,8 +403,8 @@ let create () : ILlmClient =
 
                 let modelLabel =
                     match model with
-                    | Qwen32B -> "32B"
-                    | Qwen72B -> "72B"
+                    | Qwen122B -> "122B"
+                    | Qwen35B -> "35B"
 
                 // Escape brackets so Spectre does not parse "[32B]" as a markup
                 // color tag. Spectre markup uses [[ / ]] as literal bracket escapes.

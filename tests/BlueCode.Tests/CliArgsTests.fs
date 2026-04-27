@@ -91,13 +91,13 @@ let tests =
 
           // 9. parseForcedModel round-trips
           testCase "parseForcedModel None = None"
-          <| fun () -> Expect.equal (parseForcedModel None) None "None → no forced model"
+          <| fun () -> Expect.equal (parseForcedModel None) None "None → no forced model (Task 3 changes to Some Qwen122B)"
 
-          testCase "parseForcedModel (Some \"32b\") = Some Qwen32B"
-          <| fun () -> Expect.equal (parseForcedModel (Some "32b")) (Some Qwen32B) "\"32b\" string maps to Qwen32B"
+          testCase "parseForcedModel (Some \"32b\") = Some Qwen122B (temporary; Task 3 adds retirement error)"
+          <| fun () -> Expect.equal (parseForcedModel (Some "32b")) (Some Qwen122B) "\"32b\" placeholder until Task 3 retirement guard"
 
-          testCase "parseForcedModel (Some \"72b\") = Some Qwen72B"
-          <| fun () -> Expect.equal (parseForcedModel (Some "72b")) (Some Qwen72B) "\"72b\" string maps to Qwen72B"
+          testCase "parseForcedModel (Some \"72b\") = Some Qwen35B (temporary; Task 3 adds retirement error)"
+          <| fun () -> Expect.equal (parseForcedModel (Some "72b")) (Some Qwen35B) "\"72b\" placeholder until Task 3 retirement guard"
 
           // 10. parseForcedModel on unknown raises
           testCase "parseForcedModel (Some \"unknown\") raises"

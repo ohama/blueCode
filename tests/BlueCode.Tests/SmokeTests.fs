@@ -14,10 +14,10 @@ let smokeTests =
         "Smoke (live localhost)"
         [
 
-          testCase "QwenHttpClient.CompleteAsync round-trip against live 32B"
+          testCase "QwenHttpClient.CompleteAsync round-trip against live 122B"
           <| fun () ->
               if not (smokeEnabled ()) then
-                  skiptest "Set BLUECODE_SMOKE_TEST=1 and ensure localhost:8000 (32B) is serving to run."
+                  skiptest "Set BLUECODE_SMOKE_TEST=1 and ensure localhost:8001 (122B) is serving to run."
               else
                   let client = create ()
 
@@ -32,7 +32,7 @@ let smokeTests =
                   use cts = new CancellationTokenSource(TimeSpan.FromSeconds(120.0))
 
                   let result =
-                      (client.CompleteAsync messages Qwen32B cts.Token).GetAwaiter().GetResult()
+                      (client.CompleteAsync messages Qwen122B cts.Token).GetAwaiter().GetResult()
 
                   match result with
                   | Ok { Output = output } ->
