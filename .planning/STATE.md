@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk (revision pending — _32b/_72b keys need re-keying to _35b/_122b) Phase 17 ✓ Phase 18 added (not planned yet)
-Plan: 18-02 complete
-Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 in progress (18-01 done: 35B unloaded; 18-02 done: 122B-only bench 31/31 exit=0, all criteria PASS; 18-03 decision matrix next)
-Last activity: 2026-04-27 — Phase 18-02 complete (bench-122b-only.sh 31 invocations, 0 failures, T1/T2 median 3s, T6 4 steps, B2 PASS, RSS stable at 45.43 GB; 18-03 READY)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk Phase 17 ✓ Phase 18 ✓ (verdict: DROP-35B; architectural follow-ups deferred)
+Plan: 18-03 complete
+Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 18 complete (verdict: DROP-35B — 5/5 SC4 criteria PASS; eval doc on disk; reload skipped; architectural changes deferred to follow-up phase per ROADMAP §SC5)
+Last activity: 2026-04-27 — Phase 18 complete (verdict: DROP-35B; eval doc + 18-01 memory profile + 18-02 bench results all on disk; reload skipped per DROP-35B disposition; architectural changes deferred to follow-up phase per ROADMAP §SC5)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ◆ (18-01 ✓ 18-02 ✓ 18-03 ░)]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓ Phase 18 ✓]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -73,8 +73,15 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 18-02-PLAN.md (bench-122b-only.sh created; 31/31 invocations exit=0; all SC3/SC4 criteria PASS; 18-03 READY)
-Resume file: None — 18-02 complete; run 18-03 (decision matrix + documentation) next
+Stopped at: Completed 18-03-PLAN.md (single-model eval — verdict: DROP-35B; eval doc + STATE updated; reload skipped per DROP-35B; architectural follow-ups enumerated as deferred)
+Resume file: None — Phase 18 complete; run follow-up architectural-changes phase next (Router collapse, bench/baseline.json halve, CLAUDE.md update), then Phase 16 (note: follow-up should run BEFORE Phase 16 so 16-03 bench fixtures use the final canonical baseline keys)
+
+### New Decisions (18-03)
+
+- **v2.0 Phase 18 verdict DROP-35B** — All 5 ROADMAP §SC4 criteria PASS (5/5): T1/T2 median 3s ≤ 6s; T6/W1/W2/B2 step counts within baseline_max; B2 DivideByZeroException diagnosis preserved; PhysMem unused +19.42 GB ≥ 5 GB; Compressor 454 MB < 1 GB. 122B alone meets latency, step-count, diagnosis, memory-headroom, and compressor thresholds. Single-model 122B is a viable canonical configuration. Eval doc: `documentation/single-model-eval.md`. Memory profile: `18-01-MEMORY-PROFILE.md`. Bench results: `18-02-BENCH-RESULTS.md`. New harness: `scripts/bench-122b-only.sh` (preserved as evaluation evidence).
+- **v2.0 Phase 18 architectural follow-ups deferred** — Router collapse (`src/BlueCode.Core/Router.fs`), bench/baseline.json halve/re-key, CLAUDE.md Runtime Environment update, scripts/bench-122b-only.sh promotion ALL deferred to a follow-up phase per ROADMAP §SC5. Phase 18 made ZERO permanent code changes (zero src/ diff, zero bench/run.sh diff, zero baseline.json diff, zero CLAUDE.md diff). Follow-up phase should run BEFORE Phase 16.
+- **v2.0 Phase 18 35B reload skipped** — Task 3 checkpoint short-circuited autonomously per DROP-35B verdict disposition. System stays single-model (122B alone, port 8001). User can reload at will via `launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist` per documentation/single-model-eval.md §Reversibility. Reversibility window: ≥ 1 week of stable single-model operation recommended before cleanup of 35B model files / plist.
+- **v2.0 Phase 18 122B RSS hypothesis CONFIRMED** — RESEARCH §Pitfall 5 hypothesized 122B RSS stays near 45.4 GB after 35B unload. Observed: RSS stable at 45.42 GB post-unload (0 GB expansion) and 45.43 GB post-bench (+0.01 GB / +1.4 MB delta — negligible). MoE sparse activation means 122B's resident page set is prompt-driven, not memory-availability-driven. Combined system RSS drops from 62.35 GB (dual) to 45.42 GB (single) — 16.93 GB freed to PhysMem pool.
 
 ### New Decisions (18-02)
 
