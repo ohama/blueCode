@@ -18,7 +18,7 @@ v2.0 makes two architectural investments simultaneously: session state persists 
 - [x] **Phase 15: Persistence Wiring** ✓ — REPL session threading, JSONL adapter, --resume, --new-session
 - [ ] **Phase 16: Planning Wiring + Bench** — --plan flag, approval gate UI, plan retry wiring, bench fixtures extended
 - [x] **Phase 17: Qwen 3.5 Evaluation** ✓ — SWITCH verdict 2026-04-27; 35B/122B replaces 32B/72B as canonical pair (3.4× speedup, no regressions, 8/8 gate)
-- [ ] **Phase 18: Single-Model 122B Evaluation** — unload 35B and verify 122B-alone viability (latency + quality + memory profile); decide DROP-35B / KEEP-DUAL / CONDITIONAL (added 2026-04-27 via /gsd:add-phase; runs BEFORE Phase 16, same reason as 17)
+- [x] **Phase 18: Single-Model 122B Evaluation** ✓ — DROP-35B verdict 2026-04-27; all 5 §SC4 criteria PASS; 31/31 bench invocations exit=0; +19.42 GB PhysMem freed; B2 DivByZero preserved; Router collapse + baseline halve deferred to follow-up phase
 
 **Note on phase ordering:** Phase 17 should run BEFORE Phase 16 if model swap is desired before bench fixtures are set. If 35B/122B replaces 32B/72B as canonical, Phase 16's bench baseline (T6_32b, W1_32b, B2_72b, etc.) needs new model ids. Phase 16 plans on disk remain valid for whichever model pair ends up canonical; user decides execution order after Phase 17 ships findings.
 
@@ -168,9 +168,9 @@ Plans:
 | 15. Persistence Wiring | v2.0 | PERSIST-01, PERSIST-02, PERSIST-03, PERSIST-04 | 3/3 | ✓ Complete | 2026-04-27 |
 | 16. Planning Wiring + Bench | v2.0 | PLAN-02, PLAN-03, PLAN-04 (wiring) | 0/3 | Not started (plans on disk) | - |
 | 17. Qwen 3.5 Evaluation | v2.0 | (none — operations) | 3/3 | ✓ Complete (SWITCH) | 2026-04-27 |
-| 18. Single-Model 122B Eval | v2.0 | (none — operations + decision) | 0/3 | Not started | - |
+| 18. Single-Model 122B Eval | v2.0 | (none — operations + decision) | 3/3 | ✓ Complete (DROP-35B) | 2026-04-27 |
 
 ---
 
 *Roadmap created: 2026-04-26*
-*Last updated: 2026-04-27 — Phase 18 added via /gsd:add-phase (single-model 122B viability eval; 3 plans; 18-01 has user checkpoint for unload; 18-03 has conditional user checkpoint for reload (engaged on KEEP-DUAL/CONDITIONAL, skipped on DROP-35B); plans revised post-checker: blockers fixed (18-02 invocation count → 31; 18-03 reload → checkpoint not autonomous))*
+*Last updated: 2026-04-27 — Phase 18 ✓ Complete (DROP-35B verdict; 31/31 bench invocations exit=0; +19.42 GB PhysMem freed; B2 DivByZero preserved; conditional 35B reload skipped per verdict; architectural follow-ups (Router collapse, baseline halve, CLAUDE.md update, scripts/bench-122b-only.sh promotion) deferred to a follow-up phase per §SC5)*
