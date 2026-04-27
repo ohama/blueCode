@@ -4,18 +4,18 @@
 
 See: `.planning/PROJECT.md` (updated 2026-04-26 after starting v2.0 milestone)
 
-**Core value:** Mac 로컬 Qwen 32B/72B를 strong-typed F# agent loop로 안정적으로 돌린다
+**Core value:** Mac 로컬 Qwen 3.5 35B/122B를 strong-typed F# agent loop로 안정적으로 돌린다 (switched from 32B/72B; Phase 17 SWITCH decision 2026-04-27)
 **Current focus:** v2.0 Persistence + Planning — major version step. Domain extensions (Phase 14) → Persistence wiring (Phase 15) → Planning wiring + bench (Phase 16).
 
 ## Current Position
 
 Milestone: v2.0 Persistence + Planning (started 2026-04-26)
-Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk (revision pending) Phase 17 in progress (17-01 ✓ 17-02 ✓)
-Plan: 17-02 complete
-Status: 254/1/0 tests; bench gate 8/8 PASS; Phase 17-02 complete (service swap + load test); 17-03 next (bench --all comparison, SWITCH/STAY decision)
-Last activity: 2026-04-27 — Completed 17-02-PLAN.md (Qwen 3.5 35B/122B swap, Path A confirmed, AgentLoop role fix, canary 4/4 PASS)
+Phase: Phase 14 ✓ Phase 15 ✓ Phase 16 plans on disk (revision pending — _32b/_72b keys need re-keying to _35b/_122b) Phase 17 ✓
+Plan: 17-03 complete (Phase 17 SHIPPED)
+Status: 254/1/0 tests; bench gate 8/8 PASS (post-SWITCH, baseline re-keyed); Phase 17 complete (SWITCH to 35B/122B); Phase 16 next
+Last activity: 2026-04-27 — Completed 17-03-PLAN.md (bench --all comparison, SWITCH verdict, baseline re-keyed, CLAUDE.md updated)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ◆ (17-01 ✓ 17-02 ✓)]
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ◆ [Phase 14 ✓ Phase 15 ✓ Phase 16 ░ Phase 17 ✓]
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -73,12 +73,19 @@ v2.1+ candidates (after v2.0 ships):
 ## Session Continuity
 
 Last session: 2026-04-27
-Stopped at: Completed 17-02-PLAN.md (Qwen 3.5 swap, Path A confirmed, AgentLoop fix, canary 4/4 PASS)
-Resume file: None — Phase 17-02 complete; run 17-03 (bench --all comparison + SWITCH/STAY decision) next
+Stopped at: Completed 17-03-PLAN.md (bench --all comparison, SWITCH verdict, baseline re-keyed, CLAUDE.md updated, gate 8/8 PASS)
+Resume file: None — Phase 17 complete (SWITCH to 35B/122B); run Phase 16 next (note: Phase 16 plans reference _32b/_72b bench keys; mechanical re-key needed before 16-03 bench tasks execute)
 
 ### New Decision (15-03)
 
 - **v2.0 Phase 15-03 test isolation** — `withTempHome` / `$HOME` redirect does NOT work for `FileSessionStore` tests on macOS .NET because `Environment.GetFolderPath(SpecialFolder.UserProfile)` reads native OS APIs, not `$HOME` env var (setting `$HOME` to temp returns empty string). Use unique GUID-prefixed session IDs in real `~/.bluecode/sessions/` with `finally`-block cleanup + `testSequenced` instead.
+
+### New Decisions (17-03)
+
+- **v2.0 Phase 17-03 SWITCH decision** — Qwen 3.5 35B/122B is canonical as of 2026-04-27. Criteria: all 8 gate tests PASS, B2 accuracy preserved, zero `<think>` leakage, 3.4× aggregate speedup (T6_72b: 4.1×; T6_32b: 3.7×), combined RSS 62.4 GB vs 95 GB threshold. bench/baseline.json re-keyed to _35b/_122b; CLAUDE.md Runtime Environment updated. `bench/run.sh --gate` exit 0.
+- **v2.0 Phase 17-03 MoE RSS flat post-bench** — RSS held at smoke-level (62.4 GB) throughout bench-all. blueCode's structurally similar bench prompts converged MoE routing on a stable expert subset. §5.5.1 projection of 84-93 GB post-bench was conservative; actual steady-state ~62 GB.
+- **v2.0 Phase 17-03 SHIP-BOTH deferred** — No per-task split benefit observed in bench data; both 35B and 122B converge at same step counts. SHIP-BOTH requires Router.fs plumbing; deferred to v2.1+.
+- **v2.0 Phase 17-03 Phase 16 re-key required** — Phase 16 plans on disk reference _32b/_72b bench keys. When Phase 16-03 bench tasks execute, those keys need mechanical re-key to _35b/_122b. Plan structure otherwise unaffected.
 
 ### New Decisions (17-02)
 
