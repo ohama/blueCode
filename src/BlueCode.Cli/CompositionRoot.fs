@@ -28,7 +28,8 @@ type CliOptions =
       Trace: bool
       ResumeSessionId: BlueCode.Core.Domain.SessionId option  // NEW (15-02): Some when --resume <ID> set
       NewSession: bool                                         // NEW (15-02): true when --new-session set
-      WithDual35b: bool }                                      // NEW (19-02): true when --with-35b set
+      WithDual35b: bool                                        // NEW (19-02): true when --with-35b set
+      PlanMode: bool }                                         // NEW (16-02): true when --plan set
 
 /// Default options — equivalent to old single-turn invocation with no flags.
 let defaultCliOptions: CliOptions =
@@ -37,7 +38,8 @@ let defaultCliOptions: CliOptions =
       Trace = false
       ResumeSessionId = None
       NewSession = false
-      WithDual35b = false }
+      WithDual35b = false
+      PlanMode = false }
 
 /// Convert the CLI string to a Model. Retirement guard: 32b/72b raise with a Phase 19
 /// message that Program.fs catches to exit 2. None defaults to Some Qwen122B (explicit
@@ -79,6 +81,23 @@ Inputs by action:
 - final:       {"answer": "<text>"}
 
 Rules: One tool per response. Use grep_search to locate symbols before reading large files. When done, respond with action="final". No prose, no markdown — JSON object only."""
+
+/// Prompt suffix appended to defaultSystemPrompt when --plan is set.
+/// Instructs the LLM to emit action="plan" with a steps+rationale input
+/// instead of a tool call. The plan's individual steps still use the same
+/// tool names (read_file/write_file/list_dir/run_shell/edit_file/glob_search/grep_search)
+/// — only the OUTER action shape changes.
+///
+/// This is a public constant (not private) so Program.fs can pass it to
+/// runPlanTurn without CompositionRoot needing a dependency on AgentLoop.
+let planSystemPromptSuffix: string =
+    """[PLAN MODE] Emit a single response with action="plan" and input matching:
+{
+  "steps": [{"tool": "<one of: read_file|write_file|list_dir|run_shell|edit_file|glob_search|grep_search>", "input": {...per-tool shape}, "rationale": "<one-sentence why>"}],
+  "rationale": "<one-sentence overall plan rationale>"
+}
+Constraints: maximum 5 steps. No two adjacent steps may be byte-identical.
+Do NOT execute tools yet — the user will approve before execution."""
 
 /// Construct the component graph synchronously. No HTTP calls at startup — the
 /// /v1/models probe is lazy and fires on the first LLM call to each port, owned

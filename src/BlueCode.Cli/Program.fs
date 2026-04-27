@@ -38,6 +38,8 @@ let main (argv: string array) : int =
         let isNewSession = results.Contains CliArgs.NewSession
         // NEW (19-02): --with-35b / --withdual dual-mode flag
         let withDual = results.Contains CliArgs.WithDual
+        // NEW (16-02): --plan flag
+        let isPlanMode = results.Contains CliArgs.Plan
 
         // NEW (15-02): mutually-exclusive validation. Reject BOTH-set; either-or-neither is fine.
         // Done POST-parse BEFORE bootstrap so we don't waste bootstrap cycles.
@@ -47,6 +49,18 @@ let main (argv: string array) : int =
             Log.CloseAndFlush()
             exit 2
         | _ -> ()
+
+        // Phase 16-02: --plan requires a prompt — REPL plan-mode is v2.1+.
+        if isPlanMode && List.isEmpty promptWords then
+            eprintfn "ERROR: --plan requires a prompt; REPL plan-mode is v2.1+ scope."
+            Log.CloseAndFlush()
+            exit 2
+
+        // Phase 16-02 guardrail: --plan with --with-35b unsupported (35B is rollback-only).
+        if isPlanMode && withDual then
+            eprintfn "ERROR: --plan with --with-35b is not supported in v2.0; 35B service is rollback-only."
+            Log.CloseAndFlush()
+            exit 2
 
         // parseForcedModel raises on invalid model string; wrap as usage error (exit 2).
         // (B1 W4) Specific catch for Phase 19 retirement messages → exit 2 (not 1).
@@ -96,7 +110,8 @@ let main (argv: string array) : int =
               Trace = isTrace
               ResumeSessionId = resumeId |> Option.map SessionId
               NewSession = isNewSession
-              WithDual35b = withDual }
+              WithDual35b = withDual
+              PlanMode = isPlanMode }
 
         let projectRoot = Directory.GetCurrentDirectory()
 
@@ -144,28 +159,115 @@ let main (argv: string array) : int =
         eprintfn "Session: %s" idStr
 
         let exitCode =
-            match promptWords with
-            | [] ->
-                // Multi-turn: pass the resolved Session and SessionStore to runMultiTurnWithSession.
-                (Repl.runMultiTurnWithSession components renderMode session components.SessionStore).GetAwaiter().GetResult()
-            | words ->
-                // Single-turn: thread session.Steps as priorSteps; Save once after this single turn.
-                let prompt = String.concat " " words
-                let (code, newSteps) =
-                    (Repl.runSingleTurn prompt session.Steps components renderMode).GetAwaiter().GetResult()
-                // Save the cumulative session even in single-turn mode so --resume <id> can pick up later.
-                let updated =
-                    { session with
-                        Steps = session.Steps @ newSteps
-                        LastActivityAt = DateTimeOffset.UtcNow }
-                let saveCt = System.Threading.CancellationToken.None
-                let saveRes = (components.SessionStore.Save updated saveCt).GetAwaiter().GetResult()
-                match saveRes with
-                | Ok () -> ()
-                | Error e ->
-                    eprintfn "WARNING: session save failed: %A" e
-                    Log.Warning("Session save failed: {Error}", sprintf "%A" e)
-                code
+            if isPlanMode then
+                // ─── Plan mode (Phase 16-02) ────────────────────────────────────────────
+                // Single-turn plan-then-execute. priorSteps comes from session.Steps
+                // (resumed or fresh — Program.fs session resolution above already handled).
+                // Guards: --plan without prompt -> exit 2 (above); --plan --with-35b -> exit 2 (above).
+                let prompt = String.concat " " promptWords
+                let model =
+                    opts.ForcedModel
+                    |> Option.defaultValue BlueCode.Core.Domain.Qwen122B  // 122B canonical default
+
+                let ct = System.Threading.CancellationToken.None
+
+                // Reject loop: track edit-comment between attempts. Bounded by maxUserRejects=3
+                // to avoid infinite re-prompting on flaky LLM output. The internal runPlanTurn
+                // 2-attempt retry stacks ON TOP of this user-facing loop.
+                let maxUserRejects = 3
+                let mutable rejectCount = 0
+                let mutable currentPrompt = prompt
+                let mutable finalDecision : PlanGate.PlanGateDecision option = None
+                let mutable lastError : BlueCode.Core.Domain.AgentError option = None
+
+                while finalDecision = None && rejectCount < maxUserRejects do
+                    let planResult =
+                        (BlueCode.Core.AgentLoop.runPlanTurn
+                            components.Config
+                            components.LlmClient
+                            model
+                            session.Steps
+                            currentPrompt
+                            CompositionRoot.planSystemPromptSuffix
+                            ct).GetAwaiter().GetResult()
+
+                    match planResult with
+                    | Error e ->
+                        eprintfn "%s" (renderError e)
+                        lastError <- Some e
+                        finalDecision <- Some PlanGate.Quit  // exit non-zero below
+                    | Ok plan ->
+                        PlanGate.render plan
+                        match PlanGate.promptUser PlanGate.realKeyReader with
+                        | PlanGate.Accept ->
+                            finalDecision <- Some PlanGate.Accept
+                        | PlanGate.Quit ->
+                            finalDecision <- Some PlanGate.Quit
+                        | PlanGate.Reject ->
+                            rejectCount <- rejectCount + 1
+                            // [PLAN REJECTED] prefix embedded in next runPlanTurn user prompt.
+                            // Role = User per Phase 20-03 probe (2026-04-27) — 122B HTTP 404 on
+                            // mid-conversation Role=System. The text marker carries authority,
+                            // not the role. The user-prompt position in buildMessages is always Role=User.
+                            currentPrompt <- sprintf "[PLAN REJECTED] The previous plan was rejected by the user. Propose a different plan.\n\n%s" prompt
+                        | PlanGate.Edit comment ->
+                            rejectCount <- rejectCount + 1
+                            currentPrompt <- sprintf "[PLAN EDIT NOTE: %s] Revise the previous plan accordingly.\n\n%s" comment prompt
+
+                match finalDecision, lastError with
+                | Some PlanGate.Accept, _ ->
+                    // Execute the accepted plan by calling runSingleTurn with the ORIGINAL prompt.
+                    // runSession re-invokes the LLM; the system prompt + priorSteps drive it toward
+                    // the same actions the user approved. PLAN-04 semantics: user approved the SHAPE.
+                    let (code, newSteps) =
+                        (Repl.runSingleTurn prompt session.Steps components renderMode).GetAwaiter().GetResult()
+                    // Save session — same shape as single-turn save below.
+                    let updated =
+                        { session with
+                            Steps = session.Steps @ newSteps
+                            LastActivityAt = DateTimeOffset.UtcNow }
+                    let saveCt = System.Threading.CancellationToken.None
+                    let saveRes = (components.SessionStore.Save updated saveCt).GetAwaiter().GetResult()
+                    match saveRes with
+                    | Ok () -> ()
+                    | Error e ->
+                        eprintfn "WARNING: session save failed: %A" e
+                        Log.Warning("Session save failed: {Error}", sprintf "%A" e)
+                    code
+                | Some PlanGate.Quit, Some _ ->
+                    // runPlanTurn returned Error (LLM unreachable / parse failure after 2 retries).
+                    1
+                | Some PlanGate.Quit, None ->
+                    // User typed 'q'.
+                    0
+                | _ ->
+                    // Reject loop exhausted (rejectCount >= maxUserRejects) without acceptance.
+                    eprintfn "Plan-mode: %d rejections without acceptance — aborting." rejectCount
+                    1
+            else
+                // ─── Existing dispatch (unchanged from current logic) ────────────────────
+                match promptWords with
+                | [] ->
+                    // Multi-turn: pass the resolved Session and SessionStore to runMultiTurnWithSession.
+                    (Repl.runMultiTurnWithSession components renderMode session components.SessionStore).GetAwaiter().GetResult()
+                | words ->
+                    // Single-turn: thread session.Steps as priorSteps; Save once after this single turn.
+                    let prompt = String.concat " " words
+                    let (code, newSteps) =
+                        (Repl.runSingleTurn prompt session.Steps components renderMode).GetAwaiter().GetResult()
+                    // Save the cumulative session even in single-turn mode so --resume <id> can pick up later.
+                    let updated =
+                        { session with
+                            Steps = session.Steps @ newSteps
+                            LastActivityAt = DateTimeOffset.UtcNow }
+                    let saveCt = System.Threading.CancellationToken.None
+                    let saveRes = (components.SessionStore.Save updated saveCt).GetAwaiter().GetResult()
+                    match saveRes with
+                    | Ok () -> ()
+                    | Error e ->
+                        eprintfn "WARNING: session save failed: %A" e
+                        Log.Warning("Session save failed: {Error}", sprintf "%A" e)
+                    code
 
         Log.CloseAndFlush()
         exitCode

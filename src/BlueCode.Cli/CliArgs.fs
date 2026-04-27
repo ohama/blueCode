@@ -20,6 +20,7 @@ type CliArgs =
     | Resume of id: string              // --resume <ID>; loads ~/.bluecode/sessions/<ID>.jsonl
     | [<AltCommandLine("--new-session")>] NewSession  // --newsession / --new-session; forces a fresh session id
     | [<AltCommandLine("--with-35b")>] WithDual       // --withdual / --with-35b; enables --model 35b
+    | Plan                                             // NEW (Phase 16-02): --plan flag; plan-then-execute mode
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -31,3 +32,4 @@ type CliArgs =
             | Resume _ -> "Resume session by ID. Reads ~/.bluecode/sessions/<ID>.jsonl and continues with prior context."
             | NewSession -> "Force a fresh session id. Mutually exclusive with --resume."
             | WithDual -> "Enable dual-mode (--model 35b allowed; requires launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist)"
+            | Plan -> "Plan-then-execute mode: LLM emits a plan; user approves a/r/e/q before any tool runs. Single-turn only (REPL plan-mode is v2.1+)."
