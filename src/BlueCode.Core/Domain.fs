@@ -227,3 +227,13 @@ type MessageRole =
 /// Phase 2 adds this as an additive Core type so the port signature
 /// can replace `string list` with `Message list` (LLM-01 type safety).
 type Message = { Role: MessageRole; Content: string }
+
+/// Per-model sampling parameters consumed by the HTTP adapter when building the
+/// /v1/chat/completions request body. Values match the Qwen 3.5 model card
+/// non-thinking coding configuration (temperature=0.7, top_p=0.8, top_k=20,
+/// presence_penalty=0.0). See Router.modelToSamplingParams for the per-model mapping.
+type SamplingParams =
+    { Temperature: float
+      TopP: float
+      TopK: int
+      PresencePenalty: float }
