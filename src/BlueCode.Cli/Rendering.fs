@@ -118,3 +118,4 @@ let renderError (err: AgentError) : string =
     | SessionNotFound (SessionId id) -> sprintf "Session not found: %s" id
     | SessionCorrupt detail -> sprintf "Session file corrupt: %s" detail
     | PlanInvalid detail -> sprintf "Plan invalid: %s" detail
+    | PathRetired path -> sprintf "Path retired in Phase 19: %s. Re-run with --model 122b (or no flag)." path

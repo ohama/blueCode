@@ -1,6 +1,7 @@
 module BlueCode.Tests.ModelsProbeTests
 
 open Expecto
+open BlueCode.Core.Domain
 open BlueCode.Cli.Adapters.QwenHttpClient
 
 // Note: NO [<Tests>] attribute — this project uses explicit rootTests registration
@@ -183,8 +184,39 @@ let private modelIdTests =
                   (Some "Qwen/Qwen2.5-Coder-32B")
                   "When no id starts with '/', fall back to the first usable id (single-id-server compatibility)" ]
 
+/// Tests for validateModelPath — Phase 19 PathRetired guard (pure, no IO).
+let private validateModelPathTests =
+    testList
+        "QwenHttpClient.validateModelPath"
+        [
+          testCase "validateModelPath rejects qwen32b path"
+          <| fun _ ->
+              let result = validateModelPath "/Users/x/llm-system/models/qwen32b"
+              Expect.equal result (Error (PathRetired "/Users/x/llm-system/models/qwen32b"))
+                  "qwen32b path segment should return Error(PathRetired)"
+
+          testCase "validateModelPath rejects qwen72b path"
+          <| fun _ ->
+              let result = validateModelPath "/Users/x/llm-system/models/qwen72b"
+              Expect.equal result (Error (PathRetired "/Users/x/llm-system/models/qwen72b"))
+                  "qwen72b path segment should return Error(PathRetired)"
+
+          testCase "validateModelPath accepts qwen122b path"
+          <| fun _ ->
+              let result = validateModelPath "/Users/ohama/llm-system/models/qwen122b"
+              Expect.equal result (Ok "/Users/ohama/llm-system/models/qwen122b")
+                  "qwen122b path should return Ok"
+
+          testCase "validateModelPath accepts qwen35b path"
+          <| fun _ ->
+              let result = validateModelPath "/Users/ohama/llm-system/models/qwen35b"
+              Expect.equal result (Ok "/Users/ohama/llm-system/models/qwen35b")
+                  "qwen35b path should return Ok"
+        ]
+
 let tests =
     testList
         "QwenHttpClient probes"
         [ maxModelLenTests
-          modelIdTests ]
+          modelIdTests
+          validateModelPathTests ]

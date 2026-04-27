@@ -233,6 +233,19 @@ let private withSpinner<'a> (label: string) (work: unit -> Task<'a>) : Task<'a> 
 
 // ── /v1/models probe (OBS-03) ──────────────────────────────────────────────
 
+/// Validate a model path string against the Phase 19 retirement list.
+/// Returns Error (PathRetired path) if the path contains "/qwen32b" or "/qwen72b"
+/// as a substring (covers both local-path variants and Qwen 2.5 HF ids).
+/// Returns Ok path otherwise.
+///
+/// PUBLIC for ModelsProbeTests unit testing (pure, no IO).
+let validateModelPath (path: string) : Result<string, BlueCode.Core.Domain.AgentError> =
+    let lower = path.ToLowerInvariant()
+    if lower.Contains("/qwen32b") || lower.Contains("/qwen72b") then
+        Error (BlueCode.Core.Domain.PathRetired path)
+    else
+        Ok path
+
 /// Parse the best id from a GET /v1/models response body (prefers absolute-path ids over HF repo ids; see docblock below).
 ///
 /// Heuristic (REF-01 gap fix, 2026-04-24): some servers (notably mlx_lm.server)
@@ -344,6 +357,16 @@ let probeModelInfoAsync (baseUrl: string) (ct: CancellationToken) : Task<ModelIn
                 let! json = resp.Content.ReadAsStringAsync(ct)
                 let id = tryParseModelId json |> Option.defaultValue ""
                 let maxLen = tryParseMaxModelLen json |> Option.defaultValue 8192
+
+                // Phase 19: if the probe returned a retired Qwen2.5 path, surface PathRetired.
+                // validateModelPath returns Error(PathRetired) for /qwen32b or /qwen72b paths.
+                match validateModelPath id with
+                | Error (BlueCode.Core.Domain.PathRetired _) ->
+                    Serilog.Log.Warning(
+                        "GET {Url}/v1/models returned a Phase 19 retired path id={Id}; PathRetired guard active",
+                        baseUrl, id
+                    )
+                | _ -> ()
 
                 if id = "" then
                     Serilog.Log.Warning(
