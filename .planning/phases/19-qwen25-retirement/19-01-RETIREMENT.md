@@ -128,3 +128,32 @@ _(To be filled in by Task 4 — canonical post-retirement state for 19-02 docs)_
 ## SC1 verification
 
 _(To be filled in by Task 4)_
+
+---
+
+## Pre-flight (Task 2 — captured 2026-04-27 05:44 UTC)
+
+**Pre-flight: PASS — only com.ohama.qwen122b loaded**
+
+```
+$ launchctl list | grep ohama
+44880   0   com.ohama.qwen122b
+```
+
+Only `com.ohama.qwen122b` (PID 44880) is running. 35B was unloaded in Phase 18.
+32B/72B plists exist on disk but their services are not loaded — Task 3 will unload
+and delete them.
+
+**Preservation check:**
+
+```
+$ [ -d ~/llm-system/models/qwen122b ] && echo "qwen122b: PRESERVE OK" || echo "MISSING qwen122b"
+qwen122b: PRESERVE OK
+
+$ [ -d ~/llm-system/models/qwen35b ] && echo "qwen35b: PRESERVE OK" || echo "MISSING qwen35b"
+qwen35b: PRESERVE OK
+```
+
+Both directories confirmed present before retirement begins. Task 3 will NOT touch these.
+
+**Pre-flight verdict: SAFE TO PROCEED to Task 3 (user retirement commands).**
