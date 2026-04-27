@@ -517,7 +517,7 @@ print('PASS' if content.strip() == 'OK' and '<think>' not in content else 'FAIL'
 | `'<think>...</think>OK'` 또는 `'<think>...'` 형태 | thinking 활성 — server flag 미반영 | §6 (Path B fallback) |
 | `<think>...` 만 (비완료, `max_tokens`에 잘림) | thinking이 max_tokens 소진 | §6 |
 | 시스템 프롬프트 echo, FIM 토큰 (`<\|fim_prefix\|>` 등) | Base 모델 — §3 다운로드 자체가 잘못됨 | §3 재다운로드 |
-| 빈 문자열 + `reasoning_content` 필드에 응답 | omlx-style 분리 응답 | §6 + extractContent 패치 필요 |
+| 빈 문자열 + `reasoning_content` 필드에 응답 | omlx-style 분리 응답 | RESOLVED Phase 20-02: extractContentFromJson이 이제 reasoning_content로 폴백 |
 
 ### 5.4 JSON 스키마 출력 검증 (blueCode가 사용할 실제 응답 형태)
 
@@ -975,7 +975,7 @@ curl -fsS http://127.0.0.1:8001/v1/models > /dev/null && echo "✓ 122B 정상"
 | 샘플링 파라미터 불일치 (Qwen 2.5 era) | `temperature=0.2-0.4 / presence_penalty=1.5 / top_p 및 top_k 없음` — Qwen 2.5 Coder Instruct 값이 전송됨 | RESOLVED Phase 20-01 — `buildRequestBody`가 이제 `temp=0.7, top_p=0.8, top_k=20, presence_penalty=0.0` (Qwen 3.5 model card non-thinking coding mode) 전송. `grep "presence_penalty" src/BlueCode.Cli/Adapters/QwenHttpClient.fs` 로 확인 |
 | 4-bit 멀티턴 JSON 열화 | ~5 tool call 이후 JSON이 plain-text 근사치로 변질 | Phase 17-03 bench에서 관찰; 8-bit 변형 고려 |
 | mlx-vlm 변환 이슈 | mlx_lm.server 로드 실패 (35B는 mlx-vlm 0.3.12로 변환됨) | `mlx_vlm.server` 시도 (동일 인터페이스) |
-| `content` 빈 문자열 | `reasoning_content`에 응답이 있고 `content`가 비어있음 | §6 + `extractContent` 패치 필요 |
+| `content` 빈 문자열 | `reasoning_content`에 응답이 있고 `content`가 비어있음 | RESOLVED Phase 20-02: `extractContentFromJson`이 이제 `reasoning_content`로 폴백 (`choices[0].message.reasoning_content`). `extractContent` 패치 완료. |
 | OOM on 122B cold start | `exit status 137` 또는 `[METAL] Insufficient Memory` | §7.3 옵션 참조 |
 | `Load failed: 5: Input/output error` | plist 수정 후 `launchctl load -w` 실행 시 발생 | §5.1.1 — `unload` 먼저 → `load -w` (또는 `bootout`/`bootstrap` pair) |
 | service 즉시 종료, exit status `2` | `launchctl list \| grep ohama` 두 번째 컬럼이 `2`; 로드 직후 KeepAlive 재기동 루프 | argparse 거부 — plist 의 잘못된 플래그 이름 의심 (예: `--chat-template-kwargs` → §4.1 의 `--chat-template-args` 로 교정) |
