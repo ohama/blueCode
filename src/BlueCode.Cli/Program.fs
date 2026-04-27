@@ -36,6 +36,8 @@ let main (argv: string array) : int =
         // NEW (15-02): --resume / --new-session parsing
         let resumeId = results.TryGetResult CliArgs.Resume   // string option
         let isNewSession = results.Contains CliArgs.NewSession
+        // NEW (19-02): --with-35b / --withdual dual-mode flag
+        let withDual = results.Contains CliArgs.WithDual
 
         // NEW (15-02): mutually-exclusive validation. Reject BOTH-set; either-or-neither is fine.
         // Done POST-parse BEFORE bootstrap so we don't waste bootstrap cycles.
@@ -47,13 +49,37 @@ let main (argv: string array) : int =
         | _ -> ()
 
         // parseForcedModel raises on invalid model string; wrap as usage error (exit 2).
+        // (B1 W4) Specific catch for Phase 19 retirement messages → exit 2 (not 1).
+        // Generic exceptions (e.g. unknown model) also → exit 2 via the outer ArguParseException.
         let forcedModel =
             try
-                parseForcedModel forcedStr
-            with ex ->
+                parseForcedModel forcedStr withDual
+            with
+            | ex when ex.Message.Contains "retired in Phase 19" ->
                 eprintfn "ERROR: %s" ex.Message
                 Log.CloseAndFlush()
                 exit 2
+            | ex ->
+                eprintfn "ERROR: %s" ex.Message
+                Log.CloseAndFlush()
+                exit 2
+
+        // (B1) When --with-35b is set, fail fast if 35B service is not responding.
+        // Without this guard, the user sees a generic LlmUnreachable on first CompleteAsync
+        // after ~15-30s of probe latency. SC3 requires a clear '35B not loaded' message.
+        // Exit 1 (not 2) — "service unhealthy" is distinct from the "retired alias" exit 2.
+        if withDual then
+            use httpClient = new System.Net.Http.HttpClient(Timeout = System.TimeSpan.FromSeconds(2.0))
+            try
+                let resp = httpClient.GetAsync("http://127.0.0.1:8000/v1/models").GetAwaiter().GetResult()
+                if not resp.IsSuccessStatusCode then
+                    eprintfn "ERROR: 35B service not loaded — run: launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist"
+                    Log.CloseAndFlush()
+                    exit 1
+            with _ ->
+                eprintfn "ERROR: 35B service not loaded — run: launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist"
+                Log.CloseAndFlush()
+                exit 1
 
         // Step 2: flip LoggingLevelSwitch AFTER parse, BEFORE bootstrap.
         // This gates all subsequent Log.Debug calls on the --trace flag (CLI-07).
@@ -69,7 +95,8 @@ let main (argv: string array) : int =
               Verbose = isVerbose
               Trace = isTrace
               ResumeSessionId = resumeId |> Option.map SessionId
-              NewSession = isNewSession }
+              NewSession = isNewSession
+              WithDual35b = withDual }
 
         let projectRoot = Directory.GetCurrentDirectory()
 

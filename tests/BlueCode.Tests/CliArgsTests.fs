@@ -89,21 +89,30 @@ let tests =
               Expect.equal (results.TryGetResult Model) (Some "72b") "--model 72b present"
               Expect.equal (results.TryGetResult Prompt) (Some [ "hi" ]) "Prompt = [\"hi\"]"
 
-          // 9. parseForcedModel round-trips
-          testCase "parseForcedModel None = None"
-          <| fun () -> Expect.equal (parseForcedModel None) None "None → no forced model (Task 3 changes to Some Qwen122B)"
+          // 9. parseForcedModel round-trips (Task 3 signature; Task 7 replaces these with retirement tests)
+          testCase "parseForcedModel None defaults to Qwen122B"
+          <| fun () -> Expect.equal (parseForcedModel None false) (Some Qwen122B) "None → Some Qwen122B (explicit single-model default)"
 
-          testCase "parseForcedModel (Some \"32b\") = Some Qwen122B (temporary; Task 3 adds retirement error)"
-          <| fun () -> Expect.equal (parseForcedModel (Some "32b")) (Some Qwen122B) "\"32b\" placeholder until Task 3 retirement guard"
+          testCase "parseForcedModel Some 122b returns Qwen122B"
+          <| fun () -> Expect.equal (parseForcedModel (Some "122b") false) (Some Qwen122B) "\"122b\" string maps to Qwen122B"
 
-          testCase "parseForcedModel (Some \"72b\") = Some Qwen35B (temporary; Task 3 adds retirement error)"
-          <| fun () -> Expect.equal (parseForcedModel (Some "72b")) (Some Qwen35B) "\"72b\" placeholder until Task 3 retirement guard"
+          testCase "parseForcedModel Some 32b throws retirement error (temporary; Task 7 elaborates)"
+          <| fun () ->
+              Expect.throws
+                  (fun () -> parseForcedModel (Some "32b") false |> ignore)
+                  "32b is retired in Phase 19"
+
+          testCase "parseForcedModel Some 72b throws retirement error (temporary; Task 7 elaborates)"
+          <| fun () ->
+              Expect.throws
+                  (fun () -> parseForcedModel (Some "72b") false |> ignore)
+                  "72b is retired in Phase 19"
 
           // 10. parseForcedModel on unknown raises
           testCase "parseForcedModel (Some \"unknown\") raises"
           <| fun () ->
               Expect.throws
-                  (fun () -> parseForcedModel (Some "unknown") |> ignore)
+                  (fun () -> parseForcedModel (Some "unknown") false |> ignore)
                   "invalid model string should raise an exception"
 
           // 11. --help raises ArguParseException (usage text in message)

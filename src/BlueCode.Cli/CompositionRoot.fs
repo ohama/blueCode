@@ -27,7 +27,8 @@ type CliOptions =
       Verbose: bool
       Trace: bool
       ResumeSessionId: BlueCode.Core.Domain.SessionId option  // NEW (15-02): Some when --resume <ID> set
-      NewSession: bool }                                       // NEW (15-02): true when --new-session set
+      NewSession: bool                                         // NEW (15-02): true when --new-session set
+      WithDual35b: bool }                                      // NEW (19-02): true when --with-35b set
 
 /// Default options — equivalent to old single-turn invocation with no flags.
 let defaultCliOptions: CliOptions =
@@ -35,18 +36,24 @@ let defaultCliOptions: CliOptions =
       Verbose = false
       Trace = false
       ResumeSessionId = None
-      NewSession = false }
+      NewSession = false
+      WithDual35b = false }
 
-/// Convert the CLI string ("32b"|"72b"|"122b"|"35b") to a Model. Raises on invalid input
-/// so Argu-level catch in Program.fs can surface it as a usage error (exit 2).
-/// NOTE: Task 3 replaces this with the full retirement-guarded version including exit-2 errors.
-let parseForcedModel (s: string option) : BlueCode.Core.Domain.Model option =
+/// Convert the CLI string to a Model. Retirement guard: 32b/72b raise with a Phase 19
+/// message that Program.fs catches to exit 2. None defaults to Some Qwen122B (explicit
+/// single-model default; no intent routing indirection in single-model mode).
+/// withDual=true is required to use "35b" (otherwise fails with usage error).
+let parseForcedModel (s: string option) (withDual: bool) : BlueCode.Core.Domain.Model option =
     match s with
-    | None -> None
+    | None -> Some BlueCode.Core.Domain.Qwen122B   // default to 122B
     | Some "122b" -> Some BlueCode.Core.Domain.Qwen122B
-    | Some "35b"  -> Some BlueCode.Core.Domain.Qwen35B
-    | Some "32b"  -> Some BlueCode.Core.Domain.Qwen122B // placeholder until Task 3 retirement guard
-    | Some "72b"  -> Some BlueCode.Core.Domain.Qwen35B  // placeholder until Task 3 retirement guard
+    | Some "35b" when withDual -> Some BlueCode.Core.Domain.Qwen35B
+    | Some "35b" ->
+        failwithf "Model 35b requires --with-35b flag. Run: launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist; then re-invoke with --model 35b --with-35b. See CLAUDE.md §Runtime Environment."
+    | Some "32b" ->
+        failwithf "Model 32b retired in Phase 19. Use --model 122b (or no flag for default). Migration: see CLAUDE.md §Runtime Environment."
+    | Some "72b" ->
+        failwithf "Model 72b retired in Phase 19. Use --model 122b (or no flag for default). Migration: see CLAUDE.md §Runtime Environment."
     | Some other -> failwithf "Unknown model: %s (valid values: 122b; 35b requires --with-35b)" other
 
 /// Default system prompt for Phase 4. Tells Qwen to respond with strict JSON
