@@ -12,15 +12,34 @@ v2.1 Empirical Qwen 3.5 122B Coding Evaluation shipped 2026-04-28. Single-phase 
 
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1}-ROADMAP.md`.
 
-## Next Milestone (post-v2.1)
+## Current Milestone: v2.2 Multi-file Capability
 
-No active milestone. v2.2 scoping begins with `/gsd:new-milestone` after observation window or based on the data-driven candidates surfaced in v2.1 audit:
+**Goal:** Raise the PLAN-04 5-step ceiling that v2.1 surfaced as the structural blocker for genuine multi-file refactor (CORR-EVAL-02 FAIL with orphan_count=1 — agent burned 5-step budget reading 4 files before completing rename). Verify by re-running CORR-EVAL-02 to PASS (orphan_count=0) without regressing the 7/7 bench gate. Optionally close cold-start measurement deferred from v2.1.
 
-- **PLAN-04 5-step ceiling raise** — first v2.2 candidate, data-driven. CORR-EVAL-02 FAIL surfaced this as the structural blocker for genuine multi-file refactor. Eval doc §9 lists "if 5-step cap is raised, re-run CORR-EVAL-02" as re-evaluation trigger.
-- **Cold-start measurement** — `--coldstart` handler ready; awaits scheduled disruption window.
-- **Idiomatic F# generation improvement** — Coding-quality 6/10 (idiomatic F# 1/5 sub-score) surfaces gap.
+**Why now:** Data-driven from v2.1 audit (`milestones/v2.1-MILESTONE-AUDIT.md`). Unlike speculative deferred-list candidates (compaction, slash commands, sub-agents), this milestone closes a measured architectural ceiling that prevents a useful capability (multi-file refactor) from working at all. Success criterion is pre-defined by v2.1 eval doc §9 ("if 5-step cap is raised, re-run CORR-EVAL-02"). Verdict scorecard expected to flip Correctness 31/40 → 36/40 (Total 82 → 87).
 
-Plus continuing v2.0-deferred candidates (compaction, slash commands, sub-agents, thinking-mode-on, native tool_calls, streaming) — these did not directly surface as pain in this eval; observation window determines priority.
+**Target features (2 categories, 5 + 1 requirements):**
+
+- **Capability** — single source of truth for step ceiling (Domain.fs `validatePlan` + AgentLoop.runLoop sync; default 10); system prompt announces extended budget with usage guidance; tests at new boundary; bench gate regression hold (no fixture should consume more steps post-change)
+- **Re-evaluation** — `bash bench/eval-qwen35-122b.sh --refactor` produces orphan_count=0; eval doc §2.4/§7/§8/§9 updated; final scorecard `**Total: 87/100, Recommendation: KEEP**`
+- **Optional Phase 23** — cold-start empirical measurement (deferred from v2.1 per scope; gated behind user opt-in for ~3 min disruption window)
+
+**Scope (per v2.2 scope agreement 2026-04-28):**
+
+- Phase 22 (4 plans, ~1-2 days): Core change → adapter+prompt → tests+gate → re-eval
+- Phase 23 (1 plan, optional): Cold-start single execution + eval doc update
+- bounded surgical change; no new dependencies; no `bench/baseline.json` modifications
+
+**Phase numbering:** continues at 22 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20, v2.1: 21).
+
+**Excluded** with explicit rationale (deferred to later milestones):
+- Slash commands (SLASH-01) — no daily-driver pain signal; v2.3 candidate
+- Compaction (COMPACT-01) — no observed long-session pain; v2.3 candidate
+- Sub-agent delegation (SUBAG-01) — speculative without observation; v2.3 candidate
+- Thinking-mode-on (THINK-01) — v2.1 data says OFF is correct (schema 0/50); ON regresses; defer indefinitely
+- Native OpenAI `tool_calls` — custom JSON schema is 0/50 perfect; no functional reason; v3.0 territory
+- Streaming output (STM-01) — deferred 8x; TTFT 222ms warm is already instant; defer pattern is the signal
+- Idiomatic F# generation improvement — Coding-quality 1/5 is real but observation-driven; v2.3 candidate
 
 ## Future Milestone Goals (post-v2.1)
 
@@ -83,11 +102,21 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - ✓ macOS evalplus scoring traps diagnosed and fixed (silent-failure surface) — `python -m evalplus.sanitize` pre-pass for chat-mode doubled signatures + `EVALPLUS_MAX_MEMORY_BYTES=-1` env var to skip RLIMIT_AS hard-limit crash; both baked into `run_humaneval()`. Without these the test suite returns silent pass@1=0 — v2.1 (21-02)
 - ✓ Phase 21 evaluation narrative — `documentation/phase21-evaluation-narrative.md` (372 lines) — Korean-language why/what/how/result companion to the formal scorecard doc — v2.1
 
-### Active
+### Active (v2.2 Multi-file Capability)
 
-<!-- No active milestone. Next milestone via /gsd:new-milestone. -->
+<!-- v2.2 scope agreed 2026-04-28 from v2.1 audit's CORR-EVAL-02 FAIL constraint discovery. 5 core + 1 optional requirements. -->
 
-(None — between milestones)
+#### Capability
+- [ ] **PLAN-CAP-01**: Step ceiling raised from 5 to 10 via config-driven seam (Domain.fs `validatePlan` + AgentLoop.runLoop sync)
+- [ ] **PLAN-CAP-02**: System prompt announces extended budget with usage guidance (replace "5 step" language; add "use full budget for multi-step coherent work, minimize for single-step" guide)
+- [ ] **PLAN-CAP-03**: Tests + bench gate regression hold (PlanValidatorTests + AgentLoopTests at new boundary; 7/7 PASS held; step counts unchanged for W1/W2/B2/T1/T5/T6/MT)
+
+#### Re-evaluation
+- [ ] **PLAN-CAP-04**: CORR-EVAL-02 re-run produces orphan_count=0 PASS (`bench/eval-qwen35-122b.sh --refactor`)
+- [ ] **PLAN-CAP-05**: Eval doc updated; scorecard re-aggregated (Total 82 → 87; final line `**Total: 87/100, Recommendation: KEEP**`)
+
+#### Optional Phase 23 (cold-start, deferred from v2.1)
+- [ ] **COLD-EVAL-01**: Cold-start empirical measurement (gated behind user opt-in for ~3 min disruption window)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 

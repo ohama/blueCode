@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.1 milestone complete)
+See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone scoped)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.1 verdict 82/100 KEEP confirmed; single-model canonical; 35B retained as cold rollback via `--with-35b`)
-**Current focus:** Between milestones. v2.2 scoping pending — first data-driven candidate: PLAN-04 5-step ceiling raise (CORR-EVAL-02 FAIL constraint discovery).
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.1 verdict 82/100 KEEP confirmed; v2.2 unlocks multi-file refactor capability; single-model canonical; 35B retained as cold rollback via `--with-35b`)
+**Current focus:** v2.2 Multi-file Capability — Phase 22 (4 plans), optional Phase 23 (1 plan). Raise PLAN-04 5-step ceiling (CORR-EVAL-02 FAIL constraint discovery from v2.1); re-run eval to PASS; bench gate 7/7 PASS held throughout.
 
 ## Current Position
 
-Milestone: **between milestones** (v2.1 shipped 2026-04-28 with 82/100 KEEP)
-Phase: None active
-Plan: None active
-Status: Ready to scope v2.2 via `/gsd:new-milestone` or daily-drive observation window before scoping
-Last activity: 2026-04-28 — v2.1 milestone complete; archived to `.planning/milestones/v2.1-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `v2.1-phases/`
+Milestone: v2.2 Multi-file Capability (started 2026-04-28; scoped from v2.1 audit data signal)
+Phase: 22 (PLAN-04 Ceiling Raise) — not started; ready to plan
+Plan: 0 of 4 complete
+Status: Ready to plan via `/gsd:plan-phase 22`. Bench gate 7/7 PASS baseline; tests 282/1/0; eval doc verdict 82/100 KEEP (target post-Phase-22: 87/100).
+Last activity: 2026-04-28 — v2.2 milestone scoped (REQUIREMENTS.md + ROADMAP.md created); ready for Phase 22 planning
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ○ (not started)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 0/4 plans; Phase 23 optional)
 
 ## Performance Metrics (cumulative, frozen)
 
