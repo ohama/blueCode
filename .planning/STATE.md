@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v2.0 milestone complete)
 ## Current Position
 
 Milestone: v2.1 Empirical Qwen 3.5 122B Coding Evaluation (started 2026-04-27)
-Phase: 21 (single phase) — in progress; Wave 1 complete
-Plan: 1 of 5 complete (21-01: Harness Scaffolding)
-Status: eval harness scaffold + venv live; throughput + TTFT measured; bench gate 7/7 PASS
-Last activity: 2026-04-28 — Completed 21-01-PLAN.md (eval harness scaffold, --setup/--throughput/--ttft handlers, evalplus 0.3.1 on Python 3.14.3)
+Phase: 21 (single phase) — in progress; Wave 2 complete
+Plan: 2 of 5 complete (21-01: Harness Scaffolding ✓, 21-02: HumanEval+ ✓)
+Status: HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902 (headline); completion pass@1 = 0.226; bench gate 7/7 PASS
+Last activity: 2026-04-28 — Completed 21-02-PLAN.md (HumanEval+ HTTP adapter; 328 inferences, ~61 min; two macOS scoring bugs found and fixed: evalplus.sanitize + EVALPLUS_MAX_MEMORY_BYTES=-1)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21: 1/5 plans complete)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21: 2/5 plans complete)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -74,10 +74,19 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 21 Wave 1 execution)
-Stopped at: Completed 21-01-PLAN.md — harness scaffold + live runs done; bench gate 7/7 PASS
+Last session: 2026-04-28 (Phase 21 Wave 2 wrap-up)
+Stopped at: Completed 21-02-PLAN.md — HumanEval+ chat 93.9% / 90.2%; completion 22.6% / 21.3%; two macOS scoring bugs (sanitize + RLIMIT_AS) diagnosed and fixed in handler; bench gate 7/7 PASS
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 21` Wave 2 → 21-02 (--humaneval handler)
+Next workflow trigger: `/gsd:execute-phase 21` Wave 3 → 21-03 (--refactor / --langcoverage handlers)
+
+### New Decisions (21-02)
+
+- **HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902 (headline)** — Qwen 3.5 122B-A10B-4bit MoE in the upper tier of open-weight coding models. Completion mode 0.226/0.213 is informational; chat mode is what blueCode actually uses at runtime.
+- **macOS evalplus scoring trap #1: doubled signature.** evalplus.evaluate stitches prompt + completion. Chat-mode completions are full function definitions (signature + docstring + body), producing doubled signatures that fail to parse → silent pass@1=0. Fix: `python -m evalplus.sanitize <input>.jsonl` BEFORE `evalplus.evaluate`. Now baked into `bench/eval-qwen35-122b.sh run_humaneval()`.
+- **macOS evalplus scoring trap #2: RLIMIT_AS exceeds hard limit.** `evalplus.eval.utils.reliability_guard` calls `resource.setrlimit(RLIMIT_AS, ...)` with 4 GiB default; macOS per-process hard limit is lower → every test subprocess crashes pre-execution with `ValueError("current limit exceeds maximum limit")`. Fix: set env var `EVALPLUS_MAX_MEMORY_BYTES=-1` so `query_maximum_memory_bytes()` returns `None` and `reliability_guard` skips setrlimit. Now baked into `run_humaneval()`.
+- **evalplus.evaluate result caching** — writes `<samples>_eval_results.json` cache; subsequent runs against the same samples file load from cache. Delete cache before re-scoring to force fresh evaluation. Not a regression-gate concern (each fresh eval LOG_DIR is unique).
+- **Both adapter and harness preserved on disk** — `bench/eval-humaneval-http.py` (159 lines, no `mlx_lm` imports) + `bench/eval-qwen35-122b.sh run_humaneval()` (now sanitize-aware). 21-03 + 21-04 + 21-05 inherit a fully-working scoring pipeline.
+- **Wall-clock**: chat ~28 min, completion ~33 min, total ~61 min for 328 inferences (within ~55 min plan estimate, slight overrun on completion mode).
 
 ## v2.1 Architectural Touch Points (load-bearing)
 
