@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone scoped)
 ## Current Position
 
 Milestone: v2.2 Multi-file Capability (started 2026-04-28; scoped from v2.1 audit data signal)
-Phase: 22 (PLAN-04 Ceiling Raise) — complete (4/4 plans)
-Plan: 4 of 4 complete
-Status: Phase 22 complete (4/4 plans). CORR-EVAL-02: FAIL x2. Attempt 1 (10-step ceiling): FAIL — agent used 8/10 steps, missed add→sum rename. Attempt 2 (README rewrite Option A): FAIL — agent read new 2128-char README, produced IDENTICAL step-5 miscomprehension (still planned only add3→sum3). Root cause is a persistent model extraction bias toward add3, not fixable by README prose alone. Eval doc stays 82/100, KEEP. Bench gate 7/7 PASS preserved. Tests 284/1/0. SC1-SC4 met; SC5-SC6 not met (CORR-EVAL-02 FAIL x2).
-Last activity: 2026-04-28 — Recovery attempt: README rewrite (Option A) — CORR-EVAL-02 FAIL x2 confirmed; persistent comprehension bias; eval doc unchanged; bench gate 7/7 PASS
+Phase: 22 + 23 — both complete
+Plan: Phase 22 4/4; Phase 23 1/1 (COLD-EVAL-01)
+Status: **Verdict 87/100 KEEP** (was 82 v2.1 baseline). Phase 22 (ceiling 5→10) shipped architectural; CORR-EVAL-02 FAIL x2 (persistent extraction bias on shared-prefix names — v2.3 candidate) → Correctness stays 31/40. Phase 23 cold-start empirical: 37s ready (≤180s top band), Performance 20/25 → 25/25 (5 pts added; 100%). Bench gate 7/7 PASS preserved throughout. Tests 284/1/0.
+Last activity: 2026-04-28 — Phase 23 complete; cold-start 37s (PID 44880→10536; warm OS cache); eval doc verdict flipped 82 → 87; v2.2 milestone close-ready
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 4/4 plans ████; Phase 23 optional)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ (Phase 22: 4/4 plans ████ partial closure; Phase 23: 1/1 plan ✓)
 
 ## Performance Metrics (cumulative, frozen)
 

@@ -54,7 +54,7 @@ Closes v2.1 eval doc §9 re-evaluation trigger.
 
 ## Optional Phase 23 (cold-start, deferred from v2.1)
 
-- [ ] **COLD-EVAL-01**: Cold-start empirical measurement (deferred from v2.1)
+- [x] **COLD-EVAL-01**: Cold-start empirical measurement (deferred from v2.1)
   - **Goal:** Execute `bench/eval-qwen35-122b.sh --coldstart` once during a scheduled disruption window; flip eval doc §3.3 from "deferred" to actual measurement; update §7 Performance subtotal.
   - **Behavior:** `--coldstart` handler (already implemented in 21-04) kills 122B via `launchctl kickstart -k`, polls `/v1/models` every 2s with 240s timeout, writes `coldstart.json` with `kicked_at`/`elapsed_s`/`status`.
   - **Validation:** `bench/runs/qwen35-eval-<ts>/coldstart.json` exists with `status: "ready"` and `elapsed_s` numeric.
@@ -101,7 +101,7 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 | PLAN-CAP-03 | Phase 22 (22-03) | Complete (tests 282→284; bench gate 7/7 PASS held; all fixture step counts unchanged) |
 | PLAN-CAP-04 | Phase 22 (22-04) | Partial — architectural prerequisite delivered (ceiling enables 7+ steps); empirical PASS not achieved (CORR-EVAL-02 FAIL x2 due to persistent extraction bias on shared-prefix function names, NOT ceiling exhaustion). Surfaced as v2.3 candidate. |
 | PLAN-CAP-05 | Phase 22 (22-04) | Partial — eval doc §2.4/§8/§9 updated with two-stage finding; verdict stays 82/100 KEEP (not flipped to 87 because PLAN-CAP-04 PASS gate not met). |
-| COLD-EVAL-01 | Phase 23 (23-01) — optional | Pending (deferred — awaits scheduled disruption window) |
+| COLD-EVAL-01 | Phase 23 (23-01) | Complete (37s ready; warm OS file cache case; 5/5 top band; v2.0 SUMMARY's "up to 240s" estimate empirically refuted for common case) |
 
 **Coverage:**
 - v2.2 requirements: 5 core + 1 optional = 6 total

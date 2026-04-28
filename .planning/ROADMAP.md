@@ -23,7 +23,7 @@ Success criterion is pre-defined by v2.1 eval doc §9 ("if 5-step cap is raised,
 ## Phases
 
 - [x] **Phase 22: PLAN-04 Ceiling Raise** — 4 plans (Core change → adapter+prompt → tests+gate → re-eval); SC1-SC4 satisfied (architectural ceiling raised 5→10; gate 7/7 PASS held); SC5/SC6 partial (CORR-EVAL-02 still FAIL twice — persistent extraction bias surfaced as new v2.3 constraint; eval doc verdict stays 82/100 KEEP)
-- [ ] **Phase 23: Cold-start Empirical** — 1 plan (optional; deferred from v2.1 per scope)
+- [x] **Phase 23: Cold-start Empirical** — 1 plan (executed 2026-04-28; 37s ready; Total 82 → **87/100** KEEP)
 
 ---
 
@@ -136,7 +136,7 @@ Plans:
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
 | 22. PLAN-04 Ceiling Raise | v2.2 | PLAN-CAP-01..05 (5 reqs) | 4/4 | Complete (architectural; SC5/SC6 partial — extraction bias finding) | 2026-04-28 |
-| 23. Cold-start Empirical (optional) | v2.2 | COLD-EVAL-01 (1 req) | 0/1 | Not started (deferred per scope) | - |
+| 23. Cold-start Empirical | v2.2 | COLD-EVAL-01 (1 req) | 1/1 | Complete (37s ready; 5/5 top band; verdict 82→87) | 2026-04-28 |
 
 ---
 
