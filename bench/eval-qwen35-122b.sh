@@ -431,9 +431,11 @@ run_schema_rate() {
     /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "${prompts[$idx]}" >> "$iter_log" 2>&1
     set -e
     # Count InvalidJsonOutput in THIS iteration only:
+    # Use || true to suppress grep exit-1 (no matches) under set -euo pipefail.
+    # grep -c outputs "0" on no match (exit 1); with || true, the substitution captures "0".
     local block_invalid
-    block_invalid=$(grep -c "InvalidJsonOutput" "$iter_log" 2>/dev/null || echo 0)
-    if [ "$block_invalid" -gt 0 ]; then
+    block_invalid=$(grep -c "InvalidJsonOutput" "$iter_log" 2>/dev/null || true)
+    if [ "${block_invalid:-0}" -gt 0 ]; then
       invalid_total=$((invalid_total + 1))
       echo "  $label: InvalidJsonOutput observed (count=$block_invalid in $iter_log)"
     else
@@ -441,8 +443,10 @@ run_schema_rate() {
     fi
   done
   # Cross-check via aggregate file-level count (defense in depth):
+  # grep -l exits 1 when no files match; || true prevents pipefail abort.
   local files_with_errors
-  files_with_errors=$(grep -l "InvalidJsonOutput" "$logs_dir"/schema_*.log 2>/dev/null | wc -l | tr -d ' ')
+  files_with_errors=$(grep -l "InvalidJsonOutput" "$logs_dir"/schema_*.log 2>/dev/null | wc -l | tr -d ' ' || true)
+  files_with_errors="${files_with_errors:-0}"
   echo "$invalid_total/50 InvalidJsonOutput" > "$out"
   echo "schema_rate: $invalid_total/50 InvalidJsonOutput (cross-check files-with-errors=$files_with_errors); per-iter logs at $logs_dir/"
 }
