@@ -50,7 +50,7 @@ Success criterion is pre-defined by v2.2 audit: CORR-EVAL-02 PASS (orphan_count=
 4. **Bench gate regression hold** — `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)`. Per-fixture step counts unchanged for ALL 7 fixtures vs v2.2 baseline (T6=4-5/5, W1=3/3, W2=3/3, T1=1/3, T5=3/4, B2=2/3, MT=2/4). If T6 or any fixture regresses (uses more steps): iterate prompt — try alternate phrasing or shorter directives. Do NOT modify `bench/baseline.json`.
 5. **No `src/BlueCode.Core/`, `bench/baseline.json`, or `bench/run.sh` body modifications** — Phase 24 changes are confined to `src/BlueCode.Cli/CompositionRoot.fs`.
 
-**Plans:** 2-3 plans expected
+**Plans:** 2 plans (24-03 optional, only if regression hits)
 
 Plans:
 - [ ] 24-01: System prompt enumeration directive (P1) — Cli-only edit; single-line directive added to `planSystemPromptSuffix`. Bench gate verification at end. (COMP-01)
