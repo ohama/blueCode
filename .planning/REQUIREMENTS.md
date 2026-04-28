@@ -12,13 +12,13 @@ The single data-driven candidate (COMP-BIAS-01) is decomposed into 6 atomic requ
 
 The data-driven core of v2.3 — three independent prongs attacking the persistent extraction bias.
 
-- [ ] **COMP-01**: System prompt instructs agent to enumerate ALL rename targets from spec before editing (P1 prong)
+- [x] **COMP-01**: System prompt instructs agent to enumerate ALL rename targets from spec before editing (P1 prong) — ✓ delivered in Plan 24-01 (planSystemPromptSuffix 695→879 chars)
   - **Goal:** Agent's planning step lists every function/symbol to rename BEFORE issuing any edit_file or write_file action. Forces explicit enumeration as part of the thought stream.
   - **Behavior:** `defaultSystemPrompt` or `planSystemPromptSuffix` in `CompositionRoot.fs` augmented with a single-sentence directive: "When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly in your thought before editing. Do not start editing until the full list is enumerated."
   - **Validation:** `grep -F "list ALL targets explicitly" src/BlueCode.Cli/CompositionRoot.fs` matches; system prompt ≤ 1100 chars (vs v2.2's 695-char baseline; modest expansion acceptable for capability gain).
   - **Threshold:** Bench gate W1/W2/B2/T1/T5/T6/MT step counts unchanged (no behavioral regression on single-step tasks).
 
-- [ ] **COMP-02**: Plan-mode prompt includes 1-2 inline few-shot examples of correct multi-file refactor plans (P2 prong)
+- [x] **COMP-02**: Plan-mode prompt includes 1-2 inline few-shot examples of correct multi-file refactor plans (P2 prong) — ✓ delivered in Plan 24-02 (planSystemPromptSuffix 879→1183 chars; shared-prefix add/add3 example)
   - **Goal:** Few-shot examples concretely demonstrate to the model what a correct multi-file rename plan looks like, with all rename targets enumerated. Especially powerful at disambiguating shared-prefix cases (`add` vs `add3`).
   - **Behavior:** `planSystemPromptSuffix` in `CompositionRoot.fs` extended with 1-2 worked examples in compact format. At least one example must explicitly handle a shared-prefix case (e.g., `add` and `add3` both renamed in distinct steps with explicit target lists).
   - **Validation:** `grep -F "Example:" src/BlueCode.Cli/CompositionRoot.fs` shows ≥1 plan-mode example; suffix length ≤ 1500 chars (further expansion acceptable for the few-shot block).
@@ -90,10 +90,10 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COMP-01 | Phase 24 | Pending |
-| COMP-02 | Phase 24 | Pending |
+| COMP-01 | Phase 24 | ✓ Complete (2026-04-28) |
+| COMP-02 | Phase 24 | ✓ Complete (2026-04-28) |
 | COMP-03 | Phase 25 | Pending |
-| COMP-04 | Phase 24 + 25 (regression hold per phase) | Pending |
+| COMP-04 | Phase 24 + 25 (regression hold per phase) | Phase 24 portion ✓ Complete; Phase 25 portion Pending |
 | COMP-05 | Phase 26 | Pending |
 | COMP-06 | Phase 26 | Pending |
 
@@ -104,4 +104,4 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-04-28 — initial draft from v2.3 scope agreement (Comprehension Layer — multi-prong P1+P2+P3 intervention; data-driven from v2.2 audit's COMP-BIAS-01 first candidate)*
+*Last updated: 2026-04-28 — Phase 24 complete: COMP-01 + COMP-02 delivered; COMP-04 Phase 24 portion satisfied (bench gate 7/7 PASS preserved). Phase 25 (COMP-03 + COMP-04 Phase 25 portion) and Phase 26 (COMP-05 + COMP-06) follow.*

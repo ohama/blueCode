@@ -26,7 +26,7 @@ Success criterion is pre-defined by v2.2 audit: CORR-EVAL-02 PASS (orphan_count=
 
 ## Phases
 
-- [ ] **Phase 24: Prompt-Level Intervention (P1+P2)** — 2-3 plans (system prompt enumeration guidance + few-shot multi-file examples; bench gate regression hold)
+- [x] **Phase 24: Prompt-Level Intervention (P1+P2)** — 2 plans (system prompt enumeration guidance + few-shot multi-file examples; bench gate regression hold) ✓ 2026-04-28
 - [ ] **Phase 25: Plan-Mode Pre-Flight Enumeration (P3)** — 3-4 plans (Domain.fs new PlanInvalid reason + PlanValidator.fs new pre-flight pass + tests + bench gate regression hold)
 - [ ] **Phase 26: Re-Evaluation (CORR-EVAL-02 PASS + verdict flip)** — 1 plan (re-run --refactor; eval doc §2.4/§7/§8/§9 + final scorecard line 87 → 92)
 
@@ -165,7 +165,7 @@ Plans:
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
-| 24. Prompt-Level Intervention (P1+P2) | v2.3 | COMP-01, COMP-02, COMP-04 (3 reqs) | 0/2-3 | Not started | - |
+| 24. Prompt-Level Intervention (P1+P2) | v2.3 | COMP-01, COMP-02, COMP-04 (3 reqs) | 2/2 | ✓ Complete | 2026-04-28 |
 | 25. Plan-Mode Pre-Flight Enumeration (P3) | v2.3 | COMP-03, COMP-04 (2 reqs) | 0/3-4 | Not started | - |
 | 26. Re-Evaluation | v2.3 | COMP-05, COMP-06 (2 reqs) | 0/1 | Not started | - |
 
@@ -186,4 +186,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-28*
-*Last updated: 2026-04-28 — initial roadmap from v2.3 scope agreement (Comprehension Layer — multi-prong P1+P2+P3 intervention; data-driven from v2.2 audit's COMP-BIAS-01 first candidate); 3 phases (24, 25, 26); bench gate stability mandatory; eval doc verdict expected to flip 87 → 92 post-Phase-26*
+*Last updated: 2026-04-28 — Phase 24 complete (P1+P2 prompt-level intervention shipped; planSystemPromptSuffix 695→1183 chars; bench gate 7/7 PASS preserved; verification 8/8 must-haves passed); ready for Phase 25 (P3 architectural)*
