@@ -70,7 +70,7 @@ let tests =
 
           testCase "renderError produces user-readable messages (no stack trace)"
           <| fun _ ->
-              Expect.stringContains (renderError MaxLoopsExceeded) "5 steps" "MaxLoops msg"
+              Expect.stringContains (renderError MaxLoopsExceeded) "10 steps" "MaxLoops msg"
               Expect.stringContains (renderError (LoopGuardTripped "run_shell")) "run_shell" "guard msg names action"
               Expect.equal (renderError UserCancelled) "Cancelled." "cancel msg"
               let invalid = renderError (InvalidJsonOutput "some garbage that is short")
