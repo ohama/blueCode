@@ -382,8 +382,10 @@ run_multiturn() {
       echo "  N=$n t=$t turn=1 exit=$turn1_exit sid=$sid"
       echo "SESSION_ID: $sid" >> "$out_file"
       # Turns 2..N
+      # Guard: seq 2 N on macOS BSD counts DOWN when N<2 (seq 2 1 = "2 1").
+      # Explicit guard prevents spurious extra turns for N=1.
       local k
-      for k in $(seq 2 "$n"); do
+      for k in $([ "$n" -ge 2 ] && seq 2 "$n" || true); do
         local idx=$((k - 1))
         echo "----" >> "$out_file"
         echo "TURN $k: ${prompts[$idx]}" >> "$out_file"
