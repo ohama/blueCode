@@ -259,12 +259,27 @@ Post-refactor file state (captured before bench/run.sh EXIT trap restored fixtur
 orphan_count=1 means: at least one `add` reference still exists across the 3 .fs files post-refactor.
 The CORR-EVAL-02 scoring rule is strict: **N=0 → 5 pts; N>0 → 0 pts**.
 
-This failure reflects a real blueCode constraint: multi-file refactors that require reading N files
-and writing M files need at least N+M steps. With N=4 (README + 3 .fs) and M=3, the minimum is 7
-steps. The PLAN-04 hard cap of 5 steps makes this task structurally impossible to complete in a
-single blueCode invocation. This is meaningful evaluation data, not a measurement artifact.
+This failure reflects a real blueCode constraint that v2.2 then partially diagnosed via two-stage finding:
 
-§2.4 verdict: FAIL — orphan_count=1 (5-step budget exhausted). Score: **0/5**.
+**Stage 1 (v2.1, original):** The 5-step PLAN-04 hard cap was hypothesized as the sole structural
+constraint. With N=4 (README + 3 .fs reads) and M=3 (edits), the minimum step count is 7;
+5 < 7 makes the task physically impossible.
+
+**Stage 2 (v2.2, post-ceiling-raise):** Phase 22 raised the ceiling to 10 (PlanValidator.MaxPlanSteps
+and AgentConfig.MaxLoops both bumped 5→10) and re-ran CORR-EVAL-02 — twice, once with the original
+README and once with a rewritten README that explicitly enumerates both rename targets (`add → sum`
+AND `add3 → sum3`) with a completion checklist and an explicit warning. **Both attempts produced
+identical orphan_count=1**, with **textually identical step-5 thoughts** declaring intent to rename
+only `add3 → sum3`. The agent used 8/10 steps in both attempts (no MaxLoopsExceeded; 2-step slack
+unused). Different README text (902 chars prose vs 2128 chars enumerated), same model behavior.
+
+This empirical reproducibility surfaces a **persistent extraction bias** at the comprehension layer:
+when given a multi-target rename task with shared-prefix function names (`add` and `add3`), the model
+consistently extracts only the more-complex variant as the rename target, regardless of how the
+specification is worded. Ceiling raise was a necessary but insufficient fix. The comprehension layer
+is the new constraint surfaced for v2.3 scoping.
+
+§2.4 verdict: FAIL — orphan_count=1 (persistent extraction bias on shared-prefix function names; v2.2 ceiling raise revealed comprehension layer as new bottleneck). Score: **0/5**.
 
 ---
 
@@ -871,10 +886,13 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 5. **Mac-only.** The Apple Silicon MoE routing via MLX is not directly comparable to CUDA-based
    deployments. Throughput and TTFT numbers are M-series specific.
 
-6. **Multi-file refactor is a structural blueCode limit, not a model deficiency.** The 5-step PLAN-04
-   hard cap makes any task requiring >5 steps impossible to complete. The agent demonstrated correct
-   understanding of the multi-file task; it simply ran out of budget. This is a blueCode constraint,
-   not a model knowledge gap.
+6. **Multi-file refactor: two-stage finding (v2.1 + v2.2).** v2.1 hypothesized the 5-step PLAN-04
+   hard cap as the sole structural constraint. v2.2 raised the ceiling to 10 and re-ran CORR-EVAL-02
+   twice (once with original README, once with explicitly-enumerated rewrite). Both attempts produced
+   identical orphan_count=1 with textually identical step-5 thoughts. The model exhibits a persistent
+   extraction bias on shared-prefix function names (`add` vs `add3`) — extracting only the
+   more-complex variant as the rename target regardless of spec wording. Ceiling raise was necessary
+   but insufficient; comprehension layer is the new bottleneck. v2.3 candidate.
 
 7. **Coding quality F# score (1/5) reflects transcript selection.** The 2 multi-turn transcripts
    reviewed are Python-task sessions. If F# tasks were used for multi-turn evaluation, the idiomatic
@@ -904,8 +922,15 @@ Re-run this full evaluation if any of the following change:
    Metal-accelerated; driver changes can affect these numbers substantially.
 5. **Memory profile drift** — if RSS exceeds 50 GB sustained (122B alone), it signals a KV cache
    accumulation issue. The model would need `launchctl kickstart` for recovery before re-running.
-6. **blueCode step limit change (PLAN-04)** — if the 5-step cap is raised, the multi-file refactor
-   should be re-run and CORR-EVAL-02 re-scored.
+6. **blueCode step limit change (PLAN-04)** — ~~if the 5-step cap is raised, the multi-file refactor
+   should be re-run and CORR-EVAL-02 re-scored~~ **RESOLVED in v2.2**: cap raised 5→10; CORR-EVAL-02
+   re-run produced identical FAIL twice (with original and rewritten README). Comprehension layer is
+   the new constraint, not the ceiling. See §2.4 two-stage finding.
+8. **Comprehension layer fix attempts (v2.3 candidate)** — if a multi-prong intervention is shipped
+   (e.g., system prompt enumeration guidance + plan-mode pre-flight rename-target enumeration +
+   few-shot multi-file refactor examples), the multi-file refactor should be re-run and CORR-EVAL-02
+   re-scored. The persistent extraction bias on shared-prefix function names is the load-bearing
+   measurement target for any such intervention.
 7. **evalplus version change** — macOS RLIMIT_AS and sanitize fixes are baked into the harness; a
    new evalplus version may change either behavior.
 

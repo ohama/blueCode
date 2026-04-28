@@ -22,7 +22,7 @@ Success criterion is pre-defined by v2.1 eval doc §9 ("if 5-step cap is raised,
 
 ## Phases
 
-- [ ] **Phase 22: PLAN-04 Ceiling Raise** — 4 plans (Core change → adapter+prompt → tests+gate → re-eval)
+- [x] **Phase 22: PLAN-04 Ceiling Raise** — 4 plans (Core change → adapter+prompt → tests+gate → re-eval); SC1-SC4 satisfied (architectural ceiling raised 5→10; gate 7/7 PASS held); SC5/SC6 partial (CORR-EVAL-02 still FAIL twice — persistent extraction bias surfaced as new v2.3 constraint; eval doc verdict stays 82/100 KEEP)
 - [ ] **Phase 23: Cold-start Empirical** — 1 plan (optional; deferred from v2.1 per scope)
 
 ---
@@ -135,10 +135,10 @@ Plans:
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
-| 22. PLAN-04 Ceiling Raise | v2.2 | PLAN-CAP-01..05 (5 reqs) | 0/4 | Not started | - |
-| 23. Cold-start Empirical (optional) | v2.2 | COLD-EVAL-01 (1 req) | 0/1 | Not started | - |
+| 22. PLAN-04 Ceiling Raise | v2.2 | PLAN-CAP-01..05 (5 reqs) | 4/4 | Complete (architectural; SC5/SC6 partial — extraction bias finding) | 2026-04-28 |
+| 23. Cold-start Empirical (optional) | v2.2 | COLD-EVAL-01 (1 req) | 0/1 | Not started (deferred per scope) | - |
 
 ---
 
 *Roadmap created: 2026-04-28*
-*Last updated: 2026-04-28 — initial roadmap from v2.2 scope agreement (data-driven from v2.1 audit's CORR-EVAL-02 FAIL constraint discovery); Phase 22 = ceiling raise (4 plans); Phase 23 = optional cold-start (1 plan); bench gate stability mandatory; eval doc verdict expected to flip 82 → 87 post-Phase-22*
+*Last updated: 2026-04-28 — Phase 22 complete (4/4 plans). Architectural deliverables (SC1-SC4) satisfied: ceiling raised 5→10; bench gate 7/7 PASS held; tests 282 → 284. SC5/SC6 PARTIAL — CORR-EVAL-02 re-run produced identical FAIL twice (original + rewritten README) with textually identical step-5 thought; persistent extraction bias on shared-prefix function names surfaced as v2.3 candidate. Eval doc verdict stays 82/100 KEEP; §2.4 + §8 + §9 updated with two-stage finding.*

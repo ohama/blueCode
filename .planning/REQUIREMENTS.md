@@ -12,7 +12,7 @@ Each requirement is bounded, measurable, and grounded in v2.1 empirical findings
 
 The data-driven core of v2.2 — closes the architectural ceiling discovered by CORR-EVAL-02 FAIL.
 
-- [ ] **PLAN-CAP-01**: Step ceiling raised from 5 to {N} via config-driven seam
+- [x] **PLAN-CAP-01**: Step ceiling raised from 5 to {N} via config-driven seam
   - **Goal:** Domain.fs `validatePlan` length check + AgentLoop.runLoop step budget guard read the same single source of truth (e.g., `module-level constant maxStepsPerTurn` or `AgentConfig` field). Default value: **10** (covers 4-file refactor + buffer; conservative 2× of current 5).
   - **Behavior:** 
     - `Plan.Steps.Length ≤ maxStepsPerTurn` (currently `≤ 5`); validator fails plan beyond ceiling with new `PlanInvalid` reason or extended existing reason.
@@ -21,13 +21,13 @@ The data-driven core of v2.2 — closes the architectural ceiling discovered by 
   - **Validation:** Compile succeeds; PlanValidatorTests cover new ceiling boundary; AgentLoopTests cover MaxLoopsExceeded at new boundary; `grep -rn "5\\b" src/BlueCode.Core/{AgentLoop,Domain}.fs` no longer matches the magic 5 (replaced with named constant reference).
   - **Threshold:** Single source of truth; no drift between validator and loop.
 
-- [ ] **PLAN-CAP-02**: System prompt announces extended budget with usage guidance
+- [x] **PLAN-CAP-02**: System prompt announces extended budget with usage guidance
   - **Goal:** `CompositionRoot.fs` system prompt updated to communicate the new step budget and guide the agent toward minimal-step single-tasks while permitting full-budget multi-step coherent work.
   - **Behavior:** Replace any "5 steps" / "5 actions" / "five iterations" language in the prompt with the new ceiling value. Add a single-sentence guidance: "Use the full budget for multi-step coherent work like multi-file refactoring; minimize for single-step queries."
   - **Validation:** `grep -F "5 step" src/BlueCode.Cli/CompositionRoot.fs` returns nothing (or returns updated value); system prompt length within reasonable delta of v1.3 PERF-01 783-char baseline (≤900 chars target — modest expansion acceptable for capability gain).
   - **Threshold:** Bench gate W1/W2 still complete in ≤3 steps post-change (no behavioral regression on single-step tasks).
 
-- [ ] **PLAN-CAP-03**: Tests + bench gate regression hold
+- [x] **PLAN-CAP-03**: Tests + bench gate regression hold
   - **Goal:** Test additions + verification that no existing bench fixture regresses with the raised ceiling.
   - **Behavior:**
     - PlanValidatorTests: at least 2 new cases — ceiling boundary (steps = N PASS), beyond ceiling (steps = N+1 FAIL).
@@ -96,12 +96,12 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLAN-CAP-01 | Phase 22 (22-01) | Pending |
-| PLAN-CAP-02 | Phase 22 (22-02) | Pending |
-| PLAN-CAP-03 | Phase 22 (22-03) | Pending |
-| PLAN-CAP-04 | Phase 22 (22-04) | Pending |
-| PLAN-CAP-05 | Phase 22 (22-04) | Pending |
-| COLD-EVAL-01 | Phase 23 (23-01) — optional | Pending |
+| PLAN-CAP-01 | Phase 22 (22-01) | Complete (config-driven seam; ceiling 5→10) |
+| PLAN-CAP-02 | Phase 22 (22-02) | Complete (system prompt + adapter strings updated; T6 baseline held first try) |
+| PLAN-CAP-03 | Phase 22 (22-03) | Complete (tests 282→284; bench gate 7/7 PASS held; all fixture step counts unchanged) |
+| PLAN-CAP-04 | Phase 22 (22-04) | Partial — architectural prerequisite delivered (ceiling enables 7+ steps); empirical PASS not achieved (CORR-EVAL-02 FAIL x2 due to persistent extraction bias on shared-prefix function names, NOT ceiling exhaustion). Surfaced as v2.3 candidate. |
+| PLAN-CAP-05 | Phase 22 (22-04) | Partial — eval doc §2.4/§8/§9 updated with two-stage finding; verdict stays 82/100 KEEP (not flipped to 87 because PLAN-CAP-04 PASS gate not met). |
+| COLD-EVAL-01 | Phase 23 (23-01) — optional | Pending (deferred — awaits scheduled disruption window) |
 
 **Coverage:**
 - v2.2 requirements: 5 core + 1 optional = 6 total
