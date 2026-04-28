@@ -15,7 +15,7 @@ set -u
 
 # Auto-reset W1/W2 write-task fixtures on exit (success, failure, or Ctrl-C).
 # bug_divide_zero.fs is read-only by design (B2 diagnose); do NOT include it here.
-trap 'git checkout -- bench/fixtures/bug_lastchar.fs bench/fixtures/bug_average.fs 2>/dev/null || true' EXIT
+trap 'git checkout -- bench/fixtures/bug_lastchar.fs bench/fixtures/bug_average.fs bench/fixtures/bug_binsearch.fs bench/fixtures/refactor_multifile/Calculator.fs bench/fixtures/refactor_multifile/Main.fs bench/fixtures/refactor_multifile/Tests.fs 2>/dev/null || true' EXIT
 cd /Users/ohama/projs/blueCode
 
 command -v jq >/dev/null 2>&1 || { echo "jq required but not found"; exit 1; }
