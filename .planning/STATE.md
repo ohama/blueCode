@@ -4,7 +4,7 @@
 
 See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone scoped)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.1 verdict 82/100 KEEP confirmed; v2.2 raised PLAN-04 ceiling 5→10; CORR-EVAL-02 re-run FAIL (comprehension gap); single-model canonical; 35B retained as cold rollback via `--with-35b`)
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.1 verdict 82/100 KEEP confirmed; v2.2 raised PLAN-04 ceiling 5→10; CORR-EVAL-02 re-run FAIL x2 (comprehension gap persists through README rewrite); single-model canonical; 35B retained as cold rollback via `--with-35b`)
 **Current focus:** v2.2 Phase 22 complete (4/4 plans). CORR-EVAL-02 FAIL in both v2.1 and v2.2 (same root cause: agent comprehension failure on README scope). Eval doc stays at 82/100. Next: Phase 23 (optional cold-start) or v2.2 milestone closeout, or CORR-EVAL-02 fixture/prompt fix.
 
 ## Current Position
@@ -12,8 +12,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone scoped)
 Milestone: v2.2 Multi-file Capability (started 2026-04-28; scoped from v2.1 audit data signal)
 Phase: 22 (PLAN-04 Ceiling Raise) — complete (4/4 plans)
 Plan: 4 of 4 complete
-Status: Plan 22-04 complete. CORR-EVAL-02 re-run result: FAIL (orphan_count=1); root cause = model comprehension failure (agent mis-summarized README, planned add3→sum3 only, ignoring base add→sum); ceiling raise was necessary but not sufficient. Eval doc stays 82/100. Bench gate 7/7 PASS confirmed post-gate (T6=5/5, W1=3/3, W2=3/3, T1=1/3, T5=3/4, B2=2/3, MT=2/4). Tests 284/1/0. SC1-SC4 met; SC5-SC6 not met (CORR-EVAL-02 FAIL).
-Last activity: 2026-04-28 — Completed 22-04-PLAN.md (CORR-EVAL-02 FAIL; comprehension root cause documented)
+Status: Phase 22 complete (4/4 plans). CORR-EVAL-02: FAIL x2. Attempt 1 (10-step ceiling): FAIL — agent used 8/10 steps, missed add→sum rename. Attempt 2 (README rewrite Option A): FAIL — agent read new 2128-char README, produced IDENTICAL step-5 miscomprehension (still planned only add3→sum3). Root cause is a persistent model extraction bias toward add3, not fixable by README prose alone. Eval doc stays 82/100, KEEP. Bench gate 7/7 PASS preserved. Tests 284/1/0. SC1-SC4 met; SC5-SC6 not met (CORR-EVAL-02 FAIL x2).
+Last activity: 2026-04-28 — Recovery attempt: README rewrite (Option A) — CORR-EVAL-02 FAIL x2 confirmed; persistent comprehension bias; eval doc unchanged; bench gate 7/7 PASS
 
 Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 4/4 plans ████; Phase 23 optional)
 
@@ -50,6 +50,7 @@ Stable patterns established across milestones (load-bearing for next session):
 - **10-step ceiling (22-01)** — `Plan.Steps.Length ≤ 10` (PLAN-04 raised from 5). PlanValidator.MaxPlanSteps=10 and CompositionRoot bootstrap MaxLoops=10 are independent constants (Option 1 preserved). The 5-step structural block on multi-file refactor is removed.
 - **Independent constants pattern confirmed** — PlanValidator.MaxPlanSteps and AgentConfig.MaxLoops remain separate values (not merged into AgentConstants.fs). Rationale: PlanValidator is invoked from QwenHttpClient parse layer without AgentConfig in scope (Phase 16 design invariant).
 - **Usage guidance clause (22-02)** — `planSystemPromptSuffix` updated to "1-10 steps. Use the minimum steps needed; reserve the full budget only for tasks requiring reads across multiple files before editing." First variant held without iteration. T6 used 5/5 steps (at baseline_max; no regression). Suffix char count: 695 chars (≤ 900 budget). `defaultSystemPrompt` and `Role = User` invariant unchanged.
+- **CORR-EVAL-02 persistent bias (22-04 double-FAIL)** — Two independent CORR-EVAL-02 runs both FAIL with orphan_count=1. Agent has a persistent extraction bias toward `add3→sum3`, ignoring `add→sum`. README rewrite (Option A, 2026-04-28) did not fix the bias — step-5 thought was textually identical across both runs. Next resolution path: system prompt guidance for multi-file refactors or fixture redesign. Eval doc remains 82/100 KEEP.
 
 ### Pending Todos (v2.1 candidates)
 
@@ -68,12 +69,18 @@ For awareness only — DO NOT auto-pull. v2.1 scope comes from observation windo
 
 ### Blockers/Concerns
 
-**CORR-EVAL-02 FAIL (v2.2 re-run):** orphan_count=1 confirmed 2026-04-28. Root cause is model comprehension failure — agent mis-summarized README at step 5 in both v2.1 and v2.2 runs. The step-5 thought was identical: "Rename 'add3' to 'sum3'" — omitting the base `add`→`sum` rename. Agent used 8/10 steps (had 2 unused) so ceiling was not the issue. Eval doc stays 82/100 (KEEP verdict unchanged).
+**CORR-EVAL-02 FAIL x2 (confirmed 2026-04-28):** Two independent attempts, both FAIL with orphan_count=1.
+
+- **Attempt 1 (v2.2, 10-step ceiling):** Agent used 8/10 steps. Step-5 thought: "Rename 'add3' to 'sum3'" — missed `add → sum`. Same as v2.1 FAIL.
+- **Attempt 2 (README rewrite Option A):** README rewritten to 2128 chars with explicit numbered rename sections, checklist, and warning. Agent read the new README (confirmed: 2128 chars). Step-5 thought: IDENTICAL to attempt 1. Extraction bias persists through README changes.
+
+**Root cause (updated):** Model has a **persistent extraction bias** toward `add3 → sum3`. The base `add` function is treated as canonical and not flagged as a rename target despite explicit README instruction. This is a model knowledge/attention pattern, not a README clarity gap. Option A (README rewrite) is now closed as FAILED.
 
 **Options for resolution (user opt-in required):**
-1. Rewrite `bench/fixtures/refactor_multifile/README.md` to lead with `add`→`sum` prominently, then re-run CORR-EVAL-02 in a new plan
-2. Add system prompt guidance for multi-file refactors (enumerate all rename targets)
-3. Accept 82/100 as final v2.2 verdict and close milestone
+1. ~~Rewrite README~~ — ATTEMPTED AND FAILED (2026-04-28, orphan_count=1 on second attempt)
+2. Add system prompt guidance for multi-file refactors: "Before editing, list ALL functions to rename from the spec" — forces explicit planning of both renames before any edit action
+3. Redesign fixture to avoid ambiguity (e.g., rename only `add3 → sum3`; or use distinct names that have no shared prefix)
+4. Accept 82/100 as final v2.2 verdict and close milestone
 
 Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 - Phase 20 missing formal `20-VERIFICATION.md` (per-plan SUMMARYs substitute)
@@ -83,10 +90,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 22, Plan 04 execution)
-Stopped at: Completed 22-04-PLAN.md; CORR-EVAL-02 FAIL (orphan_count=1, comprehension root cause); eval doc unchanged at 82/100; bench gate 7/7 PASS; Phase 22 complete
+Last session: 2026-04-28 (Phase 22, Plan 04 recovery)
+Stopped at: CORR-EVAL-02 FAIL x2 confirmed. README rewrite (Option A) attempted — agent produced identical step-5 miscomprehension despite reading new 2128-char README. Eval doc unchanged at 82/100. Bench gate 7/7 PASS. Phase 22 structurally complete (ceiling raise delivered).
 Resume file: None
-Next workflow trigger: User decision on CORR-EVAL-02 options (see Blockers/Concerns), then `/gsd:complete-milestone` or Phase 23 opt-in
+Next workflow trigger: User decision on remaining CORR-EVAL-02 options (system prompt guidance / fixture redesign / accept 82/100), then `/gsd:complete-milestone` or Phase 23 opt-in
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
@@ -97,7 +104,7 @@ These are the measured baselines from v2.1. Use them as input when scoping v2.2 
 - **Schema rate 0/50 InvalidJsonOutput** — perfect compliance; v2.0 architecture decisions (strict JSON schema + 2-attempt retry + 5-step loop guard + thinking-mode-off) validated under stricter stress
 - **Multi-turn coherence stable through N=7** — refutes mlx-lm#1011 "approximately 5 rounds" community claim in our environment
 - **Needle 4/4 at max_model_len=32768** — mlx_lm.server does not expose YaRN-extended ceiling in /v1/models; 32k is the conservative working assumption
-- **10-step PLAN-04 ceiling (was 5)** — raised in 22-01; CORR-EVAL-02 FAIL structural block partially resolved (ceiling no longer the constraint); v2.2 re-run (22-04, 2026-04-28) FAIL: orphan_count=1, agent used 8/10 steps — root cause is model comprehension failure (agent mis-summarized README add→sum scope as add3→sum3 only). Eval doc stays 82/100.
+- **10-step PLAN-04 ceiling (was 5)** — raised in 22-01; CORR-EVAL-02 FAIL structural block resolved (ceiling no longer the constraint). v2.2 re-run attempt 1 (22-04, 2026-04-28): FAIL, orphan_count=1, agent used 8/10 steps — comprehension failure. v2.2 re-run attempt 2 (README Option A rewrite): FAIL, orphan_count=1, agent read new 2128-char README but produced identical step-5 miscomprehension. Persistent extraction bias toward add3→sum3; base add→sum rename ignored. Eval doc stays 82/100.
 - **Coding-quality 6/10 (idiomatic F# 1/5)** — generated F# is correct but procedural; pipelines / DU / pattern matching usage is low. Observation window will determine if this becomes a v2.2 candidate (system prompt F# style hint? few-shot?)
 
 For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v2.1-phases/`.
