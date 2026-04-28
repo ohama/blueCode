@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.3 milestone scoped)
 ## Current Position
 
 Milestone: v2.3 Comprehension Layer (started 2026-04-28; scoped from v2.2 audit's COMP-BIAS-01 data-driven first candidate)
-Phase: 24 (Prompt-Level Intervention P1+P2) — complete; Phase 25/26 follow
-Plan: 2 of 2 complete (Phase 24); Phase 25 + 26 follow
-Status: Phase 24 complete + verified (8/8 must-haves). Plans 24-01 (P1 directive) and 24-02 (P2 few-shot) both done. Bench gate 7/7 PASS preserved. Ready for Phase 25 (P3 architectural).
-Last activity: 2026-04-28 — Phase 24 verified: 24-VERIFICATION.md status=passed, 8/8 must-haves; planSystemPromptSuffix 1183 chars (1100-1500 budget); defaultSystemPrompt 783 chars unchanged; src/BlueCode.Core/, bench/baseline.json, bench/run.sh byte-for-byte unchanged; bench gate GATE PASS (7/7).
+Phase: 25 (Plan-Mode Pre-Flight Enumeration P3 architectural) — in progress
+Plan: 1 of 3 complete (Phase 25); Plans 25-02 + 25-03 follow
+Status: Phase 24 complete + verified. Phase 25 Plan 1 complete (25-01): checkRenameTargetsEnumerated added to PlanValidator; validatePlan signature extended; 284 tests passing; atomic commit c933ffc. Ready for 25-02 (new test cases).
+Last activity: 2026-04-29 — Completed 25-01-PLAN.md: checkRenameTargetsEnumerated pre-flight pass; Interpretation B (no DU change); F# big-bang atomic commit c933ffc (3 files); 284/284 tests pass; Core purity + async check pass.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (Phase 24: 2/2 plans done; Phase 25/26 follow)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (Phase 24: 2/2 done; Phase 25: 1/3 done; Phase 26 follows)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -54,6 +54,8 @@ Stable patterns established across milestones (load-bearing for next session):
 - **CORR-EVAL-02 persistent bias (22-04 double-FAIL)** — Two independent CORR-EVAL-02 runs both FAIL with orphan_count=1. Agent has a persistent extraction bias toward `add3→sum3`, ignoring `add→sum`. README rewrite (Option A, 2026-04-28) did not fix the bias — step-5 thought was textually identical across both runs. Next resolution path: system prompt guidance for multi-file refactors or fixture redesign. Eval doc remains 82/100 KEEP.
 - **P1 enumeration directive (24-01)** — `planSystemPromptSuffix` extended from 695→879 chars with blank-line-separated paragraph: "When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly in your thought before editing. Do not start editing until the full list is enumerated." Directive is plan-mode-only (no impact on agent-loop path). Bench gate 7/7 PASS preserved. COMP-01 DONE.
 - **P2 few-shot example (24-02)** — `planSystemPromptSuffix` extended from 879→1183 chars with 3-line Example/Targets/Steps block demonstrating the exact `add->sum` AND `add3->sum3` shared-prefix rename failure pattern. One blank line after P1 directive; all three lines left-flush (column 0). Bench gate 7/7 PASS preserved. COMP-02 DONE. Phase 24 complete.
+- **Interpretation B (25-01)** — `PlanInvalid of detail: string` in Domain.fs is NOT modified. Fourth pre-flight pass `checkRenameTargetsEnumerated` encodes missing-target failures as structured detail string `"rename targets not enumerated: NAME1, NAME2"`. Avoids compile cascade into Rendering.fs + AgentLoop.fs:501 `buildCorrection`. Smaller diff; same observable LLM-correction behavior. `validatePlan` signature extended to `userPrompt: string -> Plan -> Result<Plan, AgentError>`. COMP-03 P3 prong in place.
+- **F# big-bang atomic commit (25-01)** — Tasks 1+2+3 committed as one atomic unit (PlanValidator.fs + AgentLoop.fs:484 + PlanValidatorTests.fs 6 mechanical updates). No valid intermediate build state; mirrors v1.1 LlmResponse Phase 7 pattern.
 
 ### Pending Todos (v2.1 candidates)
 
@@ -93,10 +95,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 24 complete + verified)
-Stopped at: Phase 24 verification passed (8/8). ROADMAP/STATE/REQUIREMENTS updated. Ready for Phase 25 architectural P3.
+Last session: 2026-04-29 (Phase 25 Plan 1 complete)
+Stopped at: Completed 25-01-PLAN.md. Atomic commit c933ffc + plan-meta 0768e43. 284 tests passing.
 Resume file: None
-Next workflow trigger: `/gsd:plan-phase 25` for Phase 25 (P3 architectural: plan-mode pre-flight enumeration — Domain.fs new PlanInvalid + PlanValidator.fs heuristic pass + tests)
+Next workflow trigger: `/gsd:execute-phase 25` for 25-02 (new PlanValidator test cases for checkRenameTargetsEnumerated)
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
