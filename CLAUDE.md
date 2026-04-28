@@ -194,6 +194,8 @@ Run `bench/run.sh --gate` to validate the current binary against `bench/baseline
 Gate labels: T6_122b W1_122b W2_122b T1_122b T5_122b B2_122b (6 entries in baseline.json).
 Fixtures live in `bench/fixtures/`. Logs land in `bench/runs/<timestamp>/`
 (gitignored). See `documentation/bench.md` for full usage and fixture conventions.
+- `documentation/qwen35-122b-coding-eval.md` — empirical 100-point scorecard verdict for Qwen 3.5 122B coding capability (v2.1 milestone). Reproduce via `bash bench/eval-qwen35-122b.sh --full`.
+- Bench gate (`bench/run.sh --gate`) is the regression authority; eval doc is observational. Run gate after any eval invocation to confirm fixtures restored cleanly by EXIT trap.
 
 ## When Stuck
 
