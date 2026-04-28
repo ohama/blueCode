@@ -20,7 +20,7 @@ v2.1 is a single-phase, 5-plan evaluation milestone. Original 3-phase scope was 
 
 ## Phases
 
-- [ ] **Phase 21: Empirical Qwen 3.5 122B Coding Evaluation** — 5 plans (harness scaffolding, HumanEval+, fixtures, multi-turn/needle/schema, aggregation+verdict doc)
+- [x] **Phase 21: Empirical Qwen 3.5 122B Coding Evaluation** — 5 plans (harness scaffolding, HumanEval+, fixtures, multi-turn/needle/schema, aggregation+verdict doc) — verdict: 82/100 KEEP
 
 ---
 
@@ -122,9 +122,9 @@ Wave structure: all 5 plans run sequentially (single 122B service, can't paralle
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
-| 21. Empirical Qwen 3.5 122B Coding Evaluation | v2.1 | PERF-EVAL-01..02, CORR-EVAL-01..04, REL-EVAL-01..03, DOC-EVAL-01 (10 reqs) | 0/5 | Not started | - |
+| 21. Empirical Qwen 3.5 122B Coding Evaluation | v2.1 | PERF-EVAL-01..02, CORR-EVAL-01..04, REL-EVAL-01..03, DOC-EVAL-01 (10 reqs) | 5/5 | Complete (82/100 KEEP) | 2026-04-28 |
 
 ---
 
 *Roadmap created: 2026-04-27*
-*Last updated: 2026-04-27 — initial roadmap from approved plan file (`/Users/ohama/.claude/plans/async-weaving-pnueli.md`); single phase with 5 plans (21-01..21-05); bench gate stability mandatory post-eval*
+*Last updated: 2026-04-28 — Phase 21 complete (5/5 plans); verdict 82/100 KEEP; bench gate 7/7 PASS post-eval; verification 15/15 truths verified*

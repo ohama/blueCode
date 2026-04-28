@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v2.0 milestone complete)
 ## Current Position
 
 Milestone: v2.1 Empirical Qwen 3.5 122B Coding Evaluation (started 2026-04-27)
-Phase: 21 (single phase) — in progress; Wave 3 complete
-Plan: 4 of 5 complete (21-01: Harness Scaffolding ✓, 21-02: HumanEval+ ✓, 21-03: Fixtures + Refactor/Langcoverage ✓, 21-04: Reliability Handlers + Orchestrator ✓)
-Status: REL-EVAL-01 0/50 PASS; REL-EVAL-02 N=1..7 clean / N=10: 2 InvalidJsonOutput; REL-EVAL-03 4/4 needle retrieved; bench gate 7/7 PASS
-Last activity: 2026-04-28 — Completed 21-04-PLAN.md (needle adapter; multiturn fixture; schema-rate/multiturn/needle live; BSD seq + grep-c pipefail bugs fixed)
+Phase: 21 (single phase) — COMPLETE; verification 15/15 truths verified
+Plan: 5 of 5 complete (21-01: Harness Scaffolding ✓, 21-02: HumanEval+ ✓, 21-03: Fixtures + Refactor/Langcoverage ✓, 21-04: Reliability Handlers + Orchestrator ✓, 21-05: Aggregation + Verdict Doc ✓)
+Status: **Total: 82/100, Recommendation: KEEP** — Correctness 31/40 (77.5%); Performance 20/25 (80%); Reliability 25/25 (100%); Coding-quality 6/10 (60%). Bench gate 7/7 PASS post-eval.
+Last activity: 2026-04-28 — Phase 21 complete; eval doc `documentation/qwen35-122b-coding-eval.md` (983 lines / 10 sections / verdict KEEP); ready for v2.1 milestone close
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21: 4/5 plans complete)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ (Phase 21: 5/5 plans complete; verdict KEEP)
 
 ## Performance Metrics (cumulative, frozen)
 
