@@ -56,7 +56,7 @@ python3 -c 'import re; m=re.search(r"defaultSystemPrompt:\s*string\s*=\s*\"\"\"(
 
 **Result:** 783 chars. Threshold is ≤800. PASS by 17 chars.
 
-**What was removed** (commit `03086a4`):
+**What was removed**:
 - Two read_file truncated/out-of-range hint sentences → moved to POST-READ HINT loop injection (Plan 11-01)
 - edit_file defense-in-depth prose → covered by POST-EDIT CONSTRAINT injection (Plan 09.1-05)
 - Verbose JSON schema per action → replaced with terse shorthand notation
@@ -88,7 +88,7 @@ python3 -c 'import re; m=re.search(r"defaultSystemPrompt:\s*string\s*=\s*\"\"\"(
 ===== GATE PASS (8/8) =====
 ```
 
-All 8 required test entries (T6 × 32B/72B, W1/W2 × 32B, T1/T5 canaries, B2 × 32B/72B) report PASS. Exit code 0 confirmed. This matches the executor-reported gate evidence from commit `03086a4`.
+All 8 required test entries (T6 × 32B/72B, W1/W2 × 32B, T1/T5 canaries, B2 × 32B/72B) report PASS. Exit code 0 confirmed. This matches the executor-reported gate evidence from commit.
 
 ---
 
@@ -134,7 +134,7 @@ Domain.fs, Router.fs, Ports.fs, ContextBuffer.fs — all unchanged across Phase 
 
 SC3 is scoped to Core: "no async{} literals introduced, no Serilog/Spectre/Argu references added to Core." The following Cli-layer fixes are out-of-scope for SC3 but are documented here for regression context.
 
-Commit `03086a4` (feat(11-02)) included two Rule 3 auto-fixes in `src/BlueCode.Cli/Adapters/FsToolExecutor.fs` that were blocking gate-pass during iterative shrink:
+Commit (feat(11-02)) included two Rule 3 auto-fixes in `src/BlueCode.Cli/Adapters/FsToolExecutor.fs` that were blocking gate-pass during iterative shrink:
 
 1. **edit_file empty old_string guard** — An empty `old_string` caused `String.IndexOf("")` to always return 0 and `Substring(0, 0)` to return empty string, resulting in an infinite replacement loop. Fix: early return `Failure(1, "oldString must be non-empty")` before the resolution path.
 

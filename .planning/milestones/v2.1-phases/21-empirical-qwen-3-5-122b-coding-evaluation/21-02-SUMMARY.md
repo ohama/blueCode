@@ -142,7 +142,7 @@ The first scoring run produced `pass@1 = 0.000` for both modes. Investigation re
 
 2. **macOS RLIMIT_AS crash.** `evalplus.eval.utils.reliability_guard` calls `resource.setrlimit(RLIMIT_AS, ...)` with a 4 GiB default that exceeds the macOS per-process hard limit, crashing every test subprocess pre-execution with `ValueError("current limit exceeds maximum limit")`. Fix: set env var `EVALPLUS_MAX_MEMORY_BYTES=-1` to make `query_maximum_memory_bytes()` return `None`, which gates out the setrlimit block in `reliability_guard`.
 
-Both fixes are now baked into the `run_humaneval()` handler in `bench/eval-qwen35-122b.sh` (commit `c1e97fb`). Future re-runs score correctly out-of-the-box. See the gotchas section in this SUMMARY for details and lessons.
+Both fixes are now baked into the `run_humaneval()` handler in `bench/eval-qwen35-122b.sh`. Future re-runs score correctly out-of-the-box. See the gotchas section in this SUMMARY for details and lessons.
 
 ## Architectural invariants preserved
 

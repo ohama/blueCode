@@ -103,7 +103,7 @@ No regressions. `git diff src/` and `git diff bench/baseline.json` both empty.
 - **Issue:** Under `set -euo pipefail`, when awk exits early (after capturing first content chunk), curl gets a broken pipe and returns exit 23. This aborted the subshell capturing `ttft_ms`.
 - **Fix:** Added `|| true` after the awk pipeline inside the `ttft_ms=$(...)` subshell assignment.
 - **Files modified:** `bench/eval-qwen35-122b.sh`
-- **Commit:** `9802ee7`
+- **Commit:**
 
 **2. [Observation] SSE first chunk format differs from plan assumption**
 

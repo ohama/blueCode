@@ -145,10 +145,10 @@ Smoke test: endpoint URL replaced with `http://127.0.0.1:9` in a temp copy; `bas
 
 ## Task Commits
 
-1. **Task 1: Create bench/eval-needle.py and bench/fixtures/multiturn_prompts.txt** - `6dd5f15` (chore)
-2. **Task 2: Wire 5 handlers in bench/eval-qwen35-122b.sh** - `71b887c` (chore)
-   - **Deviation fix: grep -c pipefail bug in run_schema_rate** - `289339d` (fix)
-   - **Deviation fix: BSD seq countdown bug in run_multiturn** - `9603e52` (fix)
+1. **Task 1: Create bench/eval-needle.py and bench/fixtures/multiturn_prompts.txt** - (chore)
+2. **Task 2: Wire 5 handlers in bench/eval-qwen35-122b.sh** - (chore)
+   - **Deviation fix: grep -c pipefail bug in run_schema_rate** - (fix)
+   - **Deviation fix: BSD seq countdown bug in run_multiturn** - (fix)
 
 Task 3 (validation): no commit (smoke test only, as specified).
 
@@ -176,7 +176,7 @@ Task 3 (validation): no commit (smoke test only, as specified).
 - **Fix:** Changed `|| echo 0` to `|| true` (preserves grep's own `0` output), added `|| true` to the pipefail-vulnerable grep-l pipeline, added `${files_with_errors:-0}` fallback.
 - **Files modified:** bench/eval-qwen35-122b.sh
 - **Verification:** Re-ran `--schema-rate`; schema_rate.txt created with `0/50 InvalidJsonOutput`
-- **Committed in:** `289339d` (fix commit separate from task commit)
+- **Committed in:** (fix commit separate from task commit)
 
 **2. [Rule 1 - Bug] BSD seq countdown in run_multiturn inner loop**
 - **Found during:** Task 2 (live multiturn run, N=1 trials)
@@ -184,7 +184,7 @@ Task 3 (validation): no commit (smoke test only, as specified).
 - **Fix:** Guard: `for k in $([ "$n" -ge 2 ] && seq 2 "$n" || true)` — produces empty sequence when n < 2.
 - **Files modified:** bench/eval-qwen35-122b.sh
 - **Verification:** Tested in shell: n=1 → `[]`, n=3 → `[2 3]`, n=5 → `[2 3 4 5]`. Killed and restarted multiturn run with fix; N=1 trials show exactly 1 turn each.
-- **Committed in:** `9603e52` (fix commit separate from task commit)
+- **Committed in:** (fix commit separate from task commit)
 
 ---
 

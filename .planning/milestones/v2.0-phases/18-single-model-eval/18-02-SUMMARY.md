@@ -74,8 +74,8 @@ completed: "2026-04-27"
 
 Each task was committed atomically:
 
-1. **Task 1: Create scripts/bench-122b-only.sh** - `a3ecbd1` (feat)
-2. **Task 2: Run bench and write results** - `d845f43` (docs)
+1. **Task 1: Create scripts/bench-122b-only.sh** - (feat)
+2. **Task 2: Run bench and write results** - (docs)
 
 **Plan metadata:** (this commit) (docs: complete plan)
 

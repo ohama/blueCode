@@ -73,8 +73,8 @@ completed: 2026-04-26
 
 Each task was committed atomically:
 
-1. **Task 1: Create PlanValidator.fs with pure validatePlan function** - `5dfd83f` (feat)
-2. **Task 2: Extend MockHelpers and create PlanValidatorTests with 5 test cases** - `939907f` (test)
+1. **Task 1: Create PlanValidator.fs with pure validatePlan function** - (feat)
+2. **Task 2: Extend MockHelpers and create PlanValidatorTests with 5 test cases** - (test)
 3. **Task 3: Verify bench gate green and finalize phase** - verification only (no code changes)
 
 **Plan metadata:** (this commit) (docs: complete plan validator plan)

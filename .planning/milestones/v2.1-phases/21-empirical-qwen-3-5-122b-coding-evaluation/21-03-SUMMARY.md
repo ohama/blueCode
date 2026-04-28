@@ -153,10 +153,10 @@ GATE PASS (7/7)
 
 ## Task Commits
 
-1. **Task 1: Add 7 fixture files** - `430c9ae` (chore) — already committed before this session
-2. **Task 2: Extend EXIT trap** - `7f7d02b` (chore)
-3. **Task 3: Wire run_refactor + run_langcoverage handlers** - `611678c` (chore)
-4. **Fix: set -e interaction with dotnet non-zero exit** - `4b586b6` (fix)
+1. **Task 1: Add 7 fixture files** - (chore) — already committed before this session
+2. **Task 2: Extend EXIT trap** - (chore)
+3. **Task 3: Wire run_refactor + run_langcoverage handlers** - (chore)
+4. **Fix: set -e interaction with dotnet non-zero exit** - (fix)
 5. **Plan metadata** - (this commit)
 
 ## Files Created/Modified
@@ -190,7 +190,7 @@ GATE PASS (7/7)
 - **Fix:** Added `set +e` before and `set -e` after `dotnet run` in both `run_refactor()` and `run_langcoverage()`. This preserves strict error handling for all other commands while allowing blueCode's non-zero exit to be captured as `exit_code` variable.
 - **Files modified:** `bench/eval-qwen35-122b.sh`
 - **Verification:** Second run produced `CORR-EVAL-02 FAIL:` verdict line + `refactor_orphan_count.txt` with correct count.
-- **Committed in:** `4b586b6` (fix commit, separate from handler implementation commit)
+- **Committed in:** (fix commit, separate from handler implementation commit)
 
 ---
 

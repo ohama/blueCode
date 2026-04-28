@@ -65,7 +65,7 @@ completed: 2026-04-26
 
 Each task was committed atomically (combined per plan, mechanically coupled):
 
-1. **Task 1 + Task 2 (combined): Add EXIT trap + documentation** - `65309b8` (feat)
+1. **Task 1 + Task 2 (combined): Add EXIT trap + documentation** - (feat)
 
 **Plan metadata:** pending (this SUMMARY.md)
 

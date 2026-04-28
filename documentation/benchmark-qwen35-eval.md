@@ -12,7 +12,7 @@
 passed to `mlx_lm.server` in launchd plists for both 35B and 122B. `QwenHttpClient.fs` was not
 modified (confirmed in Phase 17-02; carried forward to this run).
 
-**AgentLoop prerequisite:** commit `54e54a9` (Phase 17-02) changed mid-conversation hint injection
+**AgentLoop prerequisite:** commit (Phase 17-02) changed mid-conversation hint injection
 from `Role = System` to `Role = User`. Qwen 3.5 chat template rejects mid-conversation System
 messages. Without this fix, T6 fails deterministically. This fix was in place before the `--all` run.
 
@@ -240,7 +240,7 @@ Sequence: grep_search (narrow) → grep_search (broad) → read_file (targeted) 
 Correct answer given.
 
 Both models: **4 steps, within step_count_max=5, correct answer**. 35B slightly more efficient
-(read first, then grep vs 122B's double-grep). The AgentLoop User role fix (`54e54a9`) was the
+(read first, then grep vs 122B's double-grep). The AgentLoop User role fix was the
 precondition — without it, 35B fails T6 deterministically (mid-conversation POST-READ HINT was
 injected as System role, rejected by Qwen 3.5 chat template with HTTP 404).
 
@@ -396,7 +396,7 @@ zero correctness regression, zero thinking-mode leakage, and a combined RSS of 6
 the 128 GB unified memory budget. The memory footprint is notably better than the 89.5 GB projection,
 because MoE sparse routing converges on a stable expert subset for blueCode's bench fixture pattern,
 keeping RSS flat at the smoke-level value. The single blocking precondition (AgentLoop User role
-fix for mid-conversation hints, commit `54e54a9`) was applied in Phase 17-02 and confirmed effective
+fix for mid-conversation hints, commit) was applied in Phase 17-02 and confirmed effective
 across all 34 invocations.
 
 ### 7.2 Follow-up actions

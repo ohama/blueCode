@@ -166,9 +166,9 @@ None — plan executed exactly as written with one ordering note:
 
 | Hash | Type | Description |
 |------|------|-------------|
-| `ced7b66` | feat | Move bench fixtures into bench/fixtures/ and add bug_divide_zero.fs |
-| `16157f1` | feat | Add bench/run.sh with mode-flag dispatch (lifted from v1.2 harness) |
-| `66ab640` | chore | Document bench/run.sh in CLAUDE.md and gitignore bench/runs/ |
+| | feat | Move bench fixtures into bench/fixtures/ and add bug_divide_zero.fs |
+| | feat | Add bench/run.sh with mode-flag dispatch (lifted from v1.2 harness) |
+| | chore | Document bench/run.sh in CLAUDE.md and gitignore bench/runs/ |
 
 Plan-metadata commit: `docs(10-01): complete bench harness move plan` (added after SUMMARY + STATE).
 

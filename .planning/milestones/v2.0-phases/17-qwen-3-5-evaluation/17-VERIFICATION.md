@@ -147,7 +147,7 @@ Test suite passes cleanly. No regressions introduced by AgentLoop.fs changes.
 
 **What happened:** During plan 17-02, T6 canary failures on Qwen 3.5 35B revealed that `AgentLoop.fs` `buildMessages` injected mid-conversation messages with `Role = System`. Qwen 3.5's stricter chat template rejects System-role messages at non-zero conversation positions, returning HTTP 404.
 
-**Resolution:** Commit `54e54a9` changed 3 injection sites in `buildMessages` from `Role = System` to `Role = User` (POST-EDIT CONSTRAINT + two POST-READ HINT injections).
+**Resolution:** Commit changed 3 injection sites in `buildMessages` from `Role = System` to `Role = User` (POST-EDIT CONSTRAINT + two POST-READ HINT injections).
 
 **Files affected:** `src/BlueCode.Core/AgentLoop.fs` (Core layer — not in 17-02's planned `files_modified` which listed QwenHttpClient.fs as conditional Path B).
 

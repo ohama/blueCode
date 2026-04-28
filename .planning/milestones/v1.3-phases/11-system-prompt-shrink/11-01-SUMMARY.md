@@ -65,8 +65,8 @@ completed: 2026-04-26
 
 Each task was committed atomically:
 
-1. **Task 1: Thread lastReadHint through runLoop and inject [POST-READ HINT] in buildMessages** - `61b24f6` (feat)
-2. **Task 2: Add testCaseAsync proving the post-read_file injection fires on a truncated header** - `38409dc` (test)
+1. **Task 1: Thread lastReadHint through runLoop and inject [POST-READ HINT] in buildMessages** - (feat)
+2. **Task 2: Add testCaseAsync proving the post-read_file injection fires on a truncated header** - (test)
 
 **Plan metadata:** (docs(11-01): complete post-read_file injection plan — committed after SUMMARY/STATE)
 

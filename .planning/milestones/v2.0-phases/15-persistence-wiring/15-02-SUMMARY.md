@@ -106,7 +106,7 @@ Full wiring in order:
 - **Issue**: `NewSession` DU case generates `--newsession` (no hyphen). Plan specified `--new-session` in all examples and smoke tests.
 - **Fix**: Added `[<AltCommandLine("--new-session")>]` attribute to `NewSession` case. Both `--newsession` and `--new-session` now accepted.
 - **Files modified**: `src/BlueCode.Cli/CliArgs.fs`
-- **Commit**: `6fdf018`
+- **Commit**:
 
 ## Live Smoke Results
 
@@ -141,10 +141,10 @@ dotnet run -- --help 2>&1 | grep -E "--resume|--new-session"
 
 | Hash | Type | Description |
 |------|------|-------------|
-| `a97f73f` | feat | CliArgs adds --resume/--new-session; AppComponents adds SessionStore |
-| `1b25f3c` | feat | FileSessionStore.Load parses version header + TurnComplete envelopes |
-| `230a942` | feat | Program.fs wires --resume/--new-session + conflict rejection + session id stderr |
-| `6fdf018` | fix | CliArgs adds AltCommandLine --new-session (Argu naming deviation) |
+| | feat | CliArgs adds --resume/--new-session; AppComponents adds SessionStore |
+| | feat | FileSessionStore.Load parses version header + TurnComplete envelopes |
+| | feat | Program.fs wires --resume/--new-session + conflict rejection + session id stderr |
+| | fix | CliArgs adds AltCommandLine --new-session (Argu naming deviation) |
 
 ## Next Phase Readiness
 

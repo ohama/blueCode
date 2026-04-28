@@ -685,7 +685,7 @@ rm -rf /Users/ohama/projs/blueCode/bench-fixtures/
 
 v1.2 Tool Expansion 완료 후 동일한 36 runs 재실행. 새 기능 (TLX-01 `edit_file`, TLX-02 `glob_search`, TLX-03 `grep_search`, TOOL-08 `read_file` metadata header) 가 측정된 v1.1 pain point 들을 실제로 해결했는지, 그리고 부작용 (regression) 이 없는지 검증.
 
-**측정**: 2026-04-25, blueCode `5fbb940` (v1.2 Phase 9 complete), mlx_lm.server 0.31.3 (동일).
+**측정**: 2026-04-25, blueCode (v1.2 Phase 9 complete), mlx_lm.server 0.31.3 (동일).
 
 > **TL;DR (가장 중요한 발견)**
 > - **T6 32B 실패는 여전 (3/3 결정적 fail)** — TOOL-08 metadata header 가 *원인적으로* 해결한다고 plan 했지만, **dispatcher 의 lineRange 구성 조건이 두 bound 모두를 요구** ([`AgentLoop.fs:69-72`](../src/BlueCode.Core/AgentLoop.fs#L69-L72)) 해서 LLM 이 `start_line` 만 보낼 때 `out-of-range` 헤더가 발동되지 않음. 부분 좌표 케이스가 v1.2 fix 의 사각지대.
@@ -912,7 +912,7 @@ dotnet run --project src/BlueCode.Cli -- --trace --model 32b "Read just lines 17
 
 *Part 3 수행: 2026-04-25*
 *총 실행: 36 runs (v1.1 와 동일 set) + 추가 probe 2 + W2 32B 1 retry (server kickstart 후)*
-*blueCode HEAD: `5fbb940` (v1.2 Phase 9 verified)*
+*blueCode HEAD: (v1.2 Phase 9 verified)*
 *결과: T6 72B regression + B2 양쪽 regression + 새 tool 부분 채택 — v1.2 fix 의 한계와 부작용을 정량적으로 노출*
 
 
@@ -929,8 +929,8 @@ shift" 가설을 검증한다.
 
 ## 19. 환경 / 측정 시점
 
-- blueCode HEAD (Phase 10 baseline 측정 시점): `ae11c64` — Phase 10 close (post-9.1 source-code 그대로, prompt 1689 chars)
-- blueCode HEAD (Phase 11 post-shrink 측정 시점): `eb7e162` — Phase 11 close (prompt 783 chars + POST-READ HINT injection + 2 FsToolExecutor 버그 수정)
+- blueCode HEAD (Phase 10 baseline 측정 시점): — Phase 10 close (post-9.1 source-code 그대로, prompt 1689 chars)
+- blueCode HEAD (Phase 11 post-shrink 측정 시점): — Phase 11 close (prompt 783 chars + POST-READ HINT injection + 2 FsToolExecutor 버그 수정)
 - 측정 도구: `bench/run.sh --gate` (8 invocations, ~115s wall-clock per cycle)
 - 실행 환경: Mac mini M4 Pro 64GB · Qwen32B Instruct localhost:8000 · Qwen72B Instruct AWQ 4-bit localhost:8001
 - baseline JSON: `bench/baseline.json` (Phase 10 에서 작성, Phase 11-03 에서 B2 entries 갱신)
@@ -1111,5 +1111,5 @@ Baseline: `bench/baseline.json`. 가이드: `documentation/bench.md`.
 
 *Part 4 수행: 2026-04-26*
 *총 측정: Phase 10 baseline-record + Phase 11 post-shrink final + B2 recovery validation*
-*blueCode HEAD: `eb7e162` (v1.3 Phase 11 verified, 4/4 must-haves PASS)*
+*blueCode HEAD: (v1.3 Phase 11 verified, 4/4 must-haves PASS)*
 *결과: B2 양쪽 회복 + T6 deterministic 3-step + 시스템 프롬프트 54% 감소 — v1.2 audit 가설 확정 검증, v1.3 milestone capstone 종료*

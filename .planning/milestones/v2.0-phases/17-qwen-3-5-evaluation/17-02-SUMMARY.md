@@ -75,13 +75,13 @@ completed: 2026-04-27
 
 Tasks were executed manually (autonomous: false plan); documentation additions and fix committed atomically:
 
-1. **Plist flag name correction** — `7b8cbc0` (fix) — `--chat-template-args` not `--chat-template-kwargs`
-2. **Entry-point script in plists** — `b1d644d` (docs) — use `qwen-env/bin/python3 -m mlx_lm.server` form
-3. **§9.4 uninstall procedure** — `b398991` (docs) — 58.8 GB recovery instructions for legacy 32B/72B
-4. **§5.1.1 plist reload procedure** — `cb11f88` (docs) — `Load failed: 5` fix + 3 gotcha rows
-5. **§5.5 load-test procedures** — `c9f3786` (docs) — RSS sampling + canary bench steps
-6. **§5.5.1 RSS expectations** — `56a06fc` (docs) — MoE + mmap workload-dependent RSS discussion
-7. **AgentLoop fix** — `54e54a9` (fix) — System → User role for mid-conversation hint injection
+1. **Plist flag name correction** — (fix) — `--chat-template-args` not `--chat-template-kwargs`
+2. **Entry-point script in plists** — (docs) — use `qwen-env/bin/python3 -m mlx_lm.server` form
+3. **§9.4 uninstall procedure** — (docs) — 58.8 GB recovery instructions for legacy 32B/72B
+4. **§5.1.1 plist reload procedure** — (docs) — `Load failed: 5` fix + 3 gotcha rows
+5. **§5.5 load-test procedures** — (docs) — RSS sampling + canary bench steps
+6. **§5.5.1 RSS expectations** — (docs) — MoE + mmap workload-dependent RSS discussion
+7. **AgentLoop fix** — (fix) — System → User role for mid-conversation hint injection
 
 **Plan metadata:** (this commit — `docs(17-02): complete service-swap-load-test plan`)
 
@@ -127,7 +127,7 @@ Tasks were executed manually (autonomous: false plan); documentation additions a
 - **Files modified:** `src/BlueCode.Core/AgentLoop.fs`
 - **Verification:** Post-fix canary 4/4 PASS. Existing `AgentLoopTests` assert on text content only
   (`stringContains "[POST-EDIT CONSTRAINT]"` etc.), no role assertions — tests preserved 254/1/0.
-- **Committed in:** `54e54a9` (`fix(17-02): inject POST-EDIT/POST-READ hints as User role, not System`)
+- **Committed in:** (`fix(17-02): inject POST-EDIT/POST-READ hints as User role, not System`)
 
 **2. [Rule 1 - Bug] Plist flag name was wrong (`--chat-template-kwargs` vs `--chat-template-args`)**
 
@@ -135,16 +135,16 @@ Tasks were executed manually (autonomous: false plan); documentation additions a
 - **Issue:** The runbook written in 17-01 used `--chat-template-kwargs` (the Python `**kwargs` form)
   but the actual mlx_lm.server CLI flag is `--chat-template-args`. This caused `Load failed: 5:
   Input/output error` on the first plist load attempt.
-- **Fix:** Corrected the flag name in all 5 doc occurrences (commits `7b8cbc0`, `b1d644d`). Added
+- **Fix:** Corrected the flag name in all 5 doc occurrences (commits). Added
   §5.1.1 recovery procedure to qwen35-install.md for the "Load failed: 5" error pattern.
 - **Files modified:** `documentation/qwen35-install.md`
 - **Verification:** Services loaded cleanly after fix. `plutil -lint` OK on both plists.
-- **Committed in:** `7b8cbc0`, `b1d644d`, `cb11f88`
+- **Committed in:**
 
 ---
 
 **Total deviations:** 2 auto-fixed (1 blocking-canary-blocker, 1 doc-bug)
-**Impact on plan:** Both fixes were essential. The AgentLoop fix (`54e54a9`) is a correctness improvement
+**Impact on plan:** Both fixes were essential. The AgentLoop fix is a correctness improvement
 that removes blueCode's silent dependence on lenient chat templates. The plist flag fix corrected a
 doc error from 17-01. No scope creep — `plan.files_modified` lists `17-02-LOAD-TEST.md` as the primary
 artifact; AgentLoop.fs is an unlisted but necessary blocker fix.
@@ -167,7 +167,7 @@ manually by the operator during the checkpoint walkthrough on 2026-04-27.
 ## Next Phase Readiness
 
 - **17-03 is GO**: Both services are running and canary-validated. `bench/run.sh --all` can proceed.
-- **AgentLoop fix is merged**: `54e54a9` is on master; all future sessions have correct role injection.
+- **AgentLoop fix is merged**: is on master; all future sessions have correct role injection.
 - **Baseline reference**: `bench/baseline.json` still records 32B/72B results. 17-03 will produce
   35B/122B results for comparison and make the SWITCH/STAY decision.
 - **Memory monitor**: Compressor was at 543 MB after canary; track during `--all` to confirm no OOM.

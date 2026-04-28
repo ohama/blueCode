@@ -183,7 +183,7 @@ grep -A 10 '^## Bench' CLAUDE.md
 
 ## Task Commits
 
-1. **Task 1: Write documentation/bench.md** - `d244bba` (docs)
+1. **Task 1: Write documentation/bench.md** - (docs)
 2. **Task 2: Final phase verification** - no commit (read-only)
 
 **Plan metadata:** TBD (staged after SUMMARY + STATE update)

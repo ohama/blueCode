@@ -105,15 +105,15 @@ CLAUDE.md, qwen35-install.md, single-model-eval.md, and bench.md were updated to
 
 | Task | Name | Commit |
 |------|------|--------|
-| 1 | Model DU rename + PathRetired (compile cascade) | `dba1fa1` |
-| 2 | PathRetired guard in tryParseModelId / validateModelPath | `77caae6` |
-| 3 | WithDual flag + parseForcedModel retirement guard + eager 35B probe | `200ebdc` |
-| 4 | Router intent table docstring (dormant in single-model default) | `5253155` |
-| 5 | bench/run.sh rewrite + scripts/bench-122b-only.sh deleted | `a610f23` |
-| 6 | bench/baseline.json halve to 6-entry single-model | `094f1cf` |
-| 7 | CliArgsTests: retirement errors + --with-35b parsing | `a0740e1` |
-| 8a | CLAUDE.md + qwen35-install.md + single-model-eval.md + bench.md docs | `f6e4f12` |
-| 8b | ROADMAP.md SC6 baseline count 254→258-264 | `a4e3d81` |
+| 1 | Model DU rename + PathRetired (compile cascade) | |
+| 2 | PathRetired guard in tryParseModelId / validateModelPath | |
+| 3 | WithDual flag + parseForcedModel retirement guard + eager 35B probe | |
+| 4 | Router intent table docstring (dormant in single-model default) | |
+| 5 | bench/run.sh rewrite + scripts/bench-122b-only.sh deleted | |
+| 6 | bench/baseline.json halve to 6-entry single-model | |
+| 7 | CliArgsTests: retirement errors + --with-35b parsing | |
+| 8a | CLAUDE.md + qwen35-install.md + single-model-eval.md + bench.md docs | |
+| 8b | ROADMAP.md SC6 baseline count 254→258-264 | |
 | 9 | Final verification — no fixup needed; no commit |  |
 
 ## Deviations from Plan

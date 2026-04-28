@@ -116,7 +116,7 @@ bench/fixtures/
 
 Old `bench-fixtures/` root directory: absent (`test -d bench-fixtures` exits 1).
 
-Git history: all three files added/moved in commit `ced7b66` ("feat(10-01): move bench fixtures into bench/fixtures/ and add bug_divide_zero.fs").
+Git history: all three files added/moved in commit ("feat(10-01): move bench fixtures into bench/fixtures/ and add bug_divide_zero.fs").
 
 Committed broken-baseline content:
 - `bug_lastchar.fs` (HEAD): `s.[s.Length]` — off-by-one, will throw at runtime (PASS)
@@ -230,7 +230,7 @@ Phase 10 delivered all five success criteria:
 
 1. **Gate works live** — `bench/run.sh --gate` exits 0 in 114s against the current binary with `GATE PASS (8/8)`. The three-branch verdict logic is structurally sound for negative detection.
 
-2. **Fixtures committed** — Three valid F# fixture files in `bench/fixtures/`, committed at `ced7b66`, broken-baseline content confirmed in git HEAD.
+2. **Fixtures committed** — Three valid F# fixture files in `bench/fixtures/`, committed at, broken-baseline content confirmed in git HEAD.
 
 3. **Baseline complete** — `bench/baseline.json` has all 8 required entries with correct step counts, pass flags, and B2 regression markers.
 

@@ -68,9 +68,9 @@ completed: 2026-04-25
 
 Each task committed atomically per CLAUDE.md convention (`{type}({phase}-{plan}): {name}`):
 
-1. **Task 1: Implement metadata header in readFileImpl** — `bf6cfce` (feat)
-2. **Task 2: Add four metadata-header testCases to readFileTests** — `ab14cd0` (test)
-3. **Task 3: Update system prompt to document read_file header format** — `32f5376` (feat)
+1. **Task 1: Implement metadata header in readFileImpl** — (feat)
+2. **Task 2: Add four metadata-header testCases to readFileTests** — (test)
+3. **Task 3: Update system prompt to document read_file header format** — (feat)
 
 (Plan-metadata commit follows after this SUMMARY is staged.)
 
@@ -98,7 +98,7 @@ Each task committed atomically per CLAUDE.md convention (`{type}({phase}-{plan})
 - **Fix:** Switched the four single-letter `Contains`/`isFalse Contains` assertions to `\n`-anchored variants (`"\na\n"`, `"\nb"`, `"\nc"`, `"\nd"`). The header is on a single line with no embedded newlines, so `\n`-prefixed substrings can only match body content. Test intent preserved (lines 2-3 present, lines 1 & 4 absent), brittleness eliminated.
 - **Files modified:** `tests/BlueCode.Tests/FileToolsTests.fs` (lines 86-89)
 - **Verification:** Re-ran full Expecto suite after fix → 236/236 pass + 1 ignored. Then added Task 2's four new TOOL-08 cases → 240/240 pass.
-- **Committed in:** `bf6cfce` (rolled into the Task 1 commit since the test fix is the direct consequence of Task 1's behavioral change)
+- **Committed in:** (rolled into the Task 1 commit since the test fix is the direct consequence of Task 1's behavioral change)
 
 **2. [Rule 1 - Bug] Plan-supplied Task 2 test `bounded read (not-truncated)` would have hit the same collision**
 
@@ -107,7 +107,7 @@ Each task committed atomically per CLAUDE.md convention (`{type}({phase}-{plan})
 - **Fix:** Anchored the bounded-read body assertions with `\n`: `"\nb"`, `"\nc"`, `"\nd"` for presence; `"\na"`, `"\ne"` for absence. Same pattern as deviation #1.
 - **Files modified:** `tests/BlueCode.Tests/FileToolsTests.fs` (lines 174-178 of new code)
 - **Verification:** All 4 TOOL-08 testCases pass; full suite 240/240.
-- **Committed in:** `ab14cd0` (Task 2 commit)
+- **Committed in:** (Task 2 commit)
 
 **3. [Rule 1 - Bug] Plan-supplied Task 2 test `out-of-range` had a self-defeating assertion**
 
@@ -116,7 +116,7 @@ Each task committed atomically per CLAUDE.md convention (`{type}({phase}-{plan})
 - **Fix:** Dropped the third absence assertion. Kept the two independent body markers `only` and `three` (neither word appears anywhere in the fixed header format) which are sufficient to prove the content section is empty. Added an inline comment explaining the omission.
 - **Files modified:** `tests/BlueCode.Tests/FileToolsTests.fs` (out-of-range testCase, comment added)
 - **Verification:** out-of-range testCase passes; full suite 240/240.
-- **Committed in:** `ab14cd0` (Task 2 commit)
+- **Committed in:** (Task 2 commit)
 
 ---
 

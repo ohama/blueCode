@@ -12,7 +12,7 @@
 This document records the empirical measurements captured during the Phase 17-02 service swap from
 Qwen 2.5 32B/72B → Qwen 3.5 35B-A3B-4bit/122B-A10B-4bit. The walkthrough was performed manually by
 the operator across all 4 checkpoints. Task 5 (Path B F# patch) was NOT needed — Path A
-(`--chat-template-args '{"enable_thinking": false}'` server flag, as corrected in commit `7b8cbc0`) was
+(`--chat-template-args '{"enable_thinking": false}'` server flag, as corrected in commit) was
 confirmed working with mlx_lm 0.31.3. An unplanned blocker was encountered and fixed during Task 6
 (canary bench); see §Deviations below.
 
@@ -44,7 +44,7 @@ cause: the plist used the wrong flag name (`--chat-template-kwargs` instead of t
 2. Fix the flag name in the plist XML
 3. `launchctl load -w` — service started cleanly
 
-This procedure was documented in `documentation/qwen35-install.md` §5.1.1 (commit `cb11f88`) as a
+This procedure was documented in `documentation/qwen35-install.md` §5.1.1 as a
 reusable gotcha: "Load failed: 5: Input/output error" is a generic launchd error that often indicates a
 malformed ProgramArguments entry, not an I/O hardware failure.
 
@@ -84,7 +84,7 @@ Both models confirmed on disk with config.json, special_tokens_map.json, and add
 Both passed `plutil -lint` (OK).
 
 Note on flag name: the runbook was corrected from `--chat-template-kwargs` to `--chat-template-args`
-in commits `7b8cbc0` and `b1d644d`. The plists on disk use the corrected flag name.
+in commits and. The plists on disk use the corrected flag name.
 
 ### 4.2 /v1/models responses
 
@@ -195,7 +195,7 @@ bench workloads. No OOM observed during canary.
 
 **Run against:** 35B @ port 8000 (blueCode `--model 32b` route), 122B @ port 8001 (`--model 72b` route)
 
-### 7.1 Pre-fix canary (before commit `54e54a9`)
+### 7.1 Pre-fix canary (before commit)
 
 | Test | Model route | Exit | Elapsed | Notes |
 |------|-------------|------|---------|-------|
@@ -220,7 +220,7 @@ Qwen 3.5 35B's chat template (mlx_lm 0.31.3) enforces that System-role messages 
 conversation position 0. Qwen 3.5 122B passed the same test because its chat template is more lenient
 about mid-conversation System messages (non-uniform strictness across Qwen 3.5 sizes).
 
-### 7.3 AgentLoop fix (commit `54e54a9`)
+### 7.3 AgentLoop fix
 
 Root cause in `src/BlueCode.Core/AgentLoop.fs` `buildMessages`:
 
@@ -238,7 +238,7 @@ This fix also removes blueCode's implicit dependence on lenient System-role hand
 mlx_lm tokenizer happens to be loaded. The new behavior is strictly correct per the OpenAI messages
 spec and the Qwen 3.5 chat template.
 
-### 7.4 Post-fix canary (commit `54e54a9` applied)
+### 7.4 Post-fix canary (commit applied)
 
 | Test | Model route | Exit | Elapsed | Notes |
 |------|-------------|------|---------|-------|
@@ -264,8 +264,8 @@ spec and the Qwen 3.5 chat template.
 | 122B final RSS (post-canary) | 45.4 GB |
 | Combined RSS | 62.4 GB (research projected 89.5 GB; 27 GB lower due to MoE sparse activation + mmap) |
 | System memory pressure | 543 MB compressor, 1.3 GB free — acceptable, monitor during 17-03 |
-| Canary verdict | **PASS (4/4)** after AgentLoop fix (`54e54a9`) |
-| AgentLoop deviation | `fix(17-02)` commit `54e54a9` — System → User role for mid-conversation hints |
+| Canary verdict | **PASS (4/4)** after AgentLoop fix |
+| AgentLoop deviation | `fix(17-02)` commit — System → User role for mid-conversation hints |
 | Old services rollback | Preserved — plists at `~/Library/LaunchAgents/com.ohama.qwen{32b,72b}.plist`; models at `~/llm-system/models/qwen{32b,72b}/` |
 | F# code change | `src/BlueCode.Core/AgentLoop.fs` — Role injection fix (3 places, not in plan's files_modified) |
 | Test baseline | 254/1/0 preserved |
@@ -282,15 +282,15 @@ valid JSON-schema output. System memory is within acceptable bounds. Phase 17-03
 
 | Commit | Type | Description |
 |--------|------|-------------|
-| `7b8cbc0` | fix | Correct flag name: --chat-template-args (not --chat-template-kwargs) |
-| `b1d644d` | docs | Use mlx_lm.server entry-point script in plists (5 occurrences) |
-| `b398991` | docs | §9.4 full uninstall procedure for legacy 32B/72B (~58.8 GB recovery) |
-| `cb11f88` | docs | §5.1.1 plist reload procedure + 3 gotcha rows (Load failed: 5 fix) |
-| `c9f3786` | docs | §5.5 load-test measurement procedures (RSS + canary bench) |
-| `56a06fc` | docs | §5.5.1 RSS expectations refined (MoE + mmap workload-dependent) |
-| `54e54a9` | fix  | **AgentLoop: inject POST-EDIT/POST-READ hints as User role, not System** |
+| | fix | Correct flag name: --chat-template-args (not --chat-template-kwargs) |
+| | docs | Use mlx_lm.server entry-point script in plists (5 occurrences) |
+| | docs | §9.4 full uninstall procedure for legacy 32B/72B (~58.8 GB recovery) |
+| | docs | §5.1.1 plist reload procedure + 3 gotcha rows (Load failed: 5 fix) |
+| | docs | §5.5 load-test measurement procedures (RSS + canary bench) |
+| | docs | §5.5.1 RSS expectations refined (MoE + mmap workload-dependent) |
+| | fix  | **AgentLoop: inject POST-EDIT/POST-READ hints as User role, not System** |
 
-The `fix(17-02)` commit `54e54a9` is the critical blocker fix. All other commits are doc additions
+The `fix(17-02)` commit is the critical blocker fix. All other commits are doc additions
 to `documentation/qwen35-install.md`.
 
 ---
@@ -299,7 +299,7 @@ to `documentation/qwen35-install.md`.
 
 - **Services:** Qwen 3.5 35B-A3B-4bit @ port 8000, 122B-A10B-4bit @ port 8001 — both running
 - **Path A:** thinking-mode disabled via server flag; no F# code change needed
-- **AgentLoop fix:** `54e54a9` is already on master; blueCode no longer relies on lenient
+- **AgentLoop fix:** is already on master; blueCode no longer relies on lenient
   System-role handling in the chat template
 - **Baseline for bench comparison:** `bench/baseline.json` still references 32B/72B results;
   17-03 must re-run `--all` and decide whether to accept new results as the new baseline (SWITCH)

@@ -287,7 +287,7 @@ Phase 19; current B2_122b preserves diagnose accuracy). Both models misdiagnosed
 divide-by-zero fixture as "integer truncation" instead of "empty list → DivideByZeroException"
 — the v1.2 audit's prompt-length attention-shift hypothesis materialized. Phase 11 PERF-03
 recovered correct diagnosis on both models after the 54% prompt shrink (1689 → 783 chars);
-baseline entries were flipped to `pass: true` in commit `04b6f92`. The audit hypothesis
+baseline entries were flipped to `pass: true` in commit. The audit hypothesis
 was confirmed: prompt length was the single cause.
 
 If a future regression is identified, mark its baseline entry with `regression: true`

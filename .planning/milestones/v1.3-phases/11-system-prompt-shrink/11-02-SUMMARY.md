@@ -115,7 +115,7 @@ Rules: One tool per response. Use grep_search to locate symbols before reading l
 
 ## Task Commits
 
-1. **Task 1: Shrink defaultSystemPrompt + fix FsToolExecutor bugs** — `03086a4` (feat)
+1. **Task 1: Shrink defaultSystemPrompt + fix FsToolExecutor bugs** — (feat)
 
 **Plan metadata:** (docs commit to follow)
 
@@ -142,7 +142,7 @@ Rules: One tool per response. Use grep_search to locate symbols before reading l
 - **Fix:** Added `if oldString.Length = 0 then return Ok(Failure(1, "oldString must be non-empty"))` before the IndexOf loop
 - **Files modified:** `src/BlueCode.Cli/Adapters/FsToolExecutor.fs`
 - **Verification:** W2_32b no longer hangs; error message returned to LLM which recovers correctly
-- **Committed in:** `03086a4`
+- **Committed in:**
 
 **2. [Rule 3 - Blocking] grep_search with file path returns "path not found"**
 - **Found during:** Task 1, Cycle 7 — T6_72b model consistently passed file path `src/BlueCode.Core/Domain.fs` to grep_search; tool calls `Directory.EnumerateFiles(filePath)` which fails because it's a file not a directory
@@ -150,7 +150,7 @@ Rules: One tool per response. Use grep_search to locate symbols before reading l
 - **Fix:** Before calling `Directory.EnumerateFiles`, check if root is a file with `File.Exists(root)` → use `seq { root }` to search that single file
 - **Files modified:** `src/BlueCode.Cli/Adapters/FsToolExecutor.fs`
 - **Verification:** T6_72b now succeeds in 3 steps (grep_search finds Step at line 130, read 130-140, final)
-- **Committed in:** `03086a4`
+- **Committed in:**
 
 ---
 

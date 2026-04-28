@@ -91,7 +91,7 @@ completed: 2026-04-27
 ## Qualitative Observations (one sentence each)
 
 - **B2 accuracy:** Both 35B and 122B correctly identified "empty list → DivideByZeroException" in 2 steps; no degradation from v1.4.
-- **T6 dispatcher:** Both models used 4 steps (within max=5) with correct read+grep+targeted-read+final or double-grep+read+final patterns; AgentLoop User role fix (`54e54a9`) was essential.
+- **T6 dispatcher:** Both models used 4 steps (within max=5) with correct read+grep+targeted-read+final or double-grep+read+final patterns; AgentLoop User role fix was essential.
 - **W1/W2 loop-injection:** Both W1 and W2 converged at exactly 3 steps (read+write+final) across 35B and 122B; loop-injection primitive fully operational.
 - **Multi-turn degradation:** Zero tests exceeded their step_count_max; ml-explore/mlx-lm#1011 risk not triggered within bench's 4-step ceiling.
 - **Thinking-mode leakage:** Zero `<think>` tokens across all 34 invocations; Path A (`--chat-template-args '{"enable_thinking": false}'`) fully effective.
@@ -115,10 +115,10 @@ Path A confirmed in Phase 17-02 and carried through bench-all without leakage. `
 
 ## Task Commits
 
-1. **Eval doc (§1-§9)** — `4306128` (docs)
-2. **baseline.json re-key** — `5bbec9a` (chore)
-3. **CLAUDE.md update** — `c9bd25b` (docs)
-4. **qwen35-install §10 + §5.5.1** — `6b4e4ef` (docs)
+1. **Eval doc (§1-§9)** — (docs)
+2. **baseline.json re-key** — (chore)
+3. **CLAUDE.md update** — (docs)
+4. **qwen35-install §10 + §5.5.1** — (docs)
 5. **Plan metadata** — (this commit)
 
 ## Files Created/Modified
@@ -142,7 +142,7 @@ Path A confirmed in Phase 17-02 and carried through bench-all without leakage. `
 - **Issue:** "Connection refused" gotcha referenced `{32b,72b}.err` log paths — stale after SWITCH
 - **Fix:** Updated to `{35b,122b}.err`
 - **Files modified:** CLAUDE.md
-- **Committed in:** `c9bd25b` (CLAUDE.md commit)
+- **Committed in:** (CLAUDE.md commit)
 
 Total deviations: 1 auto-fixed (Rule 1 — bug in documentation).
 Impact on plan: Minimal; documentation-only fix.

@@ -69,7 +69,7 @@ completed: 2026-04-26
 
 ## Task Commits
 
-1. **Task 1: Author documentation/qwen35-install.md (sections §1-§9)** — `e2eaefb` (docs)
+1. **Task 1: Author documentation/qwen35-install.md (sections §1-§9)** — (docs)
 
 **Plan metadata:** (forthcoming)
 

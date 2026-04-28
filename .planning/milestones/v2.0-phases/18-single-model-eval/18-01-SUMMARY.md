@@ -69,8 +69,8 @@ completed: "2026-04-27"
 
 Each task was committed atomically:
 
-1. **Task 1: Capture pre-unload memory baseline** - `7f15735` (chore)
-2. **Tasks 2-5: 35B unload verify + post-snapshot + health smokes + observations** - `ff4b3ea` (chore)
+1. **Task 1: Capture pre-unload memory baseline** - (chore)
+2. **Tasks 2-5: 35B unload verify + post-snapshot + health smokes + observations** - (chore)
 
 **Plan metadata:** (this commit) (docs: complete plan)
 

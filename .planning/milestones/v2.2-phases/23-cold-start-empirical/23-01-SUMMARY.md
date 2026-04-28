@@ -65,7 +65,7 @@ T6 stepped down from 5 to 4 in this run (still under baseline_max=5; PASS). Rand
 
 | Hash | Message |
 |------|---------|
-| `4bcd8a4` | `fix(23-01): move mkdir before tee in run_coldstart to satisfy set -euo pipefail` |
+| | `fix(23-01): move mkdir before tee in run_coldstart to satisfy set -euo pipefail` |
 | (next) | `chore(23-01): execute --coldstart cycle (37s ready; PID 44880→10536)` (no files staged — coldstart.json is gitignored) |
 | (next) | `docs(23-01): update eval doc §3.3 + §7 with cold-start measurement (Total 82 → 87)` |
 | (next) | `docs(23): complete cold-start empirical phase` (plan-meta) |

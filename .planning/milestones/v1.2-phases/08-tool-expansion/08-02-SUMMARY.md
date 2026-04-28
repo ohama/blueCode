@@ -82,8 +82,8 @@ completed: 2026-04-25
 
 Each task was committed atomically:
 
-1. **Task 1: editFileImpl + globToRegex + globSearchImpl + grepSearchImpl + wire match arms** - `5baa116` (feat)
-2. **Task 2: ToolExpansionTests.fs + .fsproj + RouterTests.fs registration** - `3db42fa` (test)
+1. **Task 1: editFileImpl + globToRegex + globSearchImpl + grepSearchImpl + wire match arms** - (feat)
+2. **Task 2: ToolExpansionTests.fs + .fsproj + RouterTests.fs registration** - (test)
 
 **Plan metadata:** (docs commit follows this summary creation)
 

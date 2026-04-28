@@ -135,7 +135,7 @@ Wave 5 (21-05): 집계 + 평가 문서 + STATE/CLAUDE 크로스 레퍼런스
 2. **`bench/baseline.json` 무수정** — 게이트 baseline 은 byte-for-byte 보존.
 3. **`src/` 무수정** — `git diff src/` empty. 소스 코드 변경 0.
 4. **테스트 카운트 불변** — 282/1/0 유지. eval 은 observational; `tests/BlueCode.Tests/` 에 새 테스트 모듈 추가 금지.
-5. **Role=User 불변식** (Phase 20-03) — 멀티턴 주입은 모두 `dotnet run --resume <id>` 경유. `mid-conversation Role=System` 은 mlx_lm.server 가 HTTP 404 로 reject 하므로, raw HTTP 로 system role 멀티턴을 보내면 안 됨. `dotnet run --resume` 은 blueCode 내부에서 자연히 Role=User 를 보장 (commit `54e54a9`).
+5. **Role=User 불변식** (Phase 20-03) — 멀티턴 주입은 모두 `dotnet run --resume <id>` 경유. `mid-conversation Role=System` 은 mlx_lm.server 가 HTTP 404 로 reject 하므로, raw HTTP 로 system role 멀티턴을 보내면 안 됨. `dotnet run --resume` 은 blueCode 내부에서 자연히 Role=User 를 보장.
 6. **EXIT trap 으로 fixture 복원** — multi-file refactor 같은 write-task 픽스처는 agent 가 수정하므로, `bench/run.sh:18` 의 EXIT trap 이 `git checkout --` 로 복원해야 게이트가 계속 통과. Phase 21-03 에서 trap 을 6개 fixture 로 확장.
 
 ### 3.5 atomic commit 규율
@@ -252,9 +252,9 @@ Chat-mode HumanEval+ 답변은 full function definition (signature + docstring +
 이 두 함정은 **silent failure** 라서 진짜 무서움 — 점수가 0 으로 나오지만 에러 메시지가 안 보여서 "모델이 그냥 못 푸는 거구나" 로 오해할 수 있음. 실제 진단에 시간이 걸림.
 
 #### bash 하니스 deviation 3건 (auto-fixed)
-1. **set -euo pipefail + dotnet 비-zero exit 상호작용** — blueCode 가 `MaxLoopsExceeded` 에서 exit 1 로 종료. `set -e` 하에서 첫 `--refactor` 실행이 orphan check 와 CORR-EVAL-02 verdict fire 전에 abort. **Fix:** `set +e` / `set -e` 로 `dotnet run` 호출을 bracket. (commit `4b586b6`)
-2. **BSD `seq` countdown bug** — macOS BSD `seq 2 1` 은 `"2 1"` (countdown) 반환. GNU `seq 2 1` 은 빈 출력. `run_multiturn` 의 N=1 trial 이 의도와 달리 3 turn 실행됨. **Fix:** `[ n -ge 2 ] && seq 2 n || true` guard. (commit `9603e52`)
-3. **`grep -c || echo 0` under pipefail** — `grep -c` 매칭 0개 시 exit 1. `|| echo 0` 가 `"0\n0"` (grep + echo 둘 다 출력) 생성하고, 후속 `grep -l` 파이프라인이 pipefail 로 abort. **Fix:** `|| true`. (commit `289339d`)
+1. **set -euo pipefail + dotnet 비-zero exit 상호작용** — blueCode 가 `MaxLoopsExceeded` 에서 exit 1 로 종료. `set -e` 하에서 첫 `--refactor` 실행이 orphan check 와 CORR-EVAL-02 verdict fire 전에 abort. **Fix:** `set +e` / `set -e` 로 `dotnet run` 호출을 bracket.
+2. **BSD `seq` countdown bug** — macOS BSD `seq 2 1` 은 `"2 1"` (countdown) 반환. GNU `seq 2 1` 은 빈 출력. `run_multiturn` 의 N=1 trial 이 의도와 달리 3 turn 실행됨. **Fix:** `[ n -ge 2 ] && seq 2 n || true` guard.
+3. **`grep -c || echo 0` under pipefail** — `grep -c` 매칭 0개 시 exit 1. `|| echo 0` 가 `"0\n0"` (grep + echo 둘 다 출력) 생성하고, 후속 `grep -l` 파이프라인이 pipefail 로 abort. **Fix:** `|| true`.
 
 이 셋은 모두 macOS 특화 또는 bash strict-mode 특화 문제. blueCode 자체와 무관한 하니스 quirk.
 

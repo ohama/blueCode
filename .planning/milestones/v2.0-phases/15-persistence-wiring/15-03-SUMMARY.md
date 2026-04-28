@@ -54,7 +54,7 @@ metrics:
 - `BlueCode.Tests.fsproj`: `<Compile Include="SessionStoreTests.fs" />` inserted between `ContextWarningTests.fs` and `ToolExpansionTests.fs`, before `RouterTests.fs`.
 - `RouterTests.fs rootTests`: `BlueCode.Tests.SessionStoreTests.tests` added at end of list. `BlueCode.Tests.ToolExpansionTests.tests` preserved (Phase 14 lesson verified at line 98).
 
-**Commit:** `1fa6763` — `test(15-03): SessionStore round-trip + error-path tests`
+**Commit:** — `test(15-03): SessionStore round-trip + error-path tests`
 
 ### Task 2: ReplTests.fs — multi-turn cross-turn-history test
 
@@ -72,7 +72,7 @@ Strategy: custom `capturingLlm` that records all `messages` passed to each `Comp
 
 The test inherits `testSequenced` from the surrounding `testList "Repl"` wrapper, satisfying the filesystem + global state race prevention requirement.
 
-**Commit:** `5ae91fd` — `test(15-03): multi-turn cross-turn-history test (Phase 15 SC1)`
+**Commit:** — `test(15-03): multi-turn cross-turn-history test (Phase 15 SC1)`
 
 ### Task 3: Live smoke + bench gate verification
 
@@ -148,7 +148,7 @@ Test run: `254 passed, 1 ignored, 0 failed` — confirmed.
 
 **Files modified:** `tests/BlueCode.Tests/SessionStoreTests.fs` (test fixture design only — no source code changes)
 
-**Commit:** Part of `1fa6763`
+**Commit:** Part of
 
 ## Phase 15 Success Criteria Evidence
 

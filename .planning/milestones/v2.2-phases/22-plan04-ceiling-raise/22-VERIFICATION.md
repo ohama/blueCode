@@ -156,7 +156,7 @@ Agent used 8/10 steps (no MaxLoopsExceeded; 2-step budget slack unused).
 Step-5 thought (the decisive extraction step):
 > "Now I have all the information needed. The README.md asks to: 1. Rename 'add3' to 'sum3' in Calculator.fs 2. Update all references to 'add3' to 'sum3' in Main.fs and Tests.fs. I'll start by editing Calculator.fs to rename the function."
 
-Agent correctly renamed all `add3` call sites but did not rename `add → sum`. The orphan is the string literal `"add3 1 2 3 = %d"` in Main.fs, whose `add` substring is caught by the grep-based orphan check.
+Agent correctly renamed all `add3` call sites but did not rename `add → sum`. The orphan is the `let add` function definition still present in `Calculator.fs` — the harness regex `\b(let |Calculator\.)add\b` matches `let add (x: int) (y: int) : int =` directly (verified empirically post-audit). The earlier framing in this report incorrectly attributed the orphan to a printf format-string substring; the printf string `"add3 1 2 3 = %d"` does NOT match the regex (no word-boundary after `add` due to `3`). The actual mechanism is the unrenamed function definition.
 
 **Verification — Attempt 2 (rewritten README with explicit enumeration):**
 

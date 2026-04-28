@@ -128,8 +128,8 @@ None. First variant passed without regression.
 
 | Hash | Type | Description |
 |------|------|-------------|
-| `0d99cd7` | `feat(22-02)` | update 5→10 step references in prompt, retry message, and error string |
-| `2c9e24c` | `test(22-02)` | update RenderingTests MaxLoopsExceeded assertion to 10 steps |
+| | `feat(22-02)` | update 5→10 step references in prompt, retry message, and error string |
+| | `test(22-02)` | update RenderingTests MaxLoopsExceeded assertion to 10 steps |
 
 ## Deviations from Plan
 

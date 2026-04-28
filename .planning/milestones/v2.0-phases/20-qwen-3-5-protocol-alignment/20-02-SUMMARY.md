@@ -45,10 +45,10 @@ Phase 20-02 carved a public pure helper `extractContentFromJson : string -> stri
 
 | # | Commit | Message |
 |---|--------|---------|
-| 1 | `6827742` | `refactor(20-02): extract public extractContentFromJson helper for testability` |
-| 2 | `7b08907` | `feat(20-02): add reasoning_content fallback to extractContentFromJson` |
-| 3 | `4d5f374` | `test(20-02): cover content / reasoning_content fallback ladder` |
-| 4 | `805d988` | `docs(20-02): mark reasoning_content gotcha RESOLVED in qwen35-install.md` |
+| 1 | | `refactor(20-02): extract public extractContentFromJson helper for testability` |
+| 2 | | `feat(20-02): add reasoning_content fallback to extractContentFromJson` |
+| 3 | | `test(20-02): cover content / reasoning_content fallback ladder` |
+| 4 | | `docs(20-02): mark reasoning_content gotcha RESOLVED in qwen35-install.md` |
 
 ## Test Count Delta
 

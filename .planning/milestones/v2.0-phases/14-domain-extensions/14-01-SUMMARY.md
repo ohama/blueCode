@@ -76,9 +76,9 @@ completed: 2026-04-26
 
 ## Task Commits
 
-1. **Task 1: Extend Domain.fs with v2.0 types and AgentError variants** - `32f4b02` (feat)
-2. **Task 2: Add ISessionStore port + propagate compile cascade** - `5344404` (feat)
-3. **Task 3: Update test-side match sites and verify 243/1/0** - `587a8cf` (test)
+1. **Task 1: Extend Domain.fs with v2.0 types and AgentError variants** - (feat)
+2. **Task 2: Add ISessionStore port + propagate compile cascade** - (feat)
+3. **Task 3: Update test-side match sites and verify 243/1/0** - (test)
 
 **Plan metadata:** `docs(14-01): complete domain extension plan` (this commit)
 

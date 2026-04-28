@@ -71,8 +71,8 @@ completed: 2026-04-25
 
 ## Task Commits
 
-1. **Task 1: Extend Tool DU + dispatchTool + schema enum** - `c64bc76` (feat)
-2. **Task 2: Close shared seam with FsToolExecutor stubs + 8-action prompt + test updates** - `97ef41d` (feat)
+1. **Task 1: Extend Tool DU + dispatchTool + schema enum** - (feat)
+2. **Task 2: Close shared seam with FsToolExecutor stubs + 8-action prompt + test updates** - (feat)
 
 **Plan metadata:** (docs commit follows this summary creation)
 

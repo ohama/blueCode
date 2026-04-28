@@ -78,9 +78,9 @@ completed: 2026-04-27
 
 ## Task Commits
 
-1. **Task 1: Extend wire layer + Json.fs schema** - `6f8cd57` (feat)
-2. **Task 2: Add runPlanTurn entry point** - `d889c68` (feat)
-3. **Task 3: PlanParseTests.fs** - `2ac9ac9` (test)
+1. **Task 1: Extend wire layer + Json.fs schema** - (feat)
+2. **Task 2: Add runPlanTurn entry point** - (feat)
+3. **Task 3: PlanParseTests.fs** - (test)
 
 ## Files Created/Modified
 

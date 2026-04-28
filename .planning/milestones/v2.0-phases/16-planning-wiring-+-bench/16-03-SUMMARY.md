@@ -77,9 +77,9 @@ completed: 2026-04-27
 
 ## Task Commits
 
-1. **Task 1: MT_122b multi-turn bench fixture** — `e86843f` (feat)
-2. **Task 2: AgentLoopTests mocked plan-mode test** — `5023155` (test)
-3. **Task 3: documentation/bench.md updates** — `3b324c3` (docs)
+1. **Task 1: MT_122b multi-turn bench fixture** — (feat)
+2. **Task 2: AgentLoopTests mocked plan-mode test** — (test)
+3. **Task 3: documentation/bench.md updates** — (docs)
 
 ## Files Created/Modified
 

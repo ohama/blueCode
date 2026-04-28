@@ -30,7 +30,7 @@
 - Wall-clock: ~1 day (2026-04-28 same-day milestone)
 - Core source diff confined to 5 files (PlanValidator.fs, AgentLoop.fs, Domain.fs, CompositionRoot.fs, Rendering.fs)
 
-**Git range:** `1e0a2cf` (v2.2 milestone start) → `ce56fe0` (Phase 23 phase-completion)
+**Git range:** (v2.2 milestone start) → (Phase 23 phase-completion)
 
 **What's next:**
 
@@ -68,7 +68,7 @@ Plus carried-forward candidates from v2.2 audit:
 
 - **macOS evalplus silent-failure traps diagnosed and fixed:** `evalplus.evaluate` was returning silent pass@1=0 in chat mode due to (1) doubled signature when prompt+completion stitched (chat answers are full function defs); (2) `RLIMIT_AS` exceeding macOS per-process hard limit. Fixes: `python -m evalplus.sanitize` pre-pass + `EVALPLUS_MAX_MEMORY_BYTES=-1` env var. Both baked into `run_humaneval()`. Without these, the HumanEval+ verdict would have been entirely wrong.
 
-- **Three bash-strict-mode + macOS deviations auto-fixed:** `set -euo pipefail` interaction with `dotnet run` non-zero exit (commit `4b586b6`); `grep -c \|\| echo 0` under pipefail double-output (commit `289339d`); BSD `seq 2 1` countdown bug (commit `9603e52`). Patterns documented in plan SUMMARYs for future bash handler authors.
+- **Three bash-strict-mode + macOS deviations auto-fixed:** `set -euo pipefail` interaction with `dotnet run` non-zero exit; `grep -c \|\| echo 0` under pipefail double-output; BSD `seq 2 1` countdown bug. Patterns documented in plan SUMMARYs for future bash handler authors.
 
 **Stats:**
 
@@ -80,7 +80,7 @@ Plus carried-forward candidates from v2.2 audit:
 - Wall-clock: ~1.5 days (2026-04-27 milestone start → 2026-04-28 eval doc shipped)
 - Disk: +0 GB tracked (`bench/.venv-eval/` gitignored)
 
-**Git range:** `45a649e` (v2.1 milestone start) → `4b6aeec` (Phase 21 phase-completion)
+**Git range:** (v2.1 milestone start) → (Phase 21 phase-completion)
 
 **What's next:**
 
@@ -126,7 +126,7 @@ Plus continuing v2.0-deferred candidates (compaction, slash commands, sub-agents
 - Disk: -85 GB (Qwen 2.5 retirement)
 - Wall-clock: ~2 days (2026-04-26 milestone start → 2026-04-27 Phase 16 verified)
 
-**Git range:** `31f846e` (v2.0 milestone start) → `9fe7714` (Phase 16 phase-completion)
+**Git range:** (v2.0 milestone start) → (Phase 16 phase-completion)
 
 **What's next:**
 
@@ -165,7 +165,7 @@ v2.1 candidates well-stocked from observation + v2.0 mid-milestone signals:
 - 7 commits in milestone range (v1.4 setup + execution + closes)
 - ~1 day wall-clock (2026-04-26 milestone start → 2026-04-26 Phase 13 verified)
 
-**Git range:** `48d90c9` (v1.4 milestone start) → `bd73a47` (Phase 13 complete)
+**Git range:** (v1.4 milestone start) → (Phase 13 complete)
 
 **What's next:**
 
@@ -196,7 +196,7 @@ v2.1 candidates well-stocked from observation + v2.0 mid-milestone signals:
 - 25 commits since v1.2 close
 - ~1 day wall-clock (2026-04-26 milestone start → 2026-04-26 Phase 11 verified)
 
-**Git range:** `6133abc` (v1.2 close) → `13a875d` (howto additions)
+**Git range:** (v1.2 close) → (howto additions)
 
 **What's next:**
 
@@ -227,7 +227,7 @@ v1.4 candidate: "Test Hygiene + Bench Polish" — small tactical milestone (~3 d
 - 43 commits since v1.1 close
 - ~3 days wall-clock (2026-04-24 milestone start → 2026-04-26 Phase 9.1 verifier passed)
 
-**Git range:** `c4f087e` (v1.1 close) → `776e1be` (Phase 9.1 phase-completion)
+**Git range:** `c4f087e` (v1.1 close) → (Phase 9.1 phase-completion)
 
 **What's next:**
 

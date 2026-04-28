@@ -70,8 +70,8 @@ completed: "2026-04-27"
 
 Each task was committed atomically:
 
-1. **Tasks 1+2+3: single-model eval doc** - `da7c184` (docs) — full doc written in one pass; includes decision matrix, verdict, per-test comparison, reversibility, Task 3 SKIPPED outcome, conditional follow-ups, Phase 18 disposition
-2. **Task 4: STATE.md update** - `7405756` (docs)
+1. **Tasks 1+2+3: single-model eval doc** - (docs) — full doc written in one pass; includes decision matrix, verdict, per-test comparison, reversibility, Task 3 SKIPPED outcome, conditional follow-ups, Phase 18 disposition
+2. **Task 4: STATE.md update** - (docs)
 
 **Plan metadata:** (this commit) (docs: complete plan)
 
@@ -97,7 +97,7 @@ Each task was committed atomically:
 - **Fix:** Wrote the full 265-line doc in Task 1 commit, satisfying all Task 1 and Task 2 verification checks from the first commit. Task 2 and Task 3 outcome are included in the single doc commit (da7c184).
 - **Files modified:** `documentation/single-model-eval.md`
 - **Verification:** All verify checks pass: wc -l=265 (≥150), VERDICT: DROP-35B present, 5/5 PASS criteria, reversibility section, conditional follow-ups, Phase 18 SCs, Task 3 SKIPPED outcome — all confirmed.
-- **Committed in:** `da7c184`
+- **Committed in:**
 
 ---
 

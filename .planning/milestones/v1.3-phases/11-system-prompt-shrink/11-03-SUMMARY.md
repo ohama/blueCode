@@ -146,7 +146,7 @@ Exit code: 0. B2 entries now validated on real step counts (not whitelisted via 
 
 ## Task Commits
 
-1. **Task 1: Run --b2, inspect logs, update baseline.json, run final gate** - `04b6f92` (docs)
+1. **Task 1: Run --b2, inspect logs, update baseline.json, run final gate** - (docs)
 
 **Plan metadata:** (this commit)
 

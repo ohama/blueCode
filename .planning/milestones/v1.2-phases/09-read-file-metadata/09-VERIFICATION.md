@@ -14,8 +14,8 @@ re_verification:
 **Verified:** 2026-04-25T12:30:00Z
 **Status:** passed
 **Re-verification:** No — initial verification
-**Verification HEAD:** `27d5732` (docs(09-01): complete read_file_metadata plan)
-**Phase-8-complete baseline:** `451da88`
+**Verification HEAD:** (docs(09-01): complete read_file_metadata plan)
+**Phase-8-complete baseline:**
 
 ---
 
@@ -150,7 +150,7 @@ $ git -C /Users/ohama/projs/blueCode diff 451da88 HEAD -- src/BlueCode.Core/
 (empty output)
 ```
 
-- Zero changes in `src/BlueCode.Core/` between phase-8-complete (`451da88`) and HEAD (`27d5732`). Core purity invariant satisfied.
+- Zero changes in `src/BlueCode.Core/` between phase-8-complete and HEAD. Core purity invariant satisfied.
 
 **Overall diff stat (`git diff 451da88 HEAD --stat`):**
 
@@ -224,7 +224,7 @@ No gaps. Phase 9 goal fully achieved:
 - Out-of-range branch correctly preserves the LLM's raw requested range (no clamping), enabling unambiguous bounds-violation signaling.
 - Truncated reads keep the existing TOOL-06 inline marker so prior assumptions still hold.
 - System prompt teaches the LLM the header schema and the corrective action for `out-of-range`.
-- Zero Core changes (confirmed via diff against `451da88`); all modifications confined to the Cli adapter, system prompt, and tests.
+- Zero Core changes (confirmed via diff against); all modifications confined to the Cli adapter, system prompt, and tests.
 - Full Expecto suite: 240/240 passed, 1 ignored (intentional), 0 failed.
 
 ---

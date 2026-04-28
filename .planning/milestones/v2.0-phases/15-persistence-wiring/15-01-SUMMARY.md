@@ -77,9 +77,9 @@ completed: 2026-04-26
 
 Each task was committed atomically:
 
-1. **Task 1: Extend AgentLoop.runSession to accept prior Step list** - `2feac10` (refactor)
-2. **Task 2: FileSessionStore adapter (Save working, Load stub)** - `84c0e91` (feat)
-3. **Task 3: Repl threads Session across turns, calls SessionStore.Save per turn** - `915debf` (feat)
+1. **Task 1: Extend AgentLoop.runSession to accept prior Step list** - (refactor)
+2. **Task 2: FileSessionStore adapter (Save working, Load stub)** - (feat)
+3. **Task 3: Repl threads Session across turns, calls SessionStore.Save per turn** - (feat)
 
 ## Files Created/Modified
 
@@ -139,7 +139,7 @@ All tests check single-turn behavior — `[]` (no prior steps) is semantically c
 - **Fix:** Added `[<CLIMutable>]` to `SessionHeader` and `TurnEnvelope` private types in `FileSessionStore.fs`.
 - **Files modified:** `src/BlueCode.Cli/Adapters/FileSessionStore.fs`
 - **Verification:** Build clean; 15-03 round-trip test will confirm end-to-end.
-- **Committed in:** `84c0e91` (Task 2 commit)
+- **Committed in:** (Task 2 commit)
 
 ---
 

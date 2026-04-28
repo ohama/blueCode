@@ -66,7 +66,7 @@ completed: 2026-04-26
 
 ## Task Commits
 
-1. **Task 1: Consolidate makeMockResponse into MockHelpers.fs** - `94775b2` (refactor)
+1. **Task 1: Consolidate makeMockResponse into MockHelpers.fs** - (refactor)
 
 **Plan metadata:** (docs commit follows)
 

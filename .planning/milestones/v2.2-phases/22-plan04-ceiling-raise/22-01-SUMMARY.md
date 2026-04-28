@@ -115,8 +115,8 @@ All 7 gate fixtures passed (T6_122b, W1_122b, W2_122b, T1_122b, T5_122b, B2_122b
 
 | Hash | Type | Description |
 |------|------|-------------|
-| `5f9badb` | `feat(22-01)` | bump MaxPlanSteps and MaxLoops from 5 to 10 |
-| `8f41c4f` | `test(22-01)` | add boundary tests for step ceiling 10; update 5→10 value assertions |
+| | `feat(22-01)` | bump MaxPlanSteps and MaxLoops from 5 to 10 |
+| | `test(22-01)` | add boundary tests for step ceiling 10; update 5→10 value assertions |
 
 ## Deviations from Plan
 

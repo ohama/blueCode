@@ -67,10 +67,10 @@ completed: 2026-04-27
 
 ## Task Commits
 
-1. **Task 1: Capture pre-retirement snapshot** - `0d918f0` (docs)
-2. **Task 2: Pre-flight safety check** - `6bb631c` (docs)
+1. **Task 1: Capture pre-retirement snapshot** - (docs)
+2. **Task 2: Pre-flight safety check** - (docs)
 3. **Task 3: User executes retirement commands** - (checkpoint:human-action — no commit)
-4. **Task 4: Verify post-retirement state and reclaim metrics** - `e672048` (docs)
+4. **Task 4: Verify post-retirement state and reclaim metrics** - (docs)
 
 **Plan metadata:** (this commit — docs(19-01): complete retire-qwen25-disk-reclamation plan)
 
@@ -96,7 +96,7 @@ completed: 2026-04-27
 - **Fix:** Changed health check to use `d['data'][1]['id']` which returns `/Users/ohama/llm-system/models/qwen122b` (the truth). Also added verification-script gotcha addendum to RETIREMENT.md
 - **Files modified:** 19-01-RETIREMENT.md (post-retirement §5 capture)
 - **Verification:** data[1].id confirmed as `/Users/ohama/llm-system/models/qwen122b`
-- **Committed in:** `e672048` (Task 4 commit)
+- **Committed in:** (Task 4 commit)
 
 ---
 

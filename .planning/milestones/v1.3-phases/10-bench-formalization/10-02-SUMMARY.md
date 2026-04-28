@@ -170,8 +170,8 @@ Round-trip clean. `git status --short bench/baseline.json` shows no diff (commit
 
 ## Task Commits
 
-1. **Task 1: Run --canary live and write bench/baseline.json** - `56c5d1d` (feat)
-2. **Task 2: Implement --gate mode in bench/run.sh** - `da30a46` (feat)
+1. **Task 1: Run --canary live and write bench/baseline.json** - (feat)
+2. **Task 2: Implement --gate mode in bench/run.sh** - (feat)
 
 **Plan metadata:** (docs: complete baseline + gate plan)
 
