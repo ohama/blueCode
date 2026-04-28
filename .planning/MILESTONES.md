@@ -1,5 +1,53 @@
 # Project Milestones: blueCode
 
+## v2.2 Multi-file Capability (Shipped: 2026-04-28)
+
+**Delivered:** First **data-driven** v2.2 candidate (vs deferred-list draining) — scoped from v2.1 audit's CORR-EVAL-02 FAIL constraint discovery. Two-phase milestone: Phase 22 architectural ceiling raise (PLAN-04 5→10 across 4 source files) + Phase 23 cold-start empirical measurement (deferred from v2.1). Final verdict **82 → 87/100, KEEP** (Performance 20/25 → 25/25 via cold-start +5).
+
+**Phases completed:** 22-23 (2 phases, 5 plans total — 4 in Phase 22; 1 in Phase 23)
+
+**Key accomplishments:**
+
+- **Architectural ceiling raise (Phase 22; PLAN-CAP-01..03):** `PlanValidator.MaxPlanSteps` 5→10 + `AgentConfig.MaxLoops` default 5→10 (Option 1 design — independent constants preserved per existing PlanValidator.fs:36-40 docstring rationale). System prompt "1-5 steps" → "1-10 steps" + 1-sentence usage guidance ("Use the minimum steps needed; reserve the full budget only for tasks requiring reads across multiple files before editing"). Plus `[PLAN INVALID]` retry message + `Rendering.fs` MaxLoopsExceeded user message + `RenderingTests.fs` assertion all updated. T6 baseline held first try (no system-prompt iteration needed). Tests 282 → 284 (+2 boundary cases at 10 PASS / 11 FAIL boundaries; AgentLoopTests new MaxLoopsExceeded-at-10 case using `{ testConfig with MaxLoops = 10 }` invariant).
+
+- **Constraint discovery #2: persistent extraction bias (Phase 22; PLAN-CAP-04..05 partial-by-design):** CORR-EVAL-02 re-run produced FAIL twice with textually identical step-5 thoughts ("Rename add3 to sum3 only"; ignored `add → sum`) across two completely different READMEs (902-char prose + 2128-char enumerated rewrite with explicit warning). Agent used 8/10 steps in both attempts (no MaxLoopsExceeded; ceiling sufficient). Disproves v2.1 hypothesis that ceiling alone was the constraint; surfaces comprehension layer as new bottleneck. User-accepted Option C: surface as v2.3 first candidate (COMP-BIAS-01) rather than fight symptom. Eval doc §2.4/§8/§9 updated with two-stage finding documentation.
+
+- **Cold-start empirical measurement (Phase 23; COLD-EVAL-01):** `--coldstart` produced 37s to model-ready (PID 44880 → 10536 confirms genuine process replacement; 1s first-generation post-recovery confirms full load). ≤180s top band → 5/5 pts. Performance dimension flipped 20/25 → 25/25 (100%); total **82 → 87/100, KEEP**. Surprising finding: v2.0 SUMMARY's "up to 240s" estimate was ~6× pessimistic for the common case; actual 37s reflects warm OS file cache (kernel preserves model weight pages even when kickstart kills the process). v2.0 estimate stays valid for first-boot pristine case.
+
+- **Bench gate stability preserved (mandatory invariant):** `bash bench/run.sh --gate` 7/7 PASS held across all 4 plans of Phase 22 + Phase 23. Per-fixture step counts unchanged vs v2.1 baseline (T6=4/5, W1=3/3, W2=3/3, T1=1/3, T5=3/4, B2=2/3, MT=2/4). `bench/baseline.json` byte-for-byte preserved. `git diff src/` confined to 5 Phase 22 source files (Domain.fs comment + PlanValidator.fs + AgentLoop.fs + CompositionRoot.fs + Rendering.fs). Core purity clean.
+
+- **Third macOS bash-strict-mode pattern documented:** `4bcd8a4 fix(23-01): move mkdir before tee in run_coldstart to satisfy set -euo pipefail`. After 21-04's set-e/dotnet-exit and grep-c-pipefail bugs, this is the third pattern. Common rule: under `set -euo pipefail`, **any I/O command must verify its target directory exists first**.
+
+- **Verdict change pathway:** PLAN-CAP-05 originally scoped to flip 82→87 via CORR-EVAL-02 PASS path. With CAP-04 partial closure, the same numeric end state was reached via Phase 23 cold-start path instead. Different mechanism; same result. Eval doc verdict line `**Total: 87/100, Recommendation: KEEP**` confirmed strict-format match. Eval doc preserves both stages (§2.4 documents two-stage finding for v2.3 input).
+
+**Stats:**
+
+- 2 phases (22, 23), 5 plans, 6 requirements (4 fully + 2 partial-by-design + 1 cold-start full)
+- 282 → 284 tests (+2 new + 1 in-place updated)
+- 27 files changed (+3,569 / -81 LOC; mostly plan/summary docs)
+- 19 commits in milestone range
+- Bench gate 7/7 PASS preserved throughout
+- Wall-clock: ~1 day (2026-04-28 same-day milestone)
+- Core source diff confined to 5 files (PlanValidator.fs, AgentLoop.fs, Domain.fs, CompositionRoot.fs, Rendering.fs)
+
+**Git range:** `1e0a2cf` (v2.2 milestone start) → `ce56fe0` (Phase 23 phase-completion)
+
+**What's next:**
+
+v2.3 first candidate is **COMP-BIAS-01** (data-driven from v2.2 Phase 22 finding):
+- Persistent extraction bias on shared-prefix function names — empirically reproducible across two different READMEs
+- Candidate interventions: system prompt enumeration guidance for multi-file refactors, few-shot multi-file examples in plan-mode prompt, plan-mode pre-flight rename-target enumeration
+- Re-evaluation criterion: CORR-EVAL-02 PASS (orphan_count=0); flips Correctness 31/40 → 36/40; total 87 → 92/100
+
+Plus carried-forward candidates from v2.2 audit:
+- IDIOMATIC-FS-01 (medium) — Coding-quality 1/5 may be Python-transcript artifact
+- COLDSTART-PRISTINE-01 (low) — post-reboot case untested
+- v2.0/v2.1 deferred candidates (SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01, STM-01) — observation-window dependent
+
+**Audit note:** v2.2 ran `/gsd:audit-milestone` post-Phase-23 (status: passed with 2 non-blocking caveats: CAP-04/05 partial-by-design per Option C; Phase 23 missing formal VERIFICATION.md per orchestrator decision — same pattern as v2.0 Phase 20). 4/6 requirements fully + 2 partial-by-design. 9/9 plan-integration edges PASS. 4/4 E2E flows. 12/12 documentation cross-references. Tech debt aggregated into `.planning/milestones/v2.2-MILESTONE-AUDIT.md`.
+
+---
+
 ## v2.1 Empirical Qwen 3.5 122B Coding Evaluation (Shipped: 2026-04-28)
 
 **Delivered:** Closed v2.0's empirical measurement gap with a single-phase observation-only milestone. Produced `documentation/qwen35-122b-coding-eval.md` (983 lines, 10 sections) ending with **Total: 82/100, Recommendation: KEEP**. HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902 places Qwen 3.5 122B-A10B-4bit MoE in the upper tier of open-weight coding models. Schema 0/50 perfect; multi-turn coherence through N=7 (refutes mlx-lm#1011 "5 rounds" community claim); needle 4/4 retrieved at 32k. Bench gate 7/7 PASS preserved post-eval; zero `src/` diff; tests 282/1/0 unchanged.

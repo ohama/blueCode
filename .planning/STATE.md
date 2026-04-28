@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone scoped)
+See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone complete)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.1 verdict 82/100 KEEP confirmed; v2.2 raised PLAN-04 ceiling 5→10; CORR-EVAL-02 re-run FAIL x2 (comprehension gap persists through README rewrite); single-model canonical; 35B retained as cold rollback via `--with-35b`)
-**Current focus:** v2.2 Phase 22 complete (4/4 plans). CORR-EVAL-02 FAIL in both v2.1 and v2.2 (same root cause: agent comprehension failure on README scope). Eval doc stays at 82/100. Next: Phase 23 (optional cold-start) or v2.2 milestone closeout, or CORR-EVAL-02 fixture/prompt fix.
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.2 verdict 87/100 KEEP; multi-file refactor architecturally enabled but blocked by comprehension bias; single-model canonical; 35B retained as cold rollback via `--with-35b`)
+**Current focus:** Between milestones. v2.3 scoping pending — first data-driven candidate: **COMP-BIAS-01** (persistent extraction bias on shared-prefix function names; CORR-EVAL-02 FAIL x2 with identical step-5 thoughts across two different READMEs).
 
 ## Current Position
 
-Milestone: v2.2 Multi-file Capability (started 2026-04-28; scoped from v2.1 audit data signal)
-Phase: 22 + 23 — both complete
-Plan: Phase 22 4/4; Phase 23 1/1 (COLD-EVAL-01)
-Status: **Verdict 87/100 KEEP** (was 82 v2.1 baseline). Phase 22 (ceiling 5→10) shipped architectural; CORR-EVAL-02 FAIL x2 (persistent extraction bias on shared-prefix names — v2.3 candidate) → Correctness stays 31/40. Phase 23 cold-start empirical: 37s ready (≤180s top band), Performance 20/25 → 25/25 (5 pts added; 100%). Bench gate 7/7 PASS preserved throughout. Tests 284/1/0.
-Last activity: 2026-04-28 — Phase 23 complete; cold-start 37s (PID 44880→10536; warm OS cache); eval doc verdict flipped 82 → 87; v2.2 milestone close-ready
+Milestone: **between milestones** (v2.2 shipped 2026-04-28 with 87/100 KEEP)
+Phase: None active
+Plan: None active
+Status: Ready to scope v2.3 via `/gsd:new-milestone`. v2.2 surfaced v2.3 candidates: COMP-BIAS-01 (highest), IDIOMATIC-FS-01 (medium), COLDSTART-PRISTINE-01 (low). Plus v2.0/v2.1 carried-forward (SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01, STM-01).
+Last activity: 2026-04-28 — v2.2 milestone complete; archived to `.planning/milestones/v2.2-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `v2.2-phases/`
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ (Phase 22: 4/4 plans ████ partial closure; Phase 23: 1/1 plan ✓)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ○ (not started)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -26,8 +26,9 @@ Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 
 **v1.4:** 2 phases, 2 plans, 243 tests (unchanged), zero src/ diff, 7 commits, ~1 day
 **v2.0:** 7 phases, 19 plans, 282 tests (+39), 41 files +3993/-335 LOC, 106 commits, ~2 days, -85 GB disk (Qwen 2.5 retirement); bench gate trajectory 8/8→6/6→7/7
 **v2.1:** 1 phase (single), 5 plans, 282 tests (unchanged — observational), 31 files +6463/-26 LOC, ~25 commits, ~1.5 days; verdict 82/100 KEEP; bench gate 7/7 PASS preserved; zero src/ diff
+**v2.2:** 2 phases (22, 23), 5 plans (4+1), 284 tests (+2 boundary), 27 files +3569/-81 LOC, 19 commits, ~1 day; verdict 82→87/100 KEEP (Performance 20→25 via cold-start +5; Correctness stays 31/40 because CORR-EVAL-02 FAIL x2); bench gate 7/7 PASS preserved; src/ diff confined to 5 files (PlanValidator/AgentLoop/Domain/CompositionRoot/Rendering)
 
-Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1}-phases/`.
+Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2}-phases/`.
 
 ## Accumulated Context
 

@@ -4,42 +4,28 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current State (post-v2.1)
+## Current State (post-v2.2)
 
-v2.1 Empirical Qwen 3.5 122B Coding Evaluation shipped 2026-04-28. Single-phase observation-only milestone closing v2.0's empirical measurement gap. Deliverable: `documentation/qwen35-122b-coding-eval.md` (983 lines, 10 sections) with verdict **Total: 82/100, Recommendation: KEEP**. HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902 places Qwen 3.5 122B-A10B-4bit MoE in the upper tier of open-weight coding models; schema 0/50 perfect; multi-turn coherence through N=7 (refutes mlx-lm#1011 "5 rounds" claim); needle 4/4 at 32k. Bench gate 7/7 PASS preserved; zero `src/` diff; tests 282/1/0 unchanged. Seven milestones shipped. Daily-driver use ongoing.
+v2.2 Multi-file Capability shipped 2026-04-28. First **data-driven** v2.2 candidate (vs deferred-list draining) — scoped from v2.1 audit's CORR-EVAL-02 FAIL constraint discovery. Two-phase milestone: Phase 22 architectural ceiling raise (PLAN-04 5→10 across 4 source files; tests 282 → 284) + Phase 23 cold-start empirical measurement (37s warm-OS-cache; refutes v2.0's "up to 240s" estimate for common case). Final verdict **82 → 87/100, KEEP** (Performance 20→25 via cold-start +5; Correctness 31/40 stayed because CORR-EVAL-02 FAIL x2 surfaced persistent extraction bias on shared-prefix function names as v2.3 first candidate). Bench gate 7/7 PASS preserved throughout; zero `bench/baseline.json` diff. Eight milestones shipped. Daily-driver use ongoing.
 
-**v2.0 (prior, 2026-04-27):** Persistence + Planning. Broke process-lifetime constraint with multi-turn REPL memory + JSONL session persistence + `--resume <id>` (PERSIST-01..04); plan-then-execute mode + Spectre approval gate + 2-attempt retry (PLAN-01..04). Mid-milestone scope expansion: SWITCH to Qwen 3.5 122B-A10B-4bit MoE single-model canonical + Qwen 2.5 retirement (-85 GB disk).
+**v2.1 (prior, 2026-04-28):** Empirical Qwen 3.5 122B Coding Evaluation. Single-phase observation-only milestone closing v2.0's measurement gap. `documentation/qwen35-122b-coding-eval.md` (983 lines, 10 sections); verdict 82/100 KEEP. HumanEval+ chat 0.939/0.902; schema 0/50 perfect; multi-turn N=7 stable; needle 4/4 at 32k.
 
-Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1}-ROADMAP.md`.
+**v2.0 (prior, 2026-04-27):** Persistence + Planning. Multi-turn REPL memory + JSONL session persistence + `--resume <id>` + plan-then-execute + Qwen 3.5 122B canonical + Qwen 2.5 retirement (-85 GB disk).
 
-## Current Milestone: v2.2 Multi-file Capability
+Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2}-ROADMAP.md`.
 
-**Goal:** Raise the PLAN-04 5-step ceiling that v2.1 surfaced as the structural blocker for genuine multi-file refactor (CORR-EVAL-02 FAIL with orphan_count=1 — agent burned 5-step budget reading 4 files before completing rename). Verify by re-running CORR-EVAL-02 to PASS (orphan_count=0) without regressing the 7/7 bench gate. Optionally close cold-start measurement deferred from v2.1.
+## Next Milestone (post-v2.2)
 
-**Why now:** Data-driven from v2.1 audit (`milestones/v2.1-MILESTONE-AUDIT.md`). Unlike speculative deferred-list candidates (compaction, slash commands, sub-agents), this milestone closes a measured architectural ceiling that prevents a useful capability (multi-file refactor) from working at all. Success criterion is pre-defined by v2.1 eval doc §9 ("if 5-step cap is raised, re-run CORR-EVAL-02"). Verdict scorecard expected to flip Correctness 31/40 → 36/40 (Total 82 → 87).
+No active milestone. v2.3 scoping pending. **First candidate is data-driven** from v2.2 audit:
 
-**Target features (2 categories, 5 + 1 requirements):**
+- **COMP-BIAS-01 (highest priority)** — Persistent extraction bias on shared-prefix function names. Two CORR-EVAL-02 runs with completely different READMEs produced textually identical step-5 thoughts. Multi-prong intervention candidate: system prompt enumeration guidance for multi-file refactors + few-shot multi-file examples in plan-mode prompt + plan-mode pre-flight rename-target enumeration. Re-evaluation criterion pre-defined: CORR-EVAL-02 PASS flips Correctness 31/40 → 36/40 → Total 87 → 92.
 
-- **Capability** — single source of truth for step ceiling (Domain.fs `validatePlan` + AgentLoop.runLoop sync; default 10); system prompt announces extended budget with usage guidance; tests at new boundary; bench gate regression hold (no fixture should consume more steps post-change)
-- **Re-evaluation** — `bash bench/eval-qwen35-122b.sh --refactor` produces orphan_count=0; eval doc §2.4/§7/§8/§9 updated; final scorecard `**Total: 87/100, Recommendation: KEEP**`
-- **Optional Phase 23** — cold-start empirical measurement (deferred from v2.1 per scope; gated behind user opt-in for ~3 min disruption window)
+Plus medium/low priority candidates surfaced by v2.2:
+- **IDIOMATIC-FS-01** (medium) — Coding-quality 1/5 may be Python-transcript artifact; needs F# task fixtures
+- **COLDSTART-PRISTINE-01** (low) — post-reboot pristine case untested
 
-**Scope (per v2.2 scope agreement 2026-04-28):**
-
-- Phase 22 (4 plans, ~1-2 days): Core change → adapter+prompt → tests+gate → re-eval
-- Phase 23 (1 plan, optional): Cold-start single execution + eval doc update
-- bounded surgical change; no new dependencies; no `bench/baseline.json` modifications
-
-**Phase numbering:** continues at 22 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20, v2.1: 21).
-
-**Excluded** with explicit rationale (deferred to later milestones):
-- Slash commands (SLASH-01) — no daily-driver pain signal; v2.3 candidate
-- Compaction (COMPACT-01) — no observed long-session pain; v2.3 candidate
-- Sub-agent delegation (SUBAG-01) — speculative without observation; v2.3 candidate
-- Thinking-mode-on (THINK-01) — v2.1 data says OFF is correct (schema 0/50); ON regresses; defer indefinitely
-- Native OpenAI `tool_calls` — custom JSON schema is 0/50 perfect; no functional reason; v3.0 territory
-- Streaming output (STM-01) — deferred 8x; TTFT 222ms warm is already instant; defer pattern is the signal
-- Idiomatic F# generation improvement — Coding-quality 1/5 is real but observation-driven; v2.3 candidate
+Plus carried-forward from v2.0/v2.1 (still alive):
+- SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01, STM-01 (deferred 8x; defer pattern is itself the signal)
 
 ## Future Milestone Goals (post-v2.1)
 
@@ -102,21 +88,16 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - ✓ macOS evalplus scoring traps diagnosed and fixed (silent-failure surface) — `python -m evalplus.sanitize` pre-pass for chat-mode doubled signatures + `EVALPLUS_MAX_MEMORY_BYTES=-1` env var to skip RLIMIT_AS hard-limit crash; both baked into `run_humaneval()`. Without these the test suite returns silent pass@1=0 — v2.1 (21-02)
 - ✓ Phase 21 evaluation narrative — `documentation/phase21-evaluation-narrative.md` (372 lines) — Korean-language why/what/how/result companion to the formal scorecard doc — v2.1
 
-### Active (v2.2 Multi-file Capability)
+- ✓ PLAN-04 step ceiling raised 5→10 via config-driven seam (independent constants per Option 1) — `PlanValidator.MaxPlanSteps = 10` (Core) + `AgentConfig.MaxLoops = 10` (Cli bootstrap default); plus 4 user-visible string updates (system prompt "1-10 steps" + usage guidance, [PLAN INVALID] retry, MaxLoopsExceeded user msg, RenderingTests assertion); tests 282 → 284 (+2 boundary cases at 10/11); bench gate 7/7 PASS held; T6 baseline held first try without prompt iteration — v2.2 (PLAN-CAP-01..03)
+- ✓ Cold-start empirical measurement — 37s to model-ready (PID change confirmed; warm OS file cache case; 5/5 top band ≤180s); Performance dimension 20/25 → 25/25; eval doc §3.3 flipped from "deferred per scope" to actual measurement; final scorecard `**Total: 87/100, Recommendation: KEEP**` — v2.2 (COLD-EVAL-01; Phase 23)
+- ✓ Constraint discovery #2: persistent extraction bias on shared-prefix function names — CORR-EVAL-02 re-run produced FAIL twice with textually identical step-5 thoughts across two completely different READMEs (902-char prose + 2128-char enumerated rewrite). Disproves v2.1 hypothesis that ceiling alone was the constraint; surfaces comprehension layer as new bottleneck. Documented in eval doc §2.4 + §8 Caveat #6 + §9 item 8 — v2.2 (PLAN-CAP-04..05 partial-by-design per Option C)
+- ✓ Third macOS bash-strict-mode pattern documented — `4bcd8a4 fix(23-01): move mkdir before tee in run_coldstart`. Pattern: under `set -euo pipefail`, any I/O command must verify its target dir exists first — v2.2 (23-01)
 
-<!-- v2.2 scope agreed 2026-04-28 from v2.1 audit's CORR-EVAL-02 FAIL constraint discovery. 5 core + 1 optional requirements. -->
+### Active
 
-#### Capability
-- [ ] **PLAN-CAP-01**: Step ceiling raised from 5 to 10 via config-driven seam (Domain.fs `validatePlan` + AgentLoop.runLoop sync)
-- [ ] **PLAN-CAP-02**: System prompt announces extended budget with usage guidance (replace "5 step" language; add "use full budget for multi-step coherent work, minimize for single-step" guide)
-- [ ] **PLAN-CAP-03**: Tests + bench gate regression hold (PlanValidatorTests + AgentLoopTests at new boundary; 7/7 PASS held; step counts unchanged for W1/W2/B2/T1/T5/T6/MT)
+<!-- No active milestone. Next milestone via /gsd:new-milestone. -->
 
-#### Re-evaluation
-- [ ] **PLAN-CAP-04**: CORR-EVAL-02 re-run produces orphan_count=0 PASS (`bench/eval-qwen35-122b.sh --refactor`)
-- [ ] **PLAN-CAP-05**: Eval doc updated; scorecard re-aggregated (Total 82 → 87; final line `**Total: 87/100, Recommendation: KEEP**`)
-
-#### Optional Phase 23 (cold-start, deferred from v2.1)
-- [ ] **COLD-EVAL-01**: Cold-start empirical measurement (gated behind user opt-in for ~3 min disruption window)
+(None — between milestones)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -255,6 +236,11 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 | v2.1 (21-02): macOS evalplus silent-failure traps require sanitize + RLIMIT_AS env override | Chat-mode answers are full function defs → `evalplus.evaluate` stitches prompt+completion → doubled signature → silent pass@1=0. `RLIMIT_AS` 4 GiB exceeds macOS per-process hard limit → every test subprocess crashes pre-execution with `ValueError`. | ✓ Good — `python -m evalplus.sanitize` pre-pass + `EVALPLUS_MAX_MEMORY_BYTES=-1` env var both baked into `run_humaneval()`; without these the entire HumanEval+ verdict would have been wrong. Documented in 21-02 SUMMARY for future macOS evalplus users |
 | v2.1 (21-03): 5-step PLAN-04 ceiling = constraint discovery via CORR-EVAL-02 FAIL | Multi-file refactor measured FAIL (orphan_count=1). Agent read all 4 fixture files coherently then exhausted 5-step budget on first edit. Genuine multi-file refactor needs 7+ steps. | ⚠ Revisit — first v2.2 candidate, **data-driven** from this eval (not from deferred-list backlog). Eval doc §9 lists "if 5-step cap is raised, re-run CORR-EVAL-02" as re-evaluation trigger. Needs Core change (Domain.fs Plan validator), not eval-harness fix |
 | v2.1 (21-04): macOS BSD `seq 2 1` countdown + `set -euo pipefail`/`grep -c` interaction patterns | Three bash-strict-mode + macOS deviations auto-fixed during execution: set-e/dotnet exit, grep-c pipefail double-output, BSD seq countdown. Each silently corrupted measurement until traced to root cause. | ✓ Good — patterns documented in plan SUMMARYs (commits `4b586b6`, `289339d`, `9603e52`); future bash handler authors should bracket `dotnet run` with `set +e`/`set -e`, use `\|\| true` (not `\|\| echo 0`) under pipefail, and guard BSD `seq M N` with `[ M -le N ] && seq M N \|\| true` |
+| v2.2: First data-driven candidate scoping (vs deferred-list draining) | CORR-EVAL-02 FAIL was empirically measured in v2.1; v2.2 scoped from that signal rather than picking from speculative deferred candidates (compaction, slash, sub-agents). Hypothesized 5-step ceiling = sole constraint. | ⚠ Revisit — hypothesis was partially correct (ceiling was necessary) but insufficient (CORR-EVAL-02 still FAIL post-ceiling-raise). Constraint discovery #2 (persistent extraction bias) surfaced as v2.3 first candidate. Discipline preserved: data → next data, no speculation |
+| v2.2 (Option 1 design): independent constants (PlanValidator.MaxPlanSteps + AgentConfig.MaxLoops) | PlanValidator runs at JSON parse time without AgentConfig in scope (Phase 16 design invariant); merging into shared module would require new file + import discipline | ✓ Good — surgical change; no new module; PlanValidator.fs:36-40 docstring updated to "default 10"; both sites stay in sync via grep verification |
+| v2.2 (Option C): accept CORR-EVAL-02 partial closure + document persistent extraction bias as v2.3 candidate | After README rewrite (Option A) attempt failed identically, two consecutive FAILs with completely different prose textually identical step-5 thoughts is decisive empirical signal. Symptom (README ambiguity) is not the disease (model bias). | ✓ Good — intellectually honest; v2.2 verdict went UP via Phase 23 cold-start path (different mechanism, same numeric end state 87/100); v2.3 has cleanly-scoped first candidate with multi-prong intervention space (system prompt + few-shot + plan-mode pre-flight) |
+| v2.2 (23-01): cold-start handler had `tee` before `mkdir` under `set -euo pipefail` | First `--coldstart` invocation aborted silently before kickstart fired (tee failed → pipefail abort). Service was NOT killed; no actual disruption. | ✓ Good — fixed in commit `4bcd8a4`; third macOS bash-strict-mode pattern documented in 23-01 SUMMARY for future bash handler authors. Lesson: under `set -euo pipefail`, any I/O command must verify its target dir exists first |
+| v2.2: 37s warm-OS-cache cold-start refutes v2.0's "up to 240s" estimate for common case | Empirical measurement is ~6× faster than v2.0 SUMMARY's ceiling estimate. Likely cause: kernel preserves model weight pages even when launchctl kickstart kills the process. | ✓ Good — measurement preserved as authoritative for warm-cache case; v2.0 estimate stays valid for first-boot pristine case (untested in v2.2; v2.3 candidate COLDSTART-PRISTINE-01) |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -267,4 +253,4 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-28 after v2.1 milestone shipped — empirical Qwen 3.5 122B-A10B-4bit MoE coding evaluation produced `documentation/qwen35-122b-coding-eval.md` (983 lines) with verdict **Total: 82/100, Recommendation: KEEP**. 7 milestones shipped. Daily-driver use ongoing. v2.2 first candidate is data-driven: PLAN-04 5-step ceiling raise (CORR-EVAL-02 FAIL constraint discovery)*
+*Last updated: 2026-04-28 after v2.2 milestone shipped — Multi-file Capability (Phase 22 ceiling raise + Phase 23 cold-start) flipped eval doc verdict **82 → 87/100, KEEP** (Performance 20→25; +5 from cold-start). CORR-EVAL-02 still FAIL post-ceiling-raise; persistent extraction bias on shared-prefix function names is v2.3 first candidate (data-driven). 8 milestones shipped. Daily-driver use ongoing.*
