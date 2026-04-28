@@ -92,15 +92,14 @@ Plans:
 5. **Bench gate regression hold** — `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)`. The new validator pass must not block existing fixtures (W1/W2/B2/T1/T5/T6/MT use prompts that don't mention "rename"; heuristic returns empty list; vacuous PASS).
 6. **Core purity preserved** — No Serilog/Spectre/Argu/HttpClient/file I/O creep into Domain.fs/PlanValidator.fs/AgentLoop.fs. `task {}` only.
 
-**Plans:** 3-4 plans expected
+**Plans:** 3 plans (Interpretation B chosen — see 25-01 PLAN; original 4-plan ROADMAP split collapsed because Domain.fs has no meaningful change with Interpretation B)
 
 Plans:
-- [ ] 25-01: Domain.fs PlanInvalid extension — add `RenameTargetsNotEnumerated of (string list)` variant. Single big-bang Core compile cascade per v1.1 LlmResponse pattern. Atomic commit.
-- [ ] 25-02: PlanValidator.fs new pre-flight pass — `checkRenameTargetsEnumerated` heuristic function. Wire into `validatePlan` chain. Atomic commit.
-- [ ] 25-03: PlanValidatorTests new test cases — boundary tests (PASS / FAIL / vacuous PASS); test count grows ≥3. Atomic commit.
-- [ ] 25-04: Bench gate regression hold + final verification — gate 7/7 PASS held; per-fixture step counts unchanged. Verification-only plan. (COMP-04)
+- [ ] 25-01-PLAN.md — PlanValidator.fs new pre-flight pass + validatePlan signature change + AgentLoop.fs:484 call site + 6 existing PlanValidatorTests calls fixed (atomic F# big-bang commit; 3 files, no valid intermediate build state). Interpretation B: PlanInvalid stays single-string; missing-target list encoded as structured detail string. (COMP-03)
+- [ ] 25-02-PLAN.md — Three new boundary tests in PlanValidatorTests.fs: PASS (plan covers all targets), FAIL (plan missing one target), vacuous PASS (no rename in prompt). Test count 284 → 287. (COMP-03 / COMP-04 test-count portion)
+- [ ] 25-03-PLAN.md — Bench gate 7/7 PASS verification + Interpretation B invariant checks (Domain.fs / Rendering.fs / buildCorrection unchanged) + 25-VERIFICATION.md + Phase-complete docs commit. (COMP-04 regression-hold portion)
 
-**Plan dependencies:** 25-01 → 25-02 → 25-03 → 25-04 (sequential)
+**Plan dependencies:** 25-01 → 25-02 → 25-03 (sequential; signature change must compile before tests can use it; gate verification must come after all code+test changes land)
 
 **Architectural invariants:**
 1. **Core purity (absolute)** — `src/BlueCode.Core/{Domain,PlanValidator,AgentLoop}.fs` no Serilog/Spectre/Argu/HttpClient/file I/O creep
