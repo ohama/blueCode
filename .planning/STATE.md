@@ -116,3 +116,7 @@ Next workflow trigger: `/gsd:execute-phase 21` Wave 5 → 21-05 (eval doc: 100-p
 - **Cold-start gated behind `--coldstart` flag** — disruptive (kills 122B for ~3min via `launchctl kickstart`). Per scope decision, deferred from default `--full`; reproducibility instructions in eval doc §10.
 - **Cloud comparison (Claude/GPT-4) explicit non-goal** — documented in eval doc §6.3 as deliberate boundary.
 - **Atomic commits per CLAUDE.md:** 5 task commits + plan-meta + final eval doc commit. Format: `chore(21-XX): {task-name}` for instrumentation; `docs(21-XX): write coding eval verdict doc` for the final doc.
+
+### Observation (21-05)
+
+- 2026-04-28 — v2.1 Phase 21 complete; empirical Qwen 3.5 122B coding evaluation produced `documentation/qwen35-122b-coding-eval.md` with 100-point scorecard verdict (Total: 82/100, Recommendation: KEEP). Bench gate 7/7 PASS post-eval. No `src/` or `bench/baseline.json` modifications.
