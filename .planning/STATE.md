@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v2.0 milestone complete)
 ## Current Position
 
 Milestone: v2.1 Empirical Qwen 3.5 122B Coding Evaluation (started 2026-04-27)
-Phase: 21 (single phase) — in progress; Wave 2 complete
-Plan: 2 of 5 complete (21-01: Harness Scaffolding ✓, 21-02: HumanEval+ ✓)
-Status: HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902 (headline); completion pass@1 = 0.226; bench gate 7/7 PASS
-Last activity: 2026-04-28 — Completed 21-02-PLAN.md (HumanEval+ HTTP adapter; 328 inferences, ~61 min; two macOS scoring bugs found and fixed: evalplus.sanitize + EVALPLUS_MAX_MEMORY_BYTES=-1)
+Phase: 21 (single phase) — in progress; Wave 3 complete
+Plan: 3 of 5 complete (21-01: Harness Scaffolding ✓, 21-02: HumanEval+ ✓, 21-03: Fixtures + Refactor/Langcoverage ✓)
+Status: CORR-EVAL-02 FAIL (orphan_count=1, 5-step limit); CORR-EVAL-03/04 PASS (all 3 diagnoses correct); bench gate 7/7 PASS
+Last activity: 2026-04-28 — Completed 21-03-PLAN.md (7 fixtures; EXIT trap extended; run_refactor/run_langcoverage live; set -e/dotnet bug fixed)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21: 2/5 plans complete)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21: 3/5 plans complete)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -74,10 +74,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 21 Wave 2 wrap-up)
-Stopped at: Completed 21-02-PLAN.md — HumanEval+ chat 93.9% / 90.2%; completion 22.6% / 21.3%; two macOS scoring bugs (sanitize + RLIMIT_AS) diagnosed and fixed in handler; bench gate 7/7 PASS
+Last session: 2026-04-28 (Phase 21 Wave 3 wrap-up)
+Stopped at: Completed 21-03-PLAN.md — 7 fixtures; EXIT trap extended; run_refactor/run_langcoverage live; CORR-EVAL-02 FAIL (orphan_count=1); CORR-EVAL-03/04 PASS; bench gate 7/7 PASS
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 21` Wave 3 → 21-03 (--refactor / --langcoverage handlers)
+Next workflow trigger: `/gsd:execute-phase 21` Wave 4 → 21-04 (--multiturn, --schema-rate, --needle, --coldstart, --full handlers)
 
 ### New Decisions (21-02)
 
@@ -87,6 +87,13 @@ Next workflow trigger: `/gsd:execute-phase 21` Wave 3 → 21-03 (--refactor / --
 - **evalplus.evaluate result caching** — writes `<samples>_eval_results.json` cache; subsequent runs against the same samples file load from cache. Delete cache before re-scoring to force fresh evaluation. Not a regression-gate concern (each fresh eval LOG_DIR is unique).
 - **Both adapter and harness preserved on disk** — `bench/eval-humaneval-http.py` (159 lines, no `mlx_lm` imports) + `bench/eval-qwen35-122b.sh run_humaneval()` (now sanitize-aware). 21-03 + 21-04 + 21-05 inherit a fully-working scoring pipeline.
 - **Wall-clock**: chat ~28 min, completion ~33 min, total ~61 min for 328 inferences (within ~55 min plan estimate, slight overrun on completion mode).
+
+### New Decisions (21-03)
+
+- **CORR-EVAL-02 FAIL, orphan_count=1, 5-step budget exhaustion:** Agent read all 4 fixture files (README + 3 .fs, steps 1-4) and started editing Calculator.fs on step 5 (renamed `add3`→`sum3`), then ran out of budget before touching Main.fs/Tests.fs. The multi-file refactor task requires 7+ steps minimum. This is meaningful data: the 5-step PLAN-04 limit is a hard constraint for multi-file tasks. 21-05 scores CORR-EVAL-02 as 0/5 pts. All 3 diagnose tasks passed (CORR-EVAL-03/04 PASS) in 2 steps each.
+- **set +e / set -e bracket for dotnet run in eval harness:** `blueCode` exits 1 on `MaxLoopsExceeded`. Under `set -euo pipefail`, this silently aborted `run_refactor()` before orphan check and CORR-EVAL-02 verdict. Fix: bracket `dotnet run` invocations with `set +e` before and `set -e` after in both `run_refactor()` and `run_langcoverage()`. Same pattern applies to any future harness function that invokes `dotnet run` — blueCode non-zero exit is DATA, not a harness failure.
+- **EXIT trap scope (write-task fixtures only):** `bench/run.sh:18` traps only write-task fixtures (`bug_lastchar.fs`, `bug_average.fs`, `bug_binsearch.fs`, `refactor_multifile/*.fs`). Diagnose-only fixtures (`bug_divide_zero.fs`, `bug_python_typeerror.py`, `bug_typescript_async.ts`) excluded because agent prompt says "do not modify the file" — blueCode respects this and never writes to them. The convention is documented in the line-16-17 comment.
+- **refactor_orphan_count.txt timing is load-bearing:** Must be written inside `run_refactor()` BEFORE `bench/eval-qwen35-122b.sh` exits, because the subsequent `bench/run.sh --gate` run triggers the EXIT trap that restores fixtures to original state (with `add` in them). If orphan_count were computed after the trap, it would always be 0. 21-05 reads `bench/runs/qwen35-eval-20260428-093852/refactor_orphan_count.txt` for CORR-EVAL-02 scoring.
 
 ## v2.1 Architectural Touch Points (load-bearing)
 
