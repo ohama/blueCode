@@ -27,7 +27,7 @@ Success criterion is pre-defined by v2.2 audit: CORR-EVAL-02 PASS (orphan_count=
 ## Phases
 
 - [x] **Phase 24: Prompt-Level Intervention (P1+P2)** — 2 plans (system prompt enumeration guidance + few-shot multi-file examples; bench gate regression hold) ✓ 2026-04-28
-- [ ] **Phase 25: Plan-Mode Pre-Flight Enumeration (P3)** — 3-4 plans (Domain.fs new PlanInvalid reason + PlanValidator.fs new pre-flight pass + tests + bench gate regression hold)
+- [x] **Phase 25: Plan-Mode Pre-Flight Enumeration (P3)** — 3 plans (PlanValidator.fs new pre-flight pass [Interpretation B — detail-string encoding within existing PlanInvalid case; no Domain.fs DU change; no Rendering.fs/buildCorrection cascade] + tests +3 + bench gate regression hold) ✓ 2026-04-29
 - [ ] **Phase 26: Re-Evaluation (CORR-EVAL-02 PASS + verdict flip)** — 1 plan (re-run --refactor; eval doc §2.4/§7/§8/§9 + final scorecard line 87 → 92)
 
 ---
@@ -95,9 +95,9 @@ Plans:
 **Plans:** 3 plans (Interpretation B chosen — see 25-01 PLAN; original 4-plan ROADMAP split collapsed because Domain.fs has no meaningful change with Interpretation B)
 
 Plans:
-- [ ] 25-01-PLAN.md — PlanValidator.fs new pre-flight pass + validatePlan signature change + AgentLoop.fs:484 call site + 6 existing PlanValidatorTests calls fixed (atomic F# big-bang commit; 3 files, no valid intermediate build state). Interpretation B: PlanInvalid stays single-string; missing-target list encoded as structured detail string. (COMP-03)
-- [ ] 25-02-PLAN.md — Three new boundary tests in PlanValidatorTests.fs: PASS (plan covers all targets), FAIL (plan missing one target), vacuous PASS (no rename in prompt). Test count 284 → 287. (COMP-03 / COMP-04 test-count portion)
-- [ ] 25-03-PLAN.md — Bench gate 7/7 PASS verification + Interpretation B invariant checks (Domain.fs / Rendering.fs / buildCorrection unchanged) + 25-VERIFICATION.md + Phase-complete docs commit. (COMP-04 regression-hold portion)
+- [x] 25-01-PLAN.md — PlanValidator.fs new pre-flight pass + validatePlan signature change + AgentLoop.fs:484 call site + 6 existing PlanValidatorTests calls fixed (atomic F# big-bang commit; 3 files, no valid intermediate build state). Interpretation B: PlanInvalid stays single-string; missing-target list encoded as structured detail string. (COMP-03)
+- [x] 25-02-PLAN.md — Three new boundary tests in PlanValidatorTests.fs: PASS (plan covers all targets), FAIL (plan missing one target), vacuous PASS (no rename in prompt). Test count 284 → 287. (COMP-03 / COMP-04 test-count portion)
+- [x] 25-03-PLAN.md — Bench gate 7/7 PASS verification + Interpretation B invariant checks (Domain.fs / Rendering.fs / buildCorrection unchanged) + 25-VERIFICATION.md + Phase-complete docs commit. (COMP-04 regression-hold portion)
 
 **Plan dependencies:** 25-01 → 25-02 → 25-03 (sequential; signature change must compile before tests can use it; gate verification must come after all code+test changes land)
 
@@ -165,7 +165,7 @@ Plans:
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
 | 24. Prompt-Level Intervention (P1+P2) | v2.3 | COMP-01, COMP-02, COMP-04 (3 reqs) | 2/2 | ✓ Complete | 2026-04-28 |
-| 25. Plan-Mode Pre-Flight Enumeration (P3) | v2.3 | COMP-03, COMP-04 (2 reqs) | 0/3-4 | Not started | - |
+| 25. Plan-Mode Pre-Flight Enumeration (P3) | v2.3 | COMP-03, COMP-04 (2 reqs) | 3/3 | ✓ Complete | 2026-04-29 |
 | 26. Re-Evaluation | v2.3 | COMP-05, COMP-06 (2 reqs) | 0/1 | Not started | - |
 
 ---
@@ -185,4 +185,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-28*
-*Last updated: 2026-04-28 — Phase 24 complete (P1+P2 prompt-level intervention shipped; planSystemPromptSuffix 695→1183 chars; bench gate 7/7 PASS preserved; verification 8/8 must-haves passed); ready for Phase 25 (P3 architectural)*
+*Last updated: 2026-04-29 — Phase 25 complete (P3 plan-mode pre-flight enumeration shipped; Interpretation B: checkRenameTargetsEnumerated in PlanValidator.fs; bench gate 7/7 PASS preserved; verification 10/10 must-haves passed; test count 284→287); ready for Phase 26 (re-evaluation CORR-EVAL-02)*

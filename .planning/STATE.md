@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.3 milestone scoped)
 ## Current Position
 
 Milestone: v2.3 Comprehension Layer (started 2026-04-28; scoped from v2.2 audit's COMP-BIAS-01 data-driven first candidate)
-Phase: 25 (Plan-Mode Pre-Flight Enumeration P3 architectural) — in progress
-Plan: 2 of 3 complete (Phase 25); Plan 25-03 follows
-Status: Phase 24 complete + verified. Phase 25 Plans 1+2 complete. 25-01: checkRenameTargetsEnumerated added to PlanValidator; validatePlan signature extended; 284 tests passing; atomic commit c933ffc. 25-02: three boundary tests for checkRenameTargetsEnumerated; test count 284→287; atomic commit 378a1a4. Ready for 25-03 (bench gate + final verification).
-Last activity: 2026-04-29 — Completed 25-02-PLAN.md: three checkRenameTargetsEnumerated boundary tests (PASS/FAIL/vacuous); 287/287 tests pass; atomic commit 378a1a4 (1 file: PlanValidatorTests.fs only).
+Phase: 26 (Re-Evaluation CORR-EVAL-02 PASS + verdict flip)
+Plan: 0 of 1 complete (Phase 26)
+Status: Phase 24 complete + verified. Phase 25 complete + verified. 25-03 verification: bench gate 7/7 PASS; test count 287; Domain.fs/Rendering.fs/buildCorrection unchanged across Phase 25 (Interpretation B invariant confirmed); 10/10 must-haves passed; phase-complete docs commit. Ready for Phase 26 (re-eval CORR-EVAL-02 PASS).
+Last activity: 2026-04-29 — Phase 25 verified (10/10 must-haves; bench gate 7/7 PASS; test count 287; Interpretation B confirmed). Phase-complete commit docs(25). Phase 26 unblocked.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (Phase 24: 2/2 done; Phase 25: 2/3 done; Phase 26 follows)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (Phase 24: 2/2 done ✓; Phase 25: 3/3 done ✓; Phase 26 follows)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -55,6 +55,7 @@ Stable patterns established across milestones (load-bearing for next session):
 - **P1 enumeration directive (24-01)** — `planSystemPromptSuffix` extended from 695→879 chars with blank-line-separated paragraph: "When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly in your thought before editing. Do not start editing until the full list is enumerated." Directive is plan-mode-only (no impact on agent-loop path). Bench gate 7/7 PASS preserved. COMP-01 DONE.
 - **P2 few-shot example (24-02)** — `planSystemPromptSuffix` extended from 879→1183 chars with 3-line Example/Targets/Steps block demonstrating the exact `add->sum` AND `add3->sum3` shared-prefix rename failure pattern. One blank line after P1 directive; all three lines left-flush (column 0). Bench gate 7/7 PASS preserved. COMP-02 DONE. Phase 24 complete.
 - **Interpretation B (25-01)** — `PlanInvalid of detail: string` in Domain.fs is NOT modified. Fourth pre-flight pass `checkRenameTargetsEnumerated` encodes missing-target failures as structured detail string `"rename targets not enumerated: NAME1, NAME2"`. Avoids compile cascade into Rendering.fs + AgentLoop.fs:501 `buildCorrection`. Smaller diff; same observable LLM-correction behavior. `validatePlan` signature extended to `userPrompt: string -> Plan -> Result<Plan, AgentError>`. COMP-03 P3 prong in place.
+- **Phase 25 / Interpretation B confirmed (25-03)** — `PlanInvalid of detail: string` extended via structured sub-reason "rename targets not enumerated: ..." rather than new DU case. Domain.fs/Rendering.fs/buildCorrection all unchanged across entire Phase 25 (git diff empty, verified 2026-04-29). Avoids compile cascade across Rendering.fs and AgentLoop.buildCorrection. Same observable behavior at LLM correction boundary; smaller diff. Bench gate 7/7 PASS; test count 287. COMP-03 + COMP-04 Phase 25 portion complete.
 - **F# big-bang atomic commit (25-01)** — Tasks 1+2+3 committed as one atomic unit (PlanValidator.fs + AgentLoop.fs:484 + PlanValidatorTests.fs 6 mechanical updates). No valid intermediate build state; mirrors v1.1 LlmResponse Phase 7 pattern.
 
 ### Pending Todos (v2.1 candidates)
@@ -95,10 +96,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-29 (Phase 25 Plan 2 complete)
-Stopped at: Completed 25-02-PLAN.md. Atomic commit 378a1a4 + plan-meta (docs commit). 287 tests passing.
+Last session: 2026-04-29 (Phase 25 complete; Phase 26 unblocked)
+Stopped at: Completed 25-03-PLAN.md. Phase-complete docs(25) commit. 287 tests passing. Bench gate 7/7 PASS. Interpretation B confirmed.
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 25` for 25-03 (bench gate + final Phase 25 verification)
+Next workflow trigger: `/gsd:plan-phase 26` then `/gsd:execute-phase 26` for CORR-EVAL-02 re-evaluation
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
