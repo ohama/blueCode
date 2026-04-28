@@ -1,0 +1,10 @@
+Write a Python function `parse_csv` that takes a string of CSV data and returns a list of dicts (using the first row as keys).
+Add error handling for malformed rows (mismatched column counts) — raise a ValueError with a descriptive message.
+Write three pytest-style test cases for parse_csv, including the malformed-row error case.
+Refactor the test cases to use pytest.mark.parametrize for the happy-path cases.
+Add a `parse_csv_file` helper that takes a file path and calls parse_csv on its contents.
+Make parse_csv_file handle missing files gracefully — raise FileNotFoundError with a clear message.
+Add a `--strict` flag option to parse_csv that, when False, skips malformed rows instead of raising.
+Add type hints to all the functions you've written so far (parse_csv, parse_csv_file, tests).
+Write a short README section (5-8 lines, markdown) describing the parse_csv API.
+Identify any remaining issues or edge cases in the code you've written across the previous turns.
