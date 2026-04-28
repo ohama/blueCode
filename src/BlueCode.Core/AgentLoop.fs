@@ -481,7 +481,7 @@ let runPlanTurn
         // Returns Ok plan, or Error with the parse/validation cause.
         let extractAndValidate (response: LlmResponse) : Result<Plan, AgentError> =
             match response.Output with
-            | LlmOutput.Plan p -> validatePlan p
+            | LlmOutput.Plan p -> validatePlan userInput p
             | LlmOutput.ToolCall _
             | LlmOutput.FinalAnswer _ ->
                 Error (PlanInvalid "expected plan output, got tool/final action")

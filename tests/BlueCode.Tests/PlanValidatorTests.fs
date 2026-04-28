@@ -19,7 +19,7 @@ let tests =
                         makePlannedStep "grep_search" """{"pattern":"TODO"}""" "find todos" ]
                     Rationale = "explore then survey" }
 
-              match validatePlan plan with
+              match validatePlan "" plan with
               | Ok p -> Expect.equal p.Steps.Length 3 "valid plan should round-trip unchanged"
               | Error e -> failtestf "Expected Ok, got Error %A" e
 
@@ -31,7 +31,7 @@ let tests =
                         makePlannedStep "fabricate_function" """{"name":"foo"}""" "made-up tool" ]
                     Rationale = "test unknown tool path" }
 
-              match validatePlan plan with
+              match validatePlan "" plan with
               | Error(PlanInvalid detail) ->
                   Expect.isTrue
                       (detail.Contains("fabricate_function") || detail.ToLower().Contains("unknown"))
@@ -58,7 +58,7 @@ let tests =
                         makePlannedStep "list_dir" """{"path":"k"}""" "11" ]
                     Rationale = "test step-cap path" }
 
-              match validatePlan plan with
+              match validatePlan "" plan with
               | Error(PlanInvalid detail) ->
                   Expect.isTrue
                       (detail.Contains("11") || detail.ToLower().Contains("max") || detail.ToLower().Contains("step"))
@@ -81,7 +81,7 @@ let tests =
                         makePlannedStep "list_dir" """{"path":"j"}""" "10" ]
                     Rationale = "test ceiling boundary pass" }
 
-              match validatePlan plan with
+              match validatePlan "" plan with
               | Ok _ -> ()  // correct: 10 steps ≤ MaxPlanSteps (10)
               | Error e -> failtestf "Expected Ok for 10-step plan, got Error %A" e
 
@@ -99,7 +99,7 @@ let tests =
                         makePlannedStep "grep_search" """{"pattern":"foo"}""" "search" ]
                     Rationale = "test duplicate-adjacent path" }
 
-              match validatePlan plan with
+              match validatePlan "" plan with
               | Error(PlanInvalid detail) ->
                   Expect.isTrue
                       (detail.ToLower().Contains("duplicate") || detail.ToLower().Contains("adjacent"))
@@ -115,7 +115,7 @@ let tests =
                       [ makePlannedStep "summon_demon" """{"verse":"unholy"}""" "not a real tool" ]
                     Rationale = "edge case: 1 step, unknown tool" }
 
-              match validatePlan plan with
+              match validatePlan "" plan with
               | Error(PlanInvalid detail) ->
                   Expect.isTrue
                       (detail.Contains("summon_demon") || detail.ToLower().Contains("unknown"))
