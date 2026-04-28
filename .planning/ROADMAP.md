@@ -28,7 +28,7 @@ Success criterion is pre-defined by v2.2 audit: CORR-EVAL-02 PASS (orphan_count=
 
 - [x] **Phase 24: Prompt-Level Intervention (P1+P2)** — 2 plans (system prompt enumeration guidance + few-shot multi-file examples; bench gate regression hold) ✓ 2026-04-28
 - [x] **Phase 25: Plan-Mode Pre-Flight Enumeration (P3)** — 3 plans (PlanValidator.fs new pre-flight pass [Interpretation B — detail-string encoding within existing PlanInvalid case; no Domain.fs DU change; no Rendering.fs/buildCorrection cascade] + tests +3 + bench gate regression hold) ✓ 2026-04-29
-- [ ] **Phase 26: Re-Evaluation (CORR-EVAL-02 PASS + verdict flip)** — 1 plan (re-run --refactor; eval doc §2.4/§7/§8/§9 + final scorecard line 87 → 92)
+- [ ] **Phase 26: Re-Evaluation (CORR-EVAL-02 PASS + verdict flip)** — 1 plan (re-run --refactor; eval doc §2.4/§7/§8/§9 + final scorecard line 87 → 92) **Status: blocked (2026-04-29) — CORR-EVAL-02 FAIL x3; P1/P2/P3 intervention did not reach agent-loop eval path; hallucination failure mode; v2.4 investigation required**
 
 ---
 
@@ -140,7 +140,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 26-01: Re-run CORR-EVAL-02 + flip eval doc verdict 87→92 — pre-flight + `--refactor` invocation (up to 3 stochastic attempts) + 11 eval doc edit sites in 9 logical groups + STATE.md/ROADMAP.md/REQUIREMENTS.md update + 26-VERIFICATION.md + mandatory final bench gate + phase-complete docs commit. (COMP-05, COMP-06)
+- [ ] 26-01: Re-run CORR-EVAL-02 + flip eval doc verdict 87→92 — pre-flight + `--refactor` invocation (up to 3 stochastic attempts) + 11 eval doc edit sites in 9 logical groups + STATE.md/ROADMAP.md/REQUIREMENTS.md update + 26-VERIFICATION.md + mandatory final bench gate + phase-complete docs commit. (COMP-05, COMP-06) **BLOCKED — CORR-EVAL-02 FAIL x3 (all attempts; new hallucination mode). Partial VERIFICATION written.**
 
 **Plan dependencies:** None internal (single plan); depends on Phase 24 + Phase 25 completion.
 
@@ -166,7 +166,7 @@ Plans:
 |-------|-----------|--------------|----------------|--------|-----------|
 | 24. Prompt-Level Intervention (P1+P2) | v2.3 | COMP-01, COMP-02, COMP-04 (3 reqs) | 2/2 | ✓ Complete | 2026-04-28 |
 | 25. Plan-Mode Pre-Flight Enumeration (P3) | v2.3 | COMP-03, COMP-04 (2 reqs) | 3/3 | ✓ Complete | 2026-04-29 |
-| 26. Re-Evaluation | v2.3 | COMP-05, COMP-06 (2 reqs) | 0/1 | Not started | - |
+| 26. Re-Evaluation | v2.3 | COMP-05, COMP-06 (2 reqs) | 0/1 | Blocked (2026-04-29) | - |
 
 ---
 
@@ -185,4 +185,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-28*
-*Last updated: 2026-04-29 — Phase 26 plan created (26-01: re-eval + verdict flip 87→92; 3 tasks; single wave; autonomous). Ready for /gsd:execute-phase 26.*
+*Last updated: 2026-04-29 — Phase 26 BLOCKED. CORR-EVAL-02 FAIL x3 after all v2.3 prongs in production. New hallucination failure mode (agent adds "subtract" function; does not attempt rename). Critical structural gap: P1/P2/P3 are plan-mode-only; eval harness uses agent-loop (no --plan); prongs never reached eval path. Eval doc stays 87/100. v2.4 investigation required: move P1/P2 to defaultSystemPrompt, or redesign eval harness, or redesign fixture.*
