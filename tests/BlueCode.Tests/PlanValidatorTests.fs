@@ -120,4 +120,73 @@ let tests =
                   Expect.isTrue
                       (detail.Contains("summon_demon") || detail.ToLower().Contains("unknown"))
                       "single-step plan with unknown tool should be PlanInvalid"
-              | other -> failtestf "Expected Error(PlanInvalid ...), got %A" other ]
+              | other -> failtestf "Expected Error(PlanInvalid ...), got %A" other
+
+          testCase "checkRenameTargetsEnumerated: plan covering all rename targets -> Ok"
+          <| fun () ->
+              // Both `add` and `add3` covered via distinct edit_file steps.
+              // old_string field contains the target name (case-insensitive substring).
+              let plan =
+                  { Steps =
+                      [ makePlannedStep
+                            "edit_file"
+                            """{"path":"Calc.fs","old_string":"let add x y","new_string":"let sum x y"}"""
+                            "rename add to sum"
+                        makePlannedStep
+                            "edit_file"
+                            """{"path":"Calc.fs","old_string":"let add3 x y z","new_string":"let sum3 x y z"}"""
+                            "rename add3 to sum3" ]
+                    Rationale = "two renames, both covered" }
+
+              match validatePlan "rename add to sum and rename add3 to sum3" plan with
+              | Ok p -> Expect.equal p.Steps.Length 2 "valid plan should round-trip unchanged"
+              | Error e -> failtestf "Expected Ok (both targets covered), got Error %A" e
+
+          testCase "checkRenameTargetsEnumerated: plan missing one rename target -> PlanInvalid"
+          <| fun () ->
+              // Plan covers `add` but not `add3` — the exact CORR-EVAL-02 v2.2 audit FAIL pattern.
+              // Validator must surface "add3" in the detail string so [PLAN INVALID] retry
+              // gives the LLM specific guidance.
+              let plan =
+                  { Steps =
+                      [ makePlannedStep
+                            "edit_file"
+                            """{"path":"Calc.fs","old_string":"let add x y","new_string":"let sum x y"}"""
+                            "rename add to sum (only)" ]
+                    Rationale = "missing add3 rename — the exact bias pattern" }
+
+              match validatePlan "rename add to sum and rename add3 to sum3" plan with
+              | Error(PlanInvalid detail) ->
+                  Expect.isTrue
+                      (detail.Contains("add3") || detail.ToLower().Contains("not enumerated"))
+                      (sprintf
+                          "PlanInvalid detail should name the missing target add3 or say 'not enumerated'; got: %s"
+                          detail)
+                  // Negative assertion: `add` is covered by the edit_file step (old_string contains
+                  // "let add x y" → case-insensitive substring match). It must NOT appear in the
+                  // missing list. This locks the coverage-check logic tightly: prevents a regression
+                  // where coversTarget returns false for both targets (which would let the test pass
+                  // via the OR branch above even when the heuristic is broken for `add` too).
+                  Expect.isFalse
+                      (detail.ToLower().Contains("not enumerated: add,")
+                       || detail.ToLower() = "rename targets not enumerated: add")
+                      (sprintf
+                          "Plan covers `add` via edit_file step; `add` should not appear in missing list. detail=%s"
+                          detail)
+              | other ->
+                  failtestf "Expected Error(PlanInvalid ...) for missing add3, got %A" other
+
+          testCase "checkRenameTargetsEnumerated: prompt with no rename targets -> Ok (vacuous)"
+          <| fun () ->
+              // No "rename X to Y" pattern in prompt → heuristic returns empty list →
+              // checkRenameTargetsEnumerated is vacuous PASS regardless of plan shape.
+              // This is the gate-fixture safety case (W1/W2/B2/T1/T5/T6/MT prompts have
+              // no "rename" word — confirmed by 25-RESEARCH.md Q9).
+              let plan =
+                  { Steps =
+                      [ makePlannedStep "read_file" """{"path":"a.fs"}""" "read file" ]
+                    Rationale = "non-rename task" }
+
+              match validatePlan "Read a.fs and summarize it." plan with
+              | Ok p -> Expect.equal p.Steps.Length 1 "vacuous PASS should round-trip plan unchanged"
+              | Error e -> failtestf "Expected Ok (vacuous PASS — no rename in prompt), got Error %A" e ]
