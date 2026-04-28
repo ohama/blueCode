@@ -34,10 +34,10 @@ let private knownTools : Set<string> =
 // ── Validation primitives ────────────────────────────────────────────────────
 
 /// Maximum number of steps a plan may contain. Mirrors AgentConfig.MaxLoops
-/// (LOOP-01 default 5). Hardcoded here because Plan validation is not
+/// (LOOP-01 default 10). Hardcoded here because Plan validation is not
 /// AgentConfig-aware (it's invoked from QwenHttpClient parse layer in
 /// Phase 16, which doesn't see AgentConfig).
-let MaxPlanSteps = 5
+let MaxPlanSteps = 10
 
 let private checkLength (plan: Plan) : Result<Plan, AgentError> =
     if plan.Steps.Length > MaxPlanSteps then

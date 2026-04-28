@@ -106,7 +106,7 @@ type PlannedStep =
 /// Proposed plan returned by the LLM in --plan mode (PLAN-01). Steps execute
 /// in order. Rationale is a top-level explanation distinct from per-step rationale.
 /// Validation rules (PLAN-04, implemented by PlanValidator in plan 14-02):
-///   - Steps.Length must be ≤ 5 (matches AgentConfig.MaxLoops)
+///   - Steps.Length must be ≤ 10 (matches AgentConfig.MaxLoops)
 ///   - each step.Tool must be a known tool name
 ///   - no two adjacent steps may be byte-identical
 type Plan =
