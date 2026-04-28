@@ -1,5 +1,53 @@
 # Project Milestones: blueCode
 
+## v2.1 Empirical Qwen 3.5 122B Coding Evaluation (Shipped: 2026-04-28)
+
+**Delivered:** Closed v2.0's empirical measurement gap with a single-phase observation-only milestone. Produced `documentation/qwen35-122b-coding-eval.md` (983 lines, 10 sections) ending with **Total: 82/100, Recommendation: KEEP**. HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902 places Qwen 3.5 122B-A10B-4bit MoE in the upper tier of open-weight coding models. Schema 0/50 perfect; multi-turn coherence through N=7 (refutes mlx-lm#1011 "5 rounds" community claim); needle 4/4 retrieved at 32k. Bench gate 7/7 PASS preserved post-eval; zero `src/` diff; tests 282/1/0 unchanged.
+
+**Phases completed:** 21 (1 phase, 5 plans) — single-phase milestone
+
+**Key accomplishments:**
+
+- **Empirical 100-point scorecard verdict (DOC-EVAL-01):** `documentation/qwen35-122b-coding-eval.md` (983 lines) applies the rubric Correctness 40 / Performance 25 / Reliability 25 / Coding-quality 10 with explicit thresholds per sub-criterion. Headline: **Total: 82/100, KEEP** — empirically useful for daily F# coding via blueCode. Each section ends with a verdict line; §3.3 documents cold-start deferral; §6.3 documents cloud comparison non-goal as deliberate boundary; §10 provides self-contained reproduction (`--setup` then `--full`). Companion `documentation/phase21-evaluation-narrative.md` (372 lines) provides the why/what/how/result narrative explanation.
+
+- **Anchor benchmarks measured (CORR-EVAL-01, PERF-EVAL-01..02, REL-EVAL-03):** HumanEval+ chat pass@1 0.939 / pass@1+ 0.902 (154/164; eval-standard temp=0.2 sampling); throughput median 34.6 tok/s (≥30 threshold); TTFT median 222 ms warm (≤500 threshold); long-context needle 4/4 retrieved at 8k/16k/32k (max_model_len=32768). The 3.4× speedup claim from Phase 17 SWITCH now has real tok/s baseline.
+
+- **Reliability dimension 100% (REL-EVAL-01..03):** Schema compliance 0/50 InvalidJsonOutput (perfect; stricter than Phase 18-02's 0/31). Multi-turn coherence stable through N=7 (first failures at N=10: invalid_json=2 at turns 7-10), refuting community claim from `ml-explore/mlx-lm#1011` about "approximately 5 rounds" degradation. Needle retrieval correct at server ceiling (32k via mlx_lm.server fallback).
+
+- **Real eval signal: 5-step PLAN-04 ceiling = constraint discovery (CORR-EVAL-02 FAIL):** Multi-file refactor measured FAIL with orphan_count=1. Agent read all 4 fixture files coherently then started rename on Calculator.fs, exhausted 5-step budget before touching Main.fs/Tests.fs. Not a model failure — architectural constraint surfacing. Eval doc §9 lists "if 5-step cap is raised, re-run CORR-EVAL-02" as v2.2 re-evaluation trigger. **First v2.2 candidate, data-driven.**
+
+- **Hybrid bash + Python(venv) HTTP-only harness (~1,115 LOC):** `bench/eval-qwen35-122b.sh` (~700 lines, 9 mode flags) + `bench/eval-humaneval-http.py` (159 lines, no `mlx_lm` import) + `bench/eval-needle.py` (~80 lines, no `mlx_lm` import). HTTP-only adaptation preserves the load-bearing constraint that mlx_lm.load() in-process would OOM the launchd-managed 122B service (~45 GB resident). 7 new fixtures (`refactor_multifile/{Calculator,Main,Tests}.fs`+README, `bug_binsearch.fs`, `bug_python_typeerror.py`, `bug_typescript_async.ts`, `multiturn_prompts.txt`).
+
+- **macOS evalplus silent-failure traps diagnosed and fixed:** `evalplus.evaluate` was returning silent pass@1=0 in chat mode due to (1) doubled signature when prompt+completion stitched (chat answers are full function defs); (2) `RLIMIT_AS` exceeding macOS per-process hard limit. Fixes: `python -m evalplus.sanitize` pre-pass + `EVALPLUS_MAX_MEMORY_BYTES=-1` env var. Both baked into `run_humaneval()`. Without these, the HumanEval+ verdict would have been entirely wrong.
+
+- **Three bash-strict-mode + macOS deviations auto-fixed:** `set -euo pipefail` interaction with `dotnet run` non-zero exit (commit `4b586b6`); `grep -c \|\| echo 0` under pipefail double-output (commit `289339d`); BSD `seq 2 1` countdown bug (commit `9603e52`). Patterns documented in plan SUMMARYs for future bash handler authors.
+
+**Stats:**
+
+- 1 phase (21), 5 plans, 10 requirements (100% closure; 9/10 met threshold; CORR-EVAL-02 FAIL = constraint discovery)
+- 282/1/0 tests (unchanged from v2.0; eval is observational only)
+- 31 files changed (+6,463/-26 LOC) — 12 new + 3 modified + 0 source-code changes
+- ~25 commits in milestone range
+- Bench gate 7/7 PASS preserved throughout
+- Wall-clock: ~1.5 days (2026-04-27 milestone start → 2026-04-28 eval doc shipped)
+- Disk: +0 GB tracked (`bench/.venv-eval/` gitignored)
+
+**Git range:** `45a649e` (v2.1 milestone start) → `4b6aeec` (Phase 21 phase-completion)
+
+**What's next:**
+
+v2.2 first candidate is **data-driven** from this eval (not from the deferred-list backlog):
+
+- **5-step PLAN-04 ceiling raise** — CORR-EVAL-02 FAIL surfaced this as the structural blocker for genuine multi-file refactor. Needs Core change (Domain.fs Plan validator). Re-evaluation trigger documented in eval doc §9.
+- **Cold-start measurement** — `--coldstart` handler ready; awaits scheduled disruption window
+- **Idiomatic F# generation improvement** — Coding-quality 6/10 (idiomatic F# 1/5 sub-score) surfaces gap; system prompt F# style hint or few-shot? observation window will determine
+
+Plus continuing v2.0-deferred candidates (compaction, slash commands, sub-agents, thinking-mode-on, native tool_calls, streaming) — these did not directly surface as pain in this eval; observation window determines priority.
+
+**Audit note:** v2.1 ran `/gsd:audit-milestone` post-Phase-21 (status: passed). 10/10 requirements satisfied; 5/5 plan-integration edges PASS; 1/1 E2E flows reproducible; 4/4 documentation cross-references PASS; verdict scorecard arithmetic verified (31+20+25+6 = 82). Tech debt aggregated into `.planning/milestones/v2.1-MILESTONE-AUDIT.md` (3 v2.2 candidates + 6 accepted items).
+
+---
+
 ## v2.0 Persistence + Planning (Shipped: 2026-04-27)
 
 **Delivered:** Broke the process-lifetime constraint that v1 deliberately accepted. Bundled cross-turn REPL memory + `--resume <id>` (PERSIST-01..04) with plan-then-execute mode + user approval gate (PLAN-01..04). Mid-milestone scope expansion: shipped Qwen 3.5 122B as single-model canonical (32B/72B retired; 35B preserved as cold rollback) + Qwen 3.5 protocol alignment (sampling params, 300s timeout, reasoning_content fallback, Role=User probe verdict).

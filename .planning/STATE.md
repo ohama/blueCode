@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-27 after v2.0 milestone complete)
+See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.1 milestone complete)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 안정적으로 돌린다 (single-model canonical post-v2.0; 35B retained as cold rollback via `--with-35b`)
-**Current focus:** v2.1 Empirical Qwen 3.5 122B Coding Evaluation — Phase 21, 5 plans, ~2hr eval + ~2hr analysis. Multi-dimensional measurement (Performance / Correctness / Reliability / Documentation) producing `documentation/qwen35-122b-coding-eval.md` with 100-point scorecard verdict.
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.1 verdict 82/100 KEEP confirmed; single-model canonical; 35B retained as cold rollback via `--with-35b`)
+**Current focus:** Between milestones. v2.2 scoping pending — first data-driven candidate: PLAN-04 5-step ceiling raise (CORR-EVAL-02 FAIL constraint discovery).
 
 ## Current Position
 
-Milestone: v2.1 Empirical Qwen 3.5 122B Coding Evaluation (started 2026-04-27)
-Phase: 21 (single phase) — COMPLETE; verification 15/15 truths verified
-Plan: 5 of 5 complete (21-01: Harness Scaffolding ✓, 21-02: HumanEval+ ✓, 21-03: Fixtures + Refactor/Langcoverage ✓, 21-04: Reliability Handlers + Orchestrator ✓, 21-05: Aggregation + Verdict Doc ✓)
-Status: **Total: 82/100, Recommendation: KEEP** — Correctness 31/40 (77.5%); Performance 20/25 (80%); Reliability 25/25 (100%); Coding-quality 6/10 (60%). Bench gate 7/7 PASS post-eval.
-Last activity: 2026-04-28 — Phase 21 complete; eval doc `documentation/qwen35-122b-coding-eval.md` (983 lines / 10 sections / verdict KEEP); ready for v2.1 milestone close
+Milestone: **between milestones** (v2.1 shipped 2026-04-28 with 82/100 KEEP)
+Phase: None active
+Plan: None active
+Status: Ready to scope v2.2 via `/gsd:new-milestone` or daily-drive observation window before scoping
+Last activity: 2026-04-28 — v2.1 milestone complete; archived to `.planning/milestones/v2.1-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `v2.1-phases/`
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ (Phase 21: 5/5 plans complete; verdict KEEP)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ○ (not started)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -25,8 +25,9 @@ Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 
 **v1.3:** 2 phases, 6 plans, 243 tests (+1), bench harness in repo + 54% prompt shrink + B2 recovery, 25 commits, ~1 day
 **v1.4:** 2 phases, 2 plans, 243 tests (unchanged), zero src/ diff, 7 commits, ~1 day
 **v2.0:** 7 phases, 19 plans, 282 tests (+39), 41 files +3993/-335 LOC, 106 commits, ~2 days, -85 GB disk (Qwen 2.5 retirement); bench gate trajectory 8/8→6/6→7/7
+**v2.1:** 1 phase (single), 5 plans, 282 tests (unchanged — observational), 31 files +6463/-26 LOC, ~25 commits, ~1.5 days; verdict 82/100 KEEP; bench gate 7/7 PASS preserved; zero src/ diff
 
-Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0}-phases/`.
+Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1}-phases/`.
 
 ## Accumulated Context
 
@@ -74,49 +75,21 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 21 Wave 4 wrap-up)
-Stopped at: Completed 21-04-PLAN.md — needle adapter + multiturn fixture created; schema-rate 0/50; needle 4/4 retrieved (max_model_len=32768); multiturn N=1..10 clean except N=10 (invalid_json=2); --full smoke-validated; bench gate 7/7 PASS
+Last session: 2026-04-28 (v2.1 milestone closeout)
+Stopped at: v2.1 archived; ready to scope v2.2 or open observation window
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 21` Wave 5 → 21-05 (eval doc: 100-point scorecard, write qwen35-122b-coding-eval.md)
+Next workflow trigger: `/gsd:new-milestone` (or daily-drive observation before scoping)
 
-### New Decisions (21-02)
+## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
-- **HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902 (headline)** — Qwen 3.5 122B-A10B-4bit MoE in the upper tier of open-weight coding models. Completion mode 0.226/0.213 is informational; chat mode is what blueCode actually uses at runtime.
-- **macOS evalplus scoring trap #1: doubled signature.** evalplus.evaluate stitches prompt + completion. Chat-mode completions are full function definitions (signature + docstring + body), producing doubled signatures that fail to parse → silent pass@1=0. Fix: `python -m evalplus.sanitize <input>.jsonl` BEFORE `evalplus.evaluate`. Now baked into `bench/eval-qwen35-122b.sh run_humaneval()`.
-- **macOS evalplus scoring trap #2: RLIMIT_AS exceeds hard limit.** `evalplus.eval.utils.reliability_guard` calls `resource.setrlimit(RLIMIT_AS, ...)` with 4 GiB default; macOS per-process hard limit is lower → every test subprocess crashes pre-execution with `ValueError("current limit exceeds maximum limit")`. Fix: set env var `EVALPLUS_MAX_MEMORY_BYTES=-1` so `query_maximum_memory_bytes()` returns `None` and `reliability_guard` skips setrlimit. Now baked into `run_humaneval()`.
-- **evalplus.evaluate result caching** — writes `<samples>_eval_results.json` cache; subsequent runs against the same samples file load from cache. Delete cache before re-scoring to force fresh evaluation. Not a regression-gate concern (each fresh eval LOG_DIR is unique).
-- **Both adapter and harness preserved on disk** — `bench/eval-humaneval-http.py` (159 lines, no `mlx_lm` imports) + `bench/eval-qwen35-122b.sh run_humaneval()` (now sanitize-aware). 21-03 + 21-04 + 21-05 inherit a fully-working scoring pipeline.
-- **Wall-clock**: chat ~28 min, completion ~33 min, total ~61 min for 328 inferences (within ~55 min plan estimate, slight overrun on completion mode).
+These are the measured baselines from v2.1. Use them as input when scoping v2.2 candidates.
 
-### New Decisions (21-03)
+- **HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902** — re-evaluation trigger if mlx_lm.server major version, Qwen 3.5 model card update / YaRN config change, or sampling defaults change
+- **Throughput median 34.6 tok/s; TTFT median 222 ms warm** — interactive UX baseline
+- **Schema rate 0/50 InvalidJsonOutput** — perfect compliance; v2.0 architecture decisions (strict JSON schema + 2-attempt retry + 5-step loop guard + thinking-mode-off) validated under stricter stress
+- **Multi-turn coherence stable through N=7** — refutes mlx-lm#1011 "approximately 5 rounds" community claim in our environment
+- **Needle 4/4 at max_model_len=32768** — mlx_lm.server does not expose YaRN-extended ceiling in /v1/models; 32k is the conservative working assumption
+- **5-step PLAN-04 ceiling structurally blocks multi-file refactor** — CORR-EVAL-02 FAIL with orphan_count=1; first v2.2 candidate, data-driven; needs Core change (Domain.fs Plan validator)
+- **Coding-quality 6/10 (idiomatic F# 1/5)** — generated F# is correct but procedural; pipelines / DU / pattern matching usage is low. Observation window will determine if this becomes a v2.2 candidate (system prompt F# style hint? few-shot?)
 
-- **CORR-EVAL-02 FAIL, orphan_count=1, 5-step budget exhaustion:** Agent read all 4 fixture files (README + 3 .fs, steps 1-4) and started editing Calculator.fs on step 5 (renamed `add3`→`sum3`), then ran out of budget before touching Main.fs/Tests.fs. The multi-file refactor task requires 7+ steps minimum. This is meaningful data: the 5-step PLAN-04 limit is a hard constraint for multi-file tasks. 21-05 scores CORR-EVAL-02 as 0/5 pts. All 3 diagnose tasks passed (CORR-EVAL-03/04 PASS) in 2 steps each.
-- **set +e / set -e bracket for dotnet run in eval harness:** `blueCode` exits 1 on `MaxLoopsExceeded`. Under `set -euo pipefail`, this silently aborted `run_refactor()` before orphan check and CORR-EVAL-02 verdict. Fix: bracket `dotnet run` invocations with `set +e` before and `set -e` after in both `run_refactor()` and `run_langcoverage()`. Same pattern applies to any future harness function that invokes `dotnet run` — blueCode non-zero exit is DATA, not a harness failure.
-- **EXIT trap scope (write-task fixtures only):** `bench/run.sh:18` traps only write-task fixtures (`bug_lastchar.fs`, `bug_average.fs`, `bug_binsearch.fs`, `refactor_multifile/*.fs`). Diagnose-only fixtures (`bug_divide_zero.fs`, `bug_python_typeerror.py`, `bug_typescript_async.ts`) excluded because agent prompt says "do not modify the file" — blueCode respects this and never writes to them. The convention is documented in the line-16-17 comment.
-- **refactor_orphan_count.txt timing is load-bearing:** Must be written inside `run_refactor()` BEFORE `bench/eval-qwen35-122b.sh` exits, because the subsequent `bench/run.sh --gate` run triggers the EXIT trap that restores fixtures to original state (with `add` in them). If orphan_count were computed after the trap, it would always be 0. 21-05 reads `bench/runs/qwen35-eval-20260428-093852/refactor_orphan_count.txt` for CORR-EVAL-02 scoring.
-
-### New Decisions (21-04)
-
-- **REL-EVAL-01: 0/50 InvalidJsonOutput** — 50 single-turn invocations, 0 schema errors. Stronger than Phase 18-02 baseline (0/31). Qwen 3.5 122B has essentially perfect JSON schema compliance for single-turn use.
-- **REL-EVAL-02: Multi-turn degradation first at N=10** — N=1 (1 turn), N=3 (3 turns), N=5 (4/5 succeed; turn4 MaxLoopsExceeded on parametrize task), N=7 (6/7 succeed), N=10 (5/10 succeed; 2 InvalidJsonOutput at turns 7-10). Coherence intact through N=7; schema errors emerge at N=10. mlx-lm#1011 "approximately 5 rounds" claim is partially confirmed: turns 7+ degrade, not "5 rounds" exactly.
-- **REL-EVAL-03: Needle 4/4 retrieved, max_model_len=32768** — mlx_lm.server does NOT expose max_model_len in /v1/models. Fallback to 32768 triggers. All 4 sizes (8k/16k/32k/32768) retrieved successfully. 32768 ceiling = 32k YaRN config; extended context not enabled.
-- **BSD seq countdown on macOS** — `seq 2 1` on macOS BSD generates `2 1` (counting down), not empty. Load-bearing invariant: use `[ n -ge 2 ] && seq 2 n || true` in bash harnesses to generate turns 2..N for N>=2 and empty for N=1.
-- **grep -c + pipefail** — `grep -c file || echo 0` doubles the 0 output (grep outputs 0 then exits 1; echo 0 appends). Use `grep -c file || true` to preserve grep's output. For pipelines with grep -l, append `|| true` to prevent pipefail abort when no files match.
-- **--full Option B validated** — smoke test (mock port 9) confirms dispatch chain and correct require_port_8001 first-call behavior. --coldstart excluded from run_full() (only echoed as "SKIPPED" message).
-
-## v2.1 Architectural Touch Points (load-bearing)
-
-- **Plan file is source-of-truth for scope:** `/Users/ohama/.claude/plans/async-weaving-pnueli.md` — 5-task structure, file map, reuse map, risk register, 100-point scorecard rubric. Approved 2026-04-27.
-- **Hybrid bash + Python(venv):** Pure-bash for performance/reliability/refactoring (reuses `bench/run.sh:30-46` `run()`, `bench/run.sh:111-157` `mt()`, `bench/run.sh:181-186` port precondition). Python (in `bench/.venv-eval/`) for HumanEval+ scoring (`evalplus` library) and long-context needle (mlx-runner template adapted to HTTP).
-- **mlx-runner constraint:** Sibling project `/Users/ohama/projs/mlx-runner/` uses `mlx_lm.load()` in-process; would OOM the launchd-managed 122B service (~70GB resident). MUST adapt prompts/methodology to call `localhost:8001/v1/chat/completions` over HTTP — never load a second instance.
-- **Bench gate stability mandatory post-eval:** `bash bench/run.sh --gate` exit 0 with 7/7 PASS must hold. Eval is purely external instrumentation; modifies fixtures (multi-file refactor) but EXIT trap restores them. NO `bench/baseline.json` or `src/` changes.
-- **No new tests in `tests/BlueCode.Tests/`:** Eval is observational; harness lives in `bench/eval-qwen35-122b.sh` + `bench/eval-humaneval-http.py` + `bench/eval-needle.py`. Test count stays 282/1/0.
-- **SSE streaming confirmed working** on mlx_lm.server (probed during 21-01 live run). First chunk combines role+content (NOT separate role-only chunk). awk filter `/"content":/ && !/"content":""/` captures it. curl exits 23 (broken pipe) when awk exits early — suppress with `|| true` in subshell. TTFT median 224 ms (trials 2-10 stable 214-230ms; trial 1 cold at 929ms).
-- **Python 3.14 + evalplus compatibility RESOLVED (21-01):** evalplus 0.3.1 pip install succeeded on Python 3.14.3. uv fallback not needed. `bench/.venv-eval/` populated and stable.
-- **Cold-start gated behind `--coldstart` flag** — disruptive (kills 122B for ~3min via `launchctl kickstart`). Per scope decision, deferred from default `--full`; reproducibility instructions in eval doc §10.
-- **Cloud comparison (Claude/GPT-4) explicit non-goal** — documented in eval doc §6.3 as deliberate boundary.
-- **Atomic commits per CLAUDE.md:** 5 task commits + plan-meta + final eval doc commit. Format: `chore(21-XX): {task-name}` for instrumentation; `docs(21-XX): write coding eval verdict doc` for the final doc.
-
-### Observation (21-05)
-
-- 2026-04-28 — v2.1 Phase 21 complete; empirical Qwen 3.5 122B coding evaluation produced `documentation/qwen35-122b-coding-eval.md` with 100-point scorecard verdict (Total: 82/100, Recommendation: KEEP). Bench gate 7/7 PASS post-eval. No `src/` or `bench/baseline.json` modifications.
+For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v2.1-phases/`.
