@@ -236,9 +236,20 @@ with open(src) as fin, open(dst, 'w') as fout:
         count += 1
 print(f'wrote {count} entries to {dst}')
 PYEOF
-    # Run evalplus.evaluate; tee to *_score.txt so 21-05 can grep pass@1 without re-running
-    "$VENV_PY" -m evalplus.evaluate humaneval \
-      --samples "$eval_input" \
+    # Sanitize completions BEFORE evaluate.
+    #   Why: evalplus.evaluate stitches prompt + completion. Our chat-mode completions already
+    #   contain full function definitions (signature + docstring + body). Without sanitize, the
+    #   stitched solution has a doubled signature/docstring and is unparseable → all tests fail
+    #   silently with pass@1=0.000. evalplus.sanitize extracts the body cleanly so the stitched
+    #   solution parses. (Diagnosed and fixed in 21-02.)
+    "$VENV_PY" -m evalplus.sanitize "$eval_input" \
+      || { echo "evalplus.sanitize failed for $mode" >&2; continue; }
+    local sanitized="${eval_input%.jsonl}-sanitized.jsonl"
+    # Run evalplus.evaluate; tee to *_score.txt so 21-05 can grep pass@1 without re-running.
+    #   EVALPLUS_MAX_MEMORY_BYTES=-1 disables RLIMIT_AS setrlimit which fails on macOS
+    #   (current limit exceeds maximum limit). Without it, every test process crashes pre-test.
+    EVALPLUS_MAX_MEMORY_BYTES=-1 "$VENV_PY" -m evalplus.evaluate humaneval \
+      --samples "$sanitized" \
       | tee "$LOG_DIR/humaneval_${mode}_score.txt" \
       || echo "evalplus.evaluate exited non-zero for $mode (check output above)" >&2
   done
