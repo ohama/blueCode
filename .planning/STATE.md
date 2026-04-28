@@ -11,11 +11,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-27 after v2.0 milestone complete)
 
 Milestone: v2.1 Empirical Qwen 3.5 122B Coding Evaluation (started 2026-04-27)
 Phase: 21 (single phase) — in progress; Wave 3 complete
-Plan: 3 of 5 complete (21-01: Harness Scaffolding ✓, 21-02: HumanEval+ ✓, 21-03: Fixtures + Refactor/Langcoverage ✓)
-Status: CORR-EVAL-02 FAIL (orphan_count=1, 5-step limit); CORR-EVAL-03/04 PASS (all 3 diagnoses correct); bench gate 7/7 PASS
-Last activity: 2026-04-28 — Completed 21-03-PLAN.md (7 fixtures; EXIT trap extended; run_refactor/run_langcoverage live; set -e/dotnet bug fixed)
+Plan: 4 of 5 complete (21-01: Harness Scaffolding ✓, 21-02: HumanEval+ ✓, 21-03: Fixtures + Refactor/Langcoverage ✓, 21-04: Reliability Handlers + Orchestrator ✓)
+Status: REL-EVAL-01 0/50 PASS; REL-EVAL-02 N=1..7 clean / N=10: 2 InvalidJsonOutput; REL-EVAL-03 4/4 needle retrieved; bench gate 7/7 PASS
+Last activity: 2026-04-28 — Completed 21-04-PLAN.md (needle adapter; multiturn fixture; schema-rate/multiturn/needle live; BSD seq + grep-c pipefail bugs fixed)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21: 3/5 plans complete)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ◆ (Phase 21: 4/5 plans complete)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -74,10 +74,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 21 Wave 3 wrap-up)
-Stopped at: Completed 21-03-PLAN.md — 7 fixtures; EXIT trap extended; run_refactor/run_langcoverage live; CORR-EVAL-02 FAIL (orphan_count=1); CORR-EVAL-03/04 PASS; bench gate 7/7 PASS
+Last session: 2026-04-28 (Phase 21 Wave 4 wrap-up)
+Stopped at: Completed 21-04-PLAN.md — needle adapter + multiturn fixture created; schema-rate 0/50; needle 4/4 retrieved (max_model_len=32768); multiturn N=1..10 clean except N=10 (invalid_json=2); --full smoke-validated; bench gate 7/7 PASS
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 21` Wave 4 → 21-04 (--multiturn, --schema-rate, --needle, --coldstart, --full handlers)
+Next workflow trigger: `/gsd:execute-phase 21` Wave 5 → 21-05 (eval doc: 100-point scorecard, write qwen35-122b-coding-eval.md)
 
 ### New Decisions (21-02)
 
@@ -94,6 +94,15 @@ Next workflow trigger: `/gsd:execute-phase 21` Wave 4 → 21-04 (--multiturn, --
 - **set +e / set -e bracket for dotnet run in eval harness:** `blueCode` exits 1 on `MaxLoopsExceeded`. Under `set -euo pipefail`, this silently aborted `run_refactor()` before orphan check and CORR-EVAL-02 verdict. Fix: bracket `dotnet run` invocations with `set +e` before and `set -e` after in both `run_refactor()` and `run_langcoverage()`. Same pattern applies to any future harness function that invokes `dotnet run` — blueCode non-zero exit is DATA, not a harness failure.
 - **EXIT trap scope (write-task fixtures only):** `bench/run.sh:18` traps only write-task fixtures (`bug_lastchar.fs`, `bug_average.fs`, `bug_binsearch.fs`, `refactor_multifile/*.fs`). Diagnose-only fixtures (`bug_divide_zero.fs`, `bug_python_typeerror.py`, `bug_typescript_async.ts`) excluded because agent prompt says "do not modify the file" — blueCode respects this and never writes to them. The convention is documented in the line-16-17 comment.
 - **refactor_orphan_count.txt timing is load-bearing:** Must be written inside `run_refactor()` BEFORE `bench/eval-qwen35-122b.sh` exits, because the subsequent `bench/run.sh --gate` run triggers the EXIT trap that restores fixtures to original state (with `add` in them). If orphan_count were computed after the trap, it would always be 0. 21-05 reads `bench/runs/qwen35-eval-20260428-093852/refactor_orphan_count.txt` for CORR-EVAL-02 scoring.
+
+### New Decisions (21-04)
+
+- **REL-EVAL-01: 0/50 InvalidJsonOutput** — 50 single-turn invocations, 0 schema errors. Stronger than Phase 18-02 baseline (0/31). Qwen 3.5 122B has essentially perfect JSON schema compliance for single-turn use.
+- **REL-EVAL-02: Multi-turn degradation first at N=10** — N=1 (1 turn), N=3 (3 turns), N=5 (4/5 succeed; turn4 MaxLoopsExceeded on parametrize task), N=7 (6/7 succeed), N=10 (5/10 succeed; 2 InvalidJsonOutput at turns 7-10). Coherence intact through N=7; schema errors emerge at N=10. mlx-lm#1011 "approximately 5 rounds" claim is partially confirmed: turns 7+ degrade, not "5 rounds" exactly.
+- **REL-EVAL-03: Needle 4/4 retrieved, max_model_len=32768** — mlx_lm.server does NOT expose max_model_len in /v1/models. Fallback to 32768 triggers. All 4 sizes (8k/16k/32k/32768) retrieved successfully. 32768 ceiling = 32k YaRN config; extended context not enabled.
+- **BSD seq countdown on macOS** — `seq 2 1` on macOS BSD generates `2 1` (counting down), not empty. Load-bearing invariant: use `[ n -ge 2 ] && seq 2 n || true` in bash harnesses to generate turns 2..N for N>=2 and empty for N=1.
+- **grep -c + pipefail** — `grep -c file || echo 0` doubles the 0 output (grep outputs 0 then exits 1; echo 0 appends). Use `grep -c file || true` to preserve grep's output. For pipelines with grep -l, append `|| true` to prevent pipefail abort when no files match.
+- **--full Option B validated** — smoke test (mock port 9) confirms dispatch chain and correct require_port_8001 first-call behavior. --coldstart excluded from run_full() (only echoed as "SKIPPED" message).
 
 ## v2.1 Architectural Touch Points (load-bearing)
 
