@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone complete)
+See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.3 milestone scoped)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.2 verdict 87/100 KEEP; multi-file refactor architecturally enabled but blocked by comprehension bias; single-model canonical; 35B retained as cold rollback via `--with-35b`)
-**Current focus:** Between milestones. v2.3 scoping pending — first data-driven candidate: **COMP-BIAS-01** (persistent extraction bias on shared-prefix function names; CORR-EVAL-02 FAIL x2 with identical step-5 thoughts across two different READMEs).
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.2 verdict 87/100 KEEP; v2.3 unlocks multi-file refactor end-to-end via comprehension-layer intervention; single-model canonical; 35B retained as cold rollback via `--with-35b`)
+**Current focus:** v2.3 Comprehension Layer — 3 phases (24/25/26) covering multi-prong intervention (P1 system prompt + P2 few-shot + P3 plan-mode pre-flight enumeration). Goal: CORR-EVAL-02 PASS → Total 87 → 92/100.
 
 ## Current Position
 
-Milestone: **between milestones** (v2.2 shipped 2026-04-28 with 87/100 KEEP)
-Phase: None active
-Plan: None active
-Status: Ready to scope v2.3 via `/gsd:new-milestone`. v2.2 surfaced v2.3 candidates: COMP-BIAS-01 (highest), IDIOMATIC-FS-01 (medium), COLDSTART-PRISTINE-01 (low). Plus v2.0/v2.1 carried-forward (SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01, STM-01).
-Last activity: 2026-04-28 — v2.2 milestone complete; archived to `.planning/milestones/v2.2-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `v2.2-phases/`
+Milestone: v2.3 Comprehension Layer (started 2026-04-28; scoped from v2.2 audit's COMP-BIAS-01 data-driven first candidate)
+Phase: Not started (defining requirements + roadmap)
+Plan: —
+Status: Defining requirements; no active phase yet
+Last activity: 2026-04-28 — v2.3 milestone started; scope confirmed (multi-prong P1+P2+P3 intervention; skip research)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ○ (not started)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (defining)
 
 ## Performance Metrics (cumulative, frozen)
 

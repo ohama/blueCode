@@ -14,18 +14,35 @@ v2.2 Multi-file Capability shipped 2026-04-28. First **data-driven** v2.2 candid
 
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2}-ROADMAP.md`.
 
-## Next Milestone (post-v2.2)
+## Current Milestone: v2.3 Comprehension Layer
 
-No active milestone. v2.3 scoping pending. **First candidate is data-driven** from v2.2 audit:
+**Goal:** Resolve the persistent extraction bias on shared-prefix function names that v2.2 audit surfaced as the new bottleneck (CORR-EVAL-02 FAIL x2 with textually identical step-5 thoughts across two completely different READMEs). Multi-prong intervention: system prompt enumeration guidance + few-shot multi-file examples + plan-mode pre-flight rename-target enumeration. Verify by re-running CORR-EVAL-02 to PASS (orphan_count=0); flips Correctness 31/40 → 36/40 → Total 87 → 92.
 
-- **COMP-BIAS-01 (highest priority)** — Persistent extraction bias on shared-prefix function names. Two CORR-EVAL-02 runs with completely different READMEs produced textually identical step-5 thoughts. Multi-prong intervention candidate: system prompt enumeration guidance for multi-file refactors + few-shot multi-file examples in plan-mode prompt + plan-mode pre-flight rename-target enumeration. Re-evaluation criterion pre-defined: CORR-EVAL-02 PASS flips Correctness 31/40 → 36/40 → Total 87 → 92.
+**Why now:** Data-driven from v2.2 audit (`milestones/v2.2-MILESTONE-AUDIT.md`). v2.2 disproved the v2.1 hypothesis that the 5-step ceiling alone was the constraint; the comprehension layer is now the load-bearing layer to fix. Two README variants (902-char prose vs 2128-char enumerated rewrite) produced textually identical step-5 thoughts — README clarity cannot fix the bias. Multi-prong attack required.
 
-Plus medium/low priority candidates surfaced by v2.2:
-- **IDIOMATIC-FS-01** (medium) — Coding-quality 1/5 may be Python-transcript artifact; needs F# task fixtures
-- **COLDSTART-PRISTINE-01** (low) — post-reboot pristine case untested
+**Target features (1 candidate, 3 prongs):**
 
-Plus carried-forward from v2.0/v2.1 (still alive):
-- SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01, STM-01 (deferred 8x; defer pattern is itself the signal)
+- **P1: System prompt enumeration guidance** — `defaultSystemPrompt` or `planSystemPromptSuffix` updated with hint instructing the agent to enumerate ALL rename targets from spec before editing
+- **P2: Few-shot multi-file examples** — Plan-mode prompt includes 1-2 inline correct multi-file refactor plan examples
+- **P3: Plan-mode pre-flight rename-target enumeration** — Domain.fs Plan validator extended; new validator pass checks all rename targets from user prompt are enumerated as plan steps; new `RenameTargetsNotEnumerated` PlanInvalid reason; 2-attempt retry path
+
+**Scope (per v2.3 scope agreement 2026-04-28):**
+
+- 3 phases (24, 25, 26): Prompt-level (P1+P2 bundled) → Architectural (P3) → Re-eval + verdict
+- ~4-5 days estimated; v2.0-style mid-size milestone but architecturally cleaner (one bottleneck, three prongs)
+- bench gate stability mandatory after each phase
+- Test count grows (P3 adds new validator + tests); target 284 → ~290+
+- No `bench/baseline.json` modifications
+
+**Phase numbering:** continues at 24 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20, v2.1: 21, v2.2: 22-23).
+
+**Excluded** with explicit rationale (deferred to later milestones):
+- IDIOMATIC-FS-01 — Coding-quality 1/5 medium-priority; may be Python-transcript artifact; needs F# task fixtures; v2.4+ candidate
+- COLDSTART-PRISTINE-01 — Post-reboot pristine case untested; needs scheduled disruption window; v2.4+ candidate (low urgency)
+- SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01 — Carried-forward from v2.0/v2.1; observation-driven (no daily-driver pain signal); v2.4+ candidates
+- THINK-01 — v2.1 data says thinking-OFF gives perfect schema 0/50; ON regresses; defer indefinitely
+- TOOLCALLS-01 — Custom JSON schema is 0/50 perfect; v3.0 territory
+- STM-01 — Deferred 8x; TTFT 222ms warm is already instant; defer pattern is the signal
 
 ## Future Milestone Goals (post-v2.1)
 
@@ -93,11 +110,19 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - ✓ Constraint discovery #2: persistent extraction bias on shared-prefix function names — CORR-EVAL-02 re-run produced FAIL twice with textually identical step-5 thoughts across two completely different READMEs (902-char prose + 2128-char enumerated rewrite). Disproves v2.1 hypothesis that ceiling alone was the constraint; surfaces comprehension layer as new bottleneck. Documented in eval doc §2.4 + §8 Caveat #6 + §9 item 8 — v2.2 (PLAN-CAP-04..05 partial-by-design per Option C)
 - ✓ Third macOS bash-strict-mode pattern documented — `4bcd8a4 fix(23-01): move mkdir before tee in run_coldstart`. Pattern: under `set -euo pipefail`, any I/O command must verify its target dir exists first — v2.2 (23-01)
 
-### Active
+### Active (v2.3 Comprehension Layer)
 
-<!-- No active milestone. Next milestone via /gsd:new-milestone. -->
+<!-- v2.3 scope agreed 2026-04-28 from v2.2 audit's COMP-BIAS-01 first candidate. Multi-prong (P1+P2+P3) full intervention. -->
 
-(None — between milestones)
+#### Comprehension intervention
+- [ ] **COMP-01**: System prompt instructs agent to enumerate ALL rename targets from spec before editing (P1 prong)
+- [ ] **COMP-02**: Plan-mode prompt includes 1-2 inline few-shot examples of correct multi-file refactor plans (P2 prong)
+- [ ] **COMP-03**: Plan validator new pre-flight pass checks user-prompt rename targets are enumerated as plan steps; new `RenameTargetsNotEnumerated` PlanInvalid reason; 2-attempt retry (P3 prong)
+- [ ] **COMP-04**: Tests + bench gate regression hold (PlanValidator new tests; AgentLoop new tests; 7/7 PASS held; per-fixture step counts unchanged for W1/W2/B2/T1/T5/T6/MT)
+
+#### Re-evaluation
+- [ ] **COMP-05**: CORR-EVAL-02 re-run produces orphan_count=0 PASS (`bench/eval-qwen35-122b.sh --refactor`)
+- [ ] **COMP-06**: Eval doc updated; scorecard re-aggregated (Correctness 31/40 → 36/40; Total 87 → 92; final line `**Total: 92/100, Recommendation: KEEP**`)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -253,4 +278,4 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-28 after v2.2 milestone shipped — Multi-file Capability (Phase 22 ceiling raise + Phase 23 cold-start) flipped eval doc verdict **82 → 87/100, KEEP** (Performance 20→25; +5 from cold-start). CORR-EVAL-02 still FAIL post-ceiling-raise; persistent extraction bias on shared-prefix function names is v2.3 first candidate (data-driven). 8 milestones shipped. Daily-driver use ongoing.*
+*Last updated: 2026-04-28 after starting v2.3 Comprehension Layer milestone — multi-prong (P1+P2+P3) intervention on persistent extraction bias surfaced by v2.2 audit. Target: CORR-EVAL-02 PASS → Total 87 → 92/100. 8 milestones shipped (v2.3 in progress).*
