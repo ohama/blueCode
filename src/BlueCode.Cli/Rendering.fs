@@ -111,7 +111,7 @@ let renderError (err: AgentError) : string =
     | SchemaViolation detail -> sprintf "LLM output schema violation: %s" detail
     | UnknownTool(ToolName n) -> sprintf "Unknown tool: %s" n
     | ToolFailure(_, ex) -> sprintf "Tool execution failed: %s" ex.Message
-    | MaxLoopsExceeded -> "Max loops exceeded (5 steps with no final answer)."
+    | MaxLoopsExceeded -> "Max loops exceeded (10 steps with no final answer)."
     | LoopGuardTripped action ->
         sprintf "Loop guard: action '%s' was called 3 times with the same input. Aborting." action
     | UserCancelled -> "Cancelled."

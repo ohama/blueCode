@@ -499,7 +499,7 @@ let runPlanTurn
                 | SchemaViolation d ->
                     sprintf "[PLAN PARSE ERROR] Your previous response did not match the plan schema: %s. Emit action=\"plan\" with input={steps:[...], rationale:\"...\"}." d
                 | PlanInvalid d ->
-                    sprintf "[PLAN INVALID] Your previous plan failed validation: %s. Constraints: max 5 steps; tool must be one of read_file/write_file/list_dir/run_shell/edit_file/glob_search/grep_search; no two adjacent steps may be byte-identical." d
+                    sprintf "[PLAN INVALID] Your previous plan failed validation: %s. Constraints: max 10 steps; tool must be one of read_file/write_file/list_dir/run_shell/edit_file/glob_search/grep_search; no two adjacent steps may be byte-identical." d
                 | _ ->
                     "[PLAN ERROR] Re-emit a valid plan."
             { Role = User; Content = detail }
