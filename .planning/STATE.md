@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.3 milestone scoped)
 ## Current Position
 
 Milestone: v2.3 Comprehension Layer (started 2026-04-28; scoped from v2.2 audit's COMP-BIAS-01 data-driven first candidate)
-Phase: 24 (Prompt-Level Intervention P1+P2) — not started; ready to plan
-Plan: 0 of 2-3 (Phase 24); Phase 25 + 26 follow
-Status: Ready to plan via `/gsd:plan-phase 24`. ROADMAP.md created with 3 phases (24/25/26); REQUIREMENTS.md with 6 reqs (COMP-01..06); user-approved scope (multi-prong P1+P2+P3 full).
-Last activity: 2026-04-28 — v2.3 ROADMAP.md + REQUIREMENTS.md created; user approved roadmap structure; ready for Phase 24 planning
+Phase: 24 (Prompt-Level Intervention P1+P2) — in progress
+Plan: 1 of 2-3 complete (Phase 24); Phase 25 + 26 follow
+Status: In progress. Plan 24-01 (P1 enumeration directive) complete. Bench gate 7/7 PASS preserved. Ready for Plan 24-02 (P2 few-shot examples).
+Last activity: 2026-04-28 — Plan 24-01 complete: P1 enumeration directive added to planSystemPromptSuffix (695→879 chars). Bench gate GATE PASS (7/7) confirmed.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (Phase 24/25/26: 0/3 phases; ready to plan)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (Phase 24: 1/2-3 plans; Phase 25/26 follow)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -52,6 +52,7 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Independent constants pattern confirmed** — PlanValidator.MaxPlanSteps and AgentConfig.MaxLoops remain separate values (not merged into AgentConstants.fs). Rationale: PlanValidator is invoked from QwenHttpClient parse layer without AgentConfig in scope (Phase 16 design invariant).
 - **Usage guidance clause (22-02)** — `planSystemPromptSuffix` updated to "1-10 steps. Use the minimum steps needed; reserve the full budget only for tasks requiring reads across multiple files before editing." First variant held without iteration. T6 used 5/5 steps (at baseline_max; no regression). Suffix char count: 695 chars (≤ 900 budget). `defaultSystemPrompt` and `Role = User` invariant unchanged.
 - **CORR-EVAL-02 persistent bias (22-04 double-FAIL)** — Two independent CORR-EVAL-02 runs both FAIL with orphan_count=1. Agent has a persistent extraction bias toward `add3→sum3`, ignoring `add→sum`. README rewrite (Option A, 2026-04-28) did not fix the bias — step-5 thought was textually identical across both runs. Next resolution path: system prompt guidance for multi-file refactors or fixture redesign. Eval doc remains 82/100 KEEP.
+- **P1 enumeration directive (24-01)** — `planSystemPromptSuffix` extended from 695→879 chars with blank-line-separated paragraph: "When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly in your thought before editing. Do not start editing until the full list is enumerated." Directive is plan-mode-only (no impact on agent-loop path). Bench gate 7/7 PASS preserved. COMP-01 DONE.
 
 ### Pending Todos (v2.1 candidates)
 
@@ -77,11 +78,11 @@ For awareness only — DO NOT auto-pull. v2.1 scope comes from observation windo
 
 **Root cause (updated):** Model has a **persistent extraction bias** toward `add3 → sum3`. The base `add` function is treated as canonical and not flagged as a rename target despite explicit README instruction. This is a model knowledge/attention pattern, not a README clarity gap. Option A (README rewrite) is now closed as FAILED.
 
-**Options for resolution (user opt-in required):**
+**Options for resolution:**
 1. ~~Rewrite README~~ — ATTEMPTED AND FAILED (2026-04-28, orphan_count=1 on second attempt)
-2. Add system prompt guidance for multi-file refactors: "Before editing, list ALL functions to rename from the spec" — forces explicit planning of both renames before any edit action
-3. Redesign fixture to avoid ambiguity (e.g., rename only `add3 → sum3`; or use distinct names that have no shared prefix)
-4. Accept 82/100 as final v2.2 verdict and close milestone
+2. **IN PROGRESS (v2.3)** — P1 system prompt enumeration directive DONE (24-01). P2 few-shot examples next (24-02). Full re-eval at COMP-05 (Phase 26).
+3. Redesign fixture to avoid ambiguity (fallback if P1+P2+P3 all fail)
+4. ~~Accept 82/100~~ — superseded by user decision to pursue v2.3
 
 Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 - Phase 20 missing formal `20-VERIFICATION.md` (per-plan SUMMARYs substitute)
@@ -91,10 +92,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 22, Plan 04 recovery)
-Stopped at: CORR-EVAL-02 FAIL x2 confirmed. README rewrite (Option A) attempted — agent produced identical step-5 miscomprehension despite reading new 2128-char README. Eval doc unchanged at 82/100. Bench gate 7/7 PASS. Phase 22 structurally complete (ceiling raise delivered).
+Last session: 2026-04-28 (Phase 24, Plan 01)
+Stopped at: Plan 24-01 complete. P1 enumeration directive added to planSystemPromptSuffix (695→879 chars). Bench gate GATE PASS (7/7). Plan-meta commit docs(24-01) done.
 Resume file: None
-Next workflow trigger: User decision on remaining CORR-EVAL-02 options (system prompt guidance / fixture redesign / accept 82/100), then `/gsd:complete-milestone` or Phase 23 opt-in
+Next workflow trigger: `/gsd:plan-phase 24` for Plan 24-02 (P2 few-shot examples in planSystemPromptSuffix)
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
