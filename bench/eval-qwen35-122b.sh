@@ -462,12 +462,12 @@ run_needle() {
   echo "needle: $LOG_DIR/needle.json"
 }
 run_coldstart() {
-  echo "===== COLDSTART (DISRUPTIVE — kills 122B for ~3min) =====" | tee -a "${LOG_DIR:-/tmp}/timeline.txt"
+  mkdir -p "$LOG_DIR"
+  echo "===== COLDSTART (DISRUPTIVE — kills 122B for ~3min) =====" | tee -a "$LOG_DIR/timeline.txt"
   echo "  This will: launchctl kickstart -k gui/$(id -u)/com.ohama.qwen122b"
   echo "  Then poll /v1/models every 2s with 240s timeout."
   echo "  Continue? [Ctrl-C to abort, Enter to proceed]"
   read -r _ || true
-  mkdir -p "$LOG_DIR"
   local out="$LOG_DIR/coldstart.json"
   local kicked_at
   kicked_at=$(date +%s)
