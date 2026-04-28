@@ -256,8 +256,78 @@ PYEOF
   echo "humaneval: results at $LOG_DIR/humaneval_results.json"
   echo "humaneval: scores at $LOG_DIR/humaneval_{chat,completion}_score.txt"
 }
-run_refactor()     { echo "refactor handler implemented in 21-03; not yet available" >&2; exit 4; }
-run_langcoverage() { echo "langcoverage handler implemented in 21-03; not yet available" >&2; exit 4; }
+run_refactor() {
+  require_port_8001
+  mkdir -p "$LOG_DIR"
+  local fixture_dir="bench/fixtures/refactor_multifile"
+  local prompt
+  prompt="Read $fixture_dir/README.md and perform the refactor task it describes. Modify the files in $fixture_dir as needed. Do not modify the README.md."
+  local out="$LOG_DIR/refactor_multifile_diff.txt"
+  local meta="$LOG_DIR/refactor_multifile.meta"
+  echo "===== refactor_multifile (model=122b) =====" | tee -a "$LOG_DIR/timeline.txt"
+  echo "PROMPT: $prompt" >> "$out"
+  echo "----" >> "$out"
+  local start_ts
+  start_ts=$(date +%s)
+  /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "$prompt" >> "$out" 2>&1
+  local exit_code=$?
+  local end_ts
+  end_ts=$(date +%s)
+  local elapsed=$((end_ts - start_ts))
+  echo "----" >> "$out"
+  echo "===== POST-REFACTOR FILE STATES =====" >> "$out"
+  for f in Calculator.fs Main.fs Tests.fs; do
+    echo "--- $fixture_dir/$f ---" >> "$out"
+    cat "$fixture_dir/$f" >> "$out"
+    echo "" >> "$out"
+  done
+  echo "===== ORPHAN-add CHECK =====" >> "$out"
+  # Pass criteria: no orphan references to `add` (allowing `add3` if it became `sum3` is also fine; agent task spec is rename `add` → `sum`)
+  # IMPORTANT: This check runs INSIDE run_refactor (before eval-qwen35-122b.sh exits) and BEFORE
+  # bench/run.sh's EXIT trap fires later during the gate run. Once the gate's trap restores fixtures,
+  # they will contain `add` again — so we MUST capture the count NOW and persist it to a file
+  # 21-05 reads (refactor_orphan_count.txt) for CORR-EVAL-02 scoring (5 pts if 0; 0 pts otherwise).
+  local orphan_count
+  orphan_count=$(grep -cE '\b(let |Calculator\.)add\b' \
+      "$fixture_dir/Calculator.fs" \
+      "$fixture_dir/Main.fs" \
+      "$fixture_dir/Tests.fs" 2>/dev/null | awk -F: '{sum+=$2} END {print sum+0}')
+  echo "$orphan_count" > "$LOG_DIR/refactor_orphan_count.txt"
+  echo "orphan_add_references=$orphan_count" >> "$out"
+  if [ "$orphan_count" -gt 0 ]; then
+    echo "CORR-EVAL-02 FAIL: $orphan_count orphan 'add' references remain after refactor" \
+      | tee -a "$LOG_DIR/timeline.txt" "$out"
+    # Do NOT exit non-zero here — we want eval-qwen35-122b.sh to continue cleanly so the
+    # subsequent bench gate run can restore fixtures via its EXIT trap. 21-05 reads
+    # refactor_orphan_count.txt and applies pass/fail (5 pts if 0; 0 pts otherwise).
+  else
+    echo "CORR-EVAL-02 PASS: 0 orphan 'add' references remain" | tee -a "$LOG_DIR/timeline.txt"
+  fi
+  echo "label=refactor_multifile model=122b exit=$exit_code elapsed=${elapsed}s orphan_add_refs=$orphan_count" > "$meta"
+  echo "  -> exit=$exit_code elapsed=${elapsed}s orphan_add_refs=$orphan_count" | tee -a "$LOG_DIR/timeline.txt"
+}
+run_langcoverage() {
+  require_port_8001
+  mkdir -p "$LOG_DIR"
+  for fixture in "bug_python_typeerror.py" "bug_typescript_async.ts" "bug_binsearch.fs"; do
+    local label="${fixture%.*}_diagnose"
+    local out="$LOG_DIR/${label}.log"
+    local meta="$LOG_DIR/${label}.meta"
+    local prompt="Read bench/fixtures/$fixture and identify the bug. Describe the bug in 1-3 sentences and name a triggering input that demonstrates the failure. Do not modify the file."
+    echo "===== $label (model=122b) =====" | tee -a "$LOG_DIR/timeline.txt"
+    echo "PROMPT: $prompt" >> "$out"
+    echo "----" >> "$out"
+    local start_ts
+    start_ts=$(date +%s)
+    /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "$prompt" >> "$out" 2>&1
+    local exit_code=$?
+    local end_ts
+    end_ts=$(date +%s)
+    local elapsed=$((end_ts - start_ts))
+    echo "label=$label model=122b exit=$exit_code elapsed=${elapsed}s" > "$meta"
+    echo "  -> exit=$exit_code elapsed=${elapsed}s" | tee -a "$LOG_DIR/timeline.txt"
+  done
+}
 run_multiturn()    { echo "multiturn handler implemented in 21-04; not yet available" >&2; exit 4; }
 run_schema_rate()  { echo "schema-rate handler implemented in 21-04; not yet available" >&2; exit 4; }
 run_needle()       { echo "needle handler implemented in 21-04; not yet available" >&2; exit 4; }
