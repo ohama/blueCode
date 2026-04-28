@@ -147,8 +147,8 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 
 **참고 자료:**
 - `~/projs/claw-code-agent-retired/` — Python 전체 구현 (70+ 모듈). 아키텍처 레퍼런스.
-- `./localLLM/qwen_agent_rewrite.md` — "Reuse architecture, remove complexity" 원칙
-- `./localLLM/qwen_claude_full_design.md` — 에이전트 루프 설계 원본
+- ~~`./localLLM/qwen_agent_rewrite.md`~~ — "Reuse architecture, remove complexity" 원칙 _(directory removed 2026-04-28 post-v2.2; historical design notes from v1.0 milestone era)_
+- ~~`./localLLM/qwen_claude_full_design.md`~~ — 에이전트 루프 설계 원본 _(removed 2026-04-28; see above)_
 - `documentation/howto/` — 이번 milestone 세션 learnings (Base vs Instruct 판별, 로컬 LLM 서버 디버깅, Expecto Console 충돌)
 
 **Known issues / technical debt (v1.1 target):**
@@ -176,7 +176,7 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 |----------|-----------|---------|
 | F# + .NET 10 | 사용자 선호 언어, 최신 타입 시스템 | ✓ Good — DU/Result/task가 agent 상태를 타입 수준에서 완전히 표현. 1일 내 v1.0 출시 |
 | Mac 전용, `dotnet run` | 크로스플랫폼/AOT 배포 복잡도 제거 | ✓ Good — 범위 관리 효과적, UAT 시점에 platform 문제 없음 |
-| v1 Minimal scope (4 툴 + 엄격 JSON + 5루프) | localLLM/ 설계 노트의 "simple → evolve" | ✓ Good — Qwen 안정성 확보 후 v1.1에서 확장 예정 |
+| v1 Minimal scope (4 툴 + 엄격 JSON + 5루프) | localLLM/ 설계 노트의 "simple → evolve" _(localLLM/ removed 2026-04-28 post-v2.2)_ | ✓ Good — Qwen 안정성 확보 후 v1.1에서 확장 예정 |
 | Python router(9000) 우회 직접 라우팅 | Intent/모델 선택을 F# DU로 표현 | ✓ Good — 타입 수준 정확성 + Python 의존 제거 |
 | Claude 프롬프트 재사용 금지 | Qwen format error 회피 | ✓ Good — JSON 스키마 설계가 안정적 결과 생성 |
 | NuGet 자유 사용 | .NET 관례 | ✓ Good — 표준 라이브러리 활용이 안정적 |
