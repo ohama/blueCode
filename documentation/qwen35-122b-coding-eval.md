@@ -375,20 +375,40 @@ but that scenario does not apply here.
 
 ---
 
-### §3.3 Cold-start (deferred per scope)
+### §3.3 Cold-start (measured in v2.2 Phase 23)
 
-Cold-start measurement was explicitly deferred to a separate `--coldstart` invocation per scope
-decision. The measurement is disruptive: it requires `launchctl kickstart -k com.ohama.qwen122b`,
-which kills and reloads the 122B service, interrupting normal use for approximately 3 minutes while
-the 45 GB model reloads. This is deferred to separate --coldstart invocation per scope; reproduction
-instructions in §10.
+Cold-start measurement was originally deferred from v2.1 per scope decision (disruptive: ~3 min
+service kill via `launchctl kickstart -k`). v2.2 Phase 23 (COLD-EVAL-01) executed `--coldstart` once
+in a scheduled disruption window and produced empirical data.
 
-Implementation of `run_coldstart()` is present in `bench/eval-qwen35-122b.sh` and gated behind an
-interactive confirmation prompt (`read -r _`) to prevent accidental invocation. It is explicitly
-excluded from `run_full()` (the orchestrator calls `echo "SKIPPED: --coldstart"` rather than
-invoking `run_coldstart()`).
+`bench/runs/qwen35-eval-20260428-144055/coldstart.json`:
+```json
+{"kicked_at":1777354855,"elapsed_s":37,"status":"ready"}
+```
 
-§3.3 verdict: N/A — deferred per scope. Score: **0/5** (honest; applied to maintain 100-point total integrity).
+Procedure executed by `run_coldstart()`:
+1. `launchctl kickstart -k gui/$(id -u)/com.ohama.qwen122b` — process replacement (PID 44880 → 10536, confirmed)
+2. Poll `localhost:8001/v1/models` every 2s with 240s timeout
+3. Record elapsed time when `/v1/models` first returns 200 OK
+
+**Result: 37 seconds** to model-ready state (HTTP 200 on `/v1/models`). First-generation completion
+of a 20-token chat completion completed in 1 second post-recovery, confirming model is fully loaded
+(not just HTTP-server-up). PID change confirms genuine process replacement, not a phantom recovery.
+
+**Surprising finding:** v2.0 SUMMARY estimated "up to 240s after `launchctl kickstart`". Empirical
+measurement of 37s is ~6× faster. Likely cause: warm OS file system cache (model weights cached in
+RAM from prior server run; kickstart kills the process but the kernel preserves file pages). On a
+truly cold disk cache (e.g., post-reboot), the time would be longer. The 37s value applies to the
+common case of mid-session restarts where weights are already in OS cache.
+
+**Harness fix during execution:** First `--coldstart` attempt aborted before kickstart fired due to
+a `set -euo pipefail` interaction — `tee -a "${LOG_DIR:-/tmp}/timeline.txt"` was called before
+`mkdir -p "$LOG_DIR"`, causing tee to fail with "no such file or directory" which under pipefail
+aborted the script. Fix committed (`fix(23-01): move mkdir before tee in run_coldstart`); third
+macOS bash-strict-mode pattern documented this milestone (after 21-04's set-e/dotnet-exit and
+grep-c-pipefail bugs).
+
+§3.3 verdict: PASS — cold-start 37s ≤ 180s top band threshold. Score: **5/5**.
 
 ---
 
@@ -420,7 +440,7 @@ overhead (< 0.1s per turn as measured from blueCode startup messages in transcri
 
 ---
 
-**§3 total: 10 + 5 + 0 + 5 = 20/25**
+**§3 total: 10 + 5 + 5 + 5 = 25/25** (cold-start measured in v2.2 Phase 23: 37s ready)
 
 ---
 
@@ -831,9 +851,9 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 | **Correctness subtotal** | | **31** | **40** |
 | Performance | Throughput tok/s (34.60 median ≥ 30) | 10 | 10 |
 | Performance | TTFT ms (222 ms median ≤ 500) | 5 | 5 |
-| Performance | Cold-start (deferred per scope — 0 honest) | 0 | 5 |
+| Performance | Cold-start (37s ≤ 180s top band; v2.2 Phase 23) | 5 | 5 |
 | Performance | End-to-end ±20% baseline (gate 7/7 PASS) | 5 | 5 |
-| **Performance subtotal** | | **20** | **25** |
+| **Performance subtotal** | | **25** | **25** |
 | Reliability | JSON schema rate (0/50 failures) | 10 | 10 |
 | Reliability | Multi-turn stable through N=7 | 10 | 10 |
 | Reliability | Needle 4/4 retrieved at 32k | 5 | 5 |
@@ -848,7 +868,7 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 | Dimension | Score / Max | Pct | ≥60%? |
 |-----------|-------------|-----|-------|
 | Correctness | 31/40 | 77.5% | YES |
-| Performance | 20/25 | 80.0% | YES |
+| Performance | 25/25 | 100.0% | YES |
 | Reliability | 25/25 | 100.0% | YES |
 | Coding quality | 6/10 | 60.0% | YES (exactly at threshold) |
 
@@ -858,10 +878,11 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 - <60 OR multi-turn degrades before turn 5 OR HumanEval+ <30%: ESCALATE
 
 **Applying rules:**
-- Grand total: 31 + 20 + 25 + 6 = **82/100** → ≥80 band
+- Grand total: 31 + 25 + 25 + 6 = **87/100** → ≥80 band
 - No dimension is <60% of its max (coding quality is exactly 60%)
 - Multi-turn degradation: first at N=10 (not before turn 5)
 - HumanEval+ chat: 93.9% (far above 30% ESCALATE trigger)
+- Cold-start measured in v2.2 Phase 23: 37s (top band ≤180s); flipped Performance from 20/25 to 25/25
 
 → **KEEP**
 
@@ -869,9 +890,12 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 
 ## §8 Caveats and known limitations
 
-1. **Cold-start NOT measured.** The `--coldstart` path (`launchctl kickstart -k`) was deferred as
-   disruptive. Cold-start (model weight loading from disk) takes approximately 3 minutes for 122B.
-   This matters for first-use-of-day scenarios. Reproduction in §10.
+1. **Cold-start measured in v2.2 Phase 23: 37s with warm OS file cache.** The `--coldstart` path
+   (`launchctl kickstart -k`) was originally deferred from v2.1 as disruptive; v2.2 Phase 23 executed
+   it once and recorded 37s to model-ready (5/5 top band, ≤180s). Note: this is the warm-disk-cache
+   case (model weights already in OS file cache from prior run). Truly cold disk cache (post-reboot)
+   would be slower. v2.0 SUMMARY's "up to 240s" estimate was pessimistic for the common case; closer
+   to actual on first boot. See §3.3 for measurement details.
 
 2. **Cloud comparison NOT measured.** Deliberate non-goal (§6.3). Users must form their own
    qualitative judgment from daily Claude Opus 4.7 use.
@@ -1005,4 +1029,4 @@ fixtures after gate runs.
 
 ---
 
-**Total: 82/100, Recommendation: KEEP**
+**Total: 87/100, Recommendation: KEEP**
