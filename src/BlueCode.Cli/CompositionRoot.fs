@@ -97,7 +97,11 @@ Your ONLY valid response is action="plan". Respond with EXACTLY this JSON shape:
 where each "tool" is one of: read_file|write_file|list_dir|run_shell|edit_file|glob_search|grep_search.
 Constraints: 1-10 steps. Use the minimum steps needed; reserve the full budget only for tasks requiring reads across multiple files before editing. No two adjacent steps may be identical. Do NOT execute — user will approve first.
 
-When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly in your thought before editing. Do not start editing until the full list is enumerated."""
+When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly in your thought before editing. Do not start editing until the full list is enumerated.
+
+Example: rename add->sum AND add3->sum3 across Calculator.fs/Main.fs/Tests.fs
+Targets: [add->sum (Calculator.fs def+body, Main.fs, Tests.fs); add3->sum3 (Calculator.fs def, Main.fs, Tests.fs)]
+Steps: grep_search(add), grep_search(add3), edit_file(Calculator.fs), edit_file(Main.fs), edit_file(Tests.fs)"""
 
 /// Construct the component graph synchronously. No HTTP calls at startup — the
 /// /v1/models probe is lazy and fires on the first LLM call to each port, owned
