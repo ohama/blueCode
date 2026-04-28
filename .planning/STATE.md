@@ -4,18 +4,18 @@
 
 See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone scoped)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.1 verdict 82/100 KEEP confirmed; v2.2 unlocks multi-file refactor capability; single-model canonical; 35B retained as cold rollback via `--with-35b`)
-**Current focus:** v2.2 Multi-file Capability — Phase 22 (4 plans), optional Phase 23 (1 plan). Raise PLAN-04 5-step ceiling (CORR-EVAL-02 FAIL constraint discovery from v2.1); re-run eval to PASS; bench gate 7/7 PASS held throughout.
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.1 verdict 82/100 KEEP confirmed; v2.2 raised PLAN-04 ceiling 5→10; CORR-EVAL-02 re-run FAIL (comprehension gap); single-model canonical; 35B retained as cold rollback via `--with-35b`)
+**Current focus:** v2.2 Phase 22 complete (4/4 plans). CORR-EVAL-02 FAIL in both v2.1 and v2.2 (same root cause: agent comprehension failure on README scope). Eval doc stays at 82/100. Next: Phase 23 (optional cold-start) or v2.2 milestone closeout, or CORR-EVAL-02 fixture/prompt fix.
 
 ## Current Position
 
 Milestone: v2.2 Multi-file Capability (started 2026-04-28; scoped from v2.1 audit data signal)
-Phase: 22 (PLAN-04 Ceiling Raise) — in progress
-Plan: 3 of 4 complete
-Status: Plan 22-03 complete. Bench gate 7/7 PASS confirmed (regression hold); T6=5/5, W1=3/3, W2=3/3, T1=1/3, T5=3/4, B2=2/3, MT=2/4; no prompt iteration needed; SC4 satisfied; 22-04 cleared. Tests 284/1/0.
-Last activity: 2026-04-28 — Completed 22-03-PLAN.md (gate regression hold — verification only)
+Phase: 22 (PLAN-04 Ceiling Raise) — complete (4/4 plans)
+Plan: 4 of 4 complete
+Status: Plan 22-04 complete. CORR-EVAL-02 re-run result: FAIL (orphan_count=1); root cause = model comprehension failure (agent mis-summarized README, planned add3→sum3 only, ignoring base add→sum); ceiling raise was necessary but not sufficient. Eval doc stays 82/100. Bench gate 7/7 PASS confirmed post-gate (T6=5/5, W1=3/3, W2=3/3, T1=1/3, T5=3/4, B2=2/3, MT=2/4). Tests 284/1/0. SC1-SC4 met; SC5-SC6 not met (CORR-EVAL-02 FAIL).
+Last activity: 2026-04-28 — Completed 22-04-PLAN.md (CORR-EVAL-02 FAIL; comprehension root cause documented)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 3/4 plans ███░; Phase 23 optional)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 4/4 plans ████; Phase 23 optional)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -68,19 +68,25 @@ For awareness only — DO NOT auto-pull. v2.1 scope comes from observation windo
 
 ### Blockers/Concerns
 
-None. v2.2 Phase 22 Plan 01 complete; bench gate 7/7 PASS; tests 284/1/0; daily-driver running stable on Qwen 3.5 122B canonical.
+**CORR-EVAL-02 FAIL (v2.2 re-run):** orphan_count=1 confirmed 2026-04-28. Root cause is model comprehension failure — agent mis-summarized README at step 5 in both v2.1 and v2.2 runs. The step-5 thought was identical: "Rename 'add3' to 'sum3'" — omitting the base `add`→`sum` rename. Agent used 8/10 steps (had 2 unused) so ceiling was not the issue. Eval doc stays 82/100 (KEEP verdict unchanged).
+
+**Options for resolution (user opt-in required):**
+1. Rewrite `bench/fixtures/refactor_multifile/README.md` to lead with `add`→`sum` prominently, then re-run CORR-EVAL-02 in a new plan
+2. Add system prompt guidance for multi-file refactors (enumerate all rename targets)
+3. Accept 82/100 as final v2.2 verdict and close milestone
 
 Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 - Phase 20 missing formal `20-VERIFICATION.md` (per-plan SUMMARYs substitute)
 - CLAUDE.md Key Seams has 1 stale "72B" sentence (historical)
 - `documentation/` retains legacy 32B/72B install docs (kept as historical reference)
+- eval doc §2.4 FAIL description says "5-step budget exhausted" — partially inaccurate for v2.2 run (10-step budget, 8 steps used); correct FAIL verdict and 0/5 score
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 22, Plan 03 execution)
-Stopped at: Completed 22-03-PLAN.md; gate regression hold 7/7 PASS; T6=5/5 (no prompt iteration); SC4 satisfied; 22-04 cleared
+Last session: 2026-04-28 (Phase 22, Plan 04 execution)
+Stopped at: Completed 22-04-PLAN.md; CORR-EVAL-02 FAIL (orphan_count=1, comprehension root cause); eval doc unchanged at 82/100; bench gate 7/7 PASS; Phase 22 complete
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 22` for plan 22-04
+Next workflow trigger: User decision on CORR-EVAL-02 options (see Blockers/Concerns), then `/gsd:complete-milestone` or Phase 23 opt-in
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
@@ -91,7 +97,7 @@ These are the measured baselines from v2.1. Use them as input when scoping v2.2 
 - **Schema rate 0/50 InvalidJsonOutput** — perfect compliance; v2.0 architecture decisions (strict JSON schema + 2-attempt retry + 5-step loop guard + thinking-mode-off) validated under stricter stress
 - **Multi-turn coherence stable through N=7** — refutes mlx-lm#1011 "approximately 5 rounds" community claim in our environment
 - **Needle 4/4 at max_model_len=32768** — mlx_lm.server does not expose YaRN-extended ceiling in /v1/models; 32k is the conservative working assumption
-- **10-step PLAN-04 ceiling (was 5)** — raised in 22-01; CORR-EVAL-02 FAIL structural block resolved; re-evaluation planned in 22-04 to confirm pass@1 improvement
+- **10-step PLAN-04 ceiling (was 5)** — raised in 22-01; CORR-EVAL-02 FAIL structural block partially resolved (ceiling no longer the constraint); v2.2 re-run (22-04, 2026-04-28) FAIL: orphan_count=1, agent used 8/10 steps — root cause is model comprehension failure (agent mis-summarized README add→sum scope as add3→sum3 only). Eval doc stays 82/100.
 - **Coding-quality 6/10 (idiomatic F# 1/5)** — generated F# is correct but procedural; pipelines / DU / pattern matching usage is low. Observation window will determine if this becomes a v2.2 candidate (system prompt F# style hint? few-shot?)
 
 For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v2.1-phases/`.
