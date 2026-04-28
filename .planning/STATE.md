@@ -11,11 +11,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone scoped)
 
 Milestone: v2.2 Multi-file Capability (started 2026-04-28; scoped from v2.1 audit data signal)
 Phase: 22 (PLAN-04 Ceiling Raise) — in progress
-Plan: 1 of 4 complete
-Status: Plan 22-01 complete. Bench gate 7/7 PASS; tests 284/1/0; MaxPlanSteps=10 and MaxLoops=10 in place. Ready for 22-02 (system prompt update).
-Last activity: 2026-04-28 — Completed 22-01-PLAN.md (Core ceiling raise: 5→10)
+Plan: 2 of 4 complete
+Status: Plan 22-02 complete. Bench gate 7/7 PASS; tests 284/1/0; planSystemPromptSuffix updated to "1-10 steps" + usage guidance clause; T6 at 5/5 (no regression). Ready for 22-03.
+Last activity: 2026-04-28 — Completed 22-02-PLAN.md (system prompt + adapter strings update)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 1/4 plans █░░░; Phase 23 optional)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 2/4 plans ██░░; Phase 23 optional)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -49,6 +49,7 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Plan-then-execute** (v2.0) — `--plan` flag enables plan-mode (single-turn only; `--plan --resume <id>` valid; `--plan --with-35b` rejected). `runPlanTurn` returns `Task<Result<Plan, AgentError>>` with 2-attempt retry. PlanGate.fs renders Spectre table + a/r/e/q dispatch via `IKeyReader` port. PlanValidator (3 structural rules in Core) + JSON parse layer (4th schema-invalid rule in Cli) catch all malformed plans before user sees approval prompt.
 - **10-step ceiling (22-01)** — `Plan.Steps.Length ≤ 10` (PLAN-04 raised from 5). PlanValidator.MaxPlanSteps=10 and CompositionRoot bootstrap MaxLoops=10 are independent constants (Option 1 preserved). The 5-step structural block on multi-file refactor is removed.
 - **Independent constants pattern confirmed** — PlanValidator.MaxPlanSteps and AgentConfig.MaxLoops remain separate values (not merged into AgentConstants.fs). Rationale: PlanValidator is invoked from QwenHttpClient parse layer without AgentConfig in scope (Phase 16 design invariant).
+- **Usage guidance clause (22-02)** — `planSystemPromptSuffix` updated to "1-10 steps. Use the minimum steps needed; reserve the full budget only for tasks requiring reads across multiple files before editing." First variant held without iteration. T6 used 5/5 steps (at baseline_max; no regression). Suffix char count: 695 chars (≤ 900 budget). `defaultSystemPrompt` and `Role = User` invariant unchanged.
 
 ### Pending Todos (v2.1 candidates)
 
@@ -76,10 +77,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 22, Plan 01 execution)
-Stopped at: Completed 22-01-PLAN.md; ceiling raised to 10; bench gate 7/7 PASS
+Last session: 2026-04-28 (Phase 22, Plan 02 execution)
+Stopped at: Completed 22-02-PLAN.md; system prompt + adapter strings updated; bench gate 7/7 PASS; T6 at 5/5
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 22` for plan 22-02 (system prompt update)
+Next workflow trigger: `/gsd:execute-phase 22` for plan 22-03
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
