@@ -38,9 +38,9 @@ let tests =
                       "PlanInvalid detail should reference unknown tool name or be tagged 'unknown'"
               | other -> failtestf "Expected Error(PlanInvalid ...), got %A" other
 
-          testCase "PlanInvalid: more than 5 steps (Steps.Length > MaxPlanSteps)"
+          testCase "PlanInvalid: more than 10 steps (Steps.Length > MaxPlanSteps)"
           <| fun () ->
-              // 6 valid steps; rule 'Steps.Length > 5' must trip BEFORE
+              // 11 valid steps; rule 'Steps.Length > 10' must trip BEFORE
               // adjacent-dup or unknown-tool checks (length is the cheap
               // guard, runs first per validatePlan composition).
               let plan =
@@ -50,15 +50,40 @@ let tests =
                         makePlannedStep "list_dir" """{"path":"c"}""" "3"
                         makePlannedStep "list_dir" """{"path":"d"}""" "4"
                         makePlannedStep "list_dir" """{"path":"e"}""" "5"
-                        makePlannedStep "list_dir" """{"path":"f"}""" "6" ]
+                        makePlannedStep "list_dir" """{"path":"f"}""" "6"
+                        makePlannedStep "list_dir" """{"path":"g"}""" "7"
+                        makePlannedStep "list_dir" """{"path":"h"}""" "8"
+                        makePlannedStep "list_dir" """{"path":"i"}""" "9"
+                        makePlannedStep "list_dir" """{"path":"j"}""" "10"
+                        makePlannedStep "list_dir" """{"path":"k"}""" "11" ]
                     Rationale = "test step-cap path" }
 
               match validatePlan plan with
               | Error(PlanInvalid detail) ->
                   Expect.isTrue
-                      (detail.Contains("6") || detail.ToLower().Contains("max") || detail.ToLower().Contains("step"))
+                      (detail.Contains("11") || detail.ToLower().Contains("max") || detail.ToLower().Contains("step"))
                       "PlanInvalid detail should mention step count / max"
               | other -> failtestf "Expected Error(PlanInvalid ...), got %A" other
+
+          testCase "valid plan: exactly 10 steps passes checkLength (ceiling boundary)"
+          <| fun () ->
+              let plan =
+                  { Steps =
+                      [ makePlannedStep "list_dir" """{"path":"a"}""" "1"
+                        makePlannedStep "list_dir" """{"path":"b"}""" "2"
+                        makePlannedStep "list_dir" """{"path":"c"}""" "3"
+                        makePlannedStep "list_dir" """{"path":"d"}""" "4"
+                        makePlannedStep "list_dir" """{"path":"e"}""" "5"
+                        makePlannedStep "list_dir" """{"path":"f"}""" "6"
+                        makePlannedStep "list_dir" """{"path":"g"}""" "7"
+                        makePlannedStep "list_dir" """{"path":"h"}""" "8"
+                        makePlannedStep "list_dir" """{"path":"i"}""" "9"
+                        makePlannedStep "list_dir" """{"path":"j"}""" "10" ]
+                    Rationale = "test ceiling boundary pass" }
+
+              match validatePlan plan with
+              | Ok _ -> ()  // correct: 10 steps ≤ MaxPlanSteps (10)
+              | Error e -> failtestf "Expected Ok for 10-step plan, got Error %A" e
 
           testCase "PlanInvalid: duplicate adjacent steps (byte-identical)"
           <| fun () ->

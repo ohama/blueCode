@@ -22,7 +22,7 @@ let tests =
                   Expect.isNotNull (box c.ToolExecutor) "ToolExecutor set"
                   Expect.isNotNull (box c.JsonlSink) "JsonlSink set"
                   Expect.equal c.ProjectRoot tempRoot "ProjectRoot threaded"
-                  Expect.equal c.Config.MaxLoops 5 "MaxLoops = 5"
+                  Expect.equal c.Config.MaxLoops 10 "MaxLoops = 10"
                   Expect.equal c.Config.ContextCapacity 3 "ContextCapacity = 3"
                   Expect.isNotEmpty c.Config.SystemPrompt "SystemPrompt non-empty"
                   Expect.isTrue (c.LogPath.EndsWith(".jsonl")) "LogPath ends with .jsonl"

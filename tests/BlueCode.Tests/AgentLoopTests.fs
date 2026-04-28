@@ -183,6 +183,24 @@ let agentLoopTests =
               Expect.equal result (Error MaxLoopsExceeded) "should hit MaxLoopsExceeded after 5 ToolCalls"
           }
 
+          testCaseAsync "max iter: 10 distinct ToolCalls without FinalAnswer -> MaxLoopsExceeded (new ceiling)"
+          <| async {
+              let calls =
+                  [ "a.txt"; "b.txt"; "c.txt"; "d.txt"; "e.txt"
+                    "f.txt"; "g.txt"; "h.txt"; "i.txt"; "j.txt" ]
+                  |> List.map (fun f ->
+                      makeMockResponse "reading file" (toolCall "read_file" (sprintf "{\"path\":\"%s\"}" f)))
+
+              let llm = mockLlm calls
+              let config10 = { testConfig with MaxLoops = 10 }
+
+              let! result =
+                  runSession config10 llm mockToolsOk discardStep [] "list files" CancellationToken.None
+                  |> Async.AwaitTask
+
+              Expect.equal result (Error MaxLoopsExceeded) "should hit MaxLoopsExceeded after 10 ToolCalls at new ceiling"
+          }
+
           testCaseAsync "loop guard: 3x same (action, input) trips LoopGuardTripped"
           <| async {
               // 3 identical ToolCalls with same action + same input — guard should trip on 3rd
