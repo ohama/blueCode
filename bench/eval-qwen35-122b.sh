@@ -269,8 +269,12 @@ run_refactor() {
   echo "----" >> "$out"
   local start_ts
   start_ts=$(date +%s)
+  # Capture exit_code explicitly; use set +e to prevent set -e from aborting on non-zero exit
+  # (blueCode exits 1 on MaxLoopsExceeded, which is data, not a harness failure)
+  set +e
   /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "$prompt" >> "$out" 2>&1
   local exit_code=$?
+  set -e
   local end_ts
   end_ts=$(date +%s)
   local elapsed=$((end_ts - start_ts))
@@ -319,8 +323,11 @@ run_langcoverage() {
     echo "----" >> "$out"
     local start_ts
     start_ts=$(date +%s)
+    # Capture exit_code explicitly; blueCode may exit 1 on MaxLoopsExceeded (data, not failure)
+    set +e
     /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "$prompt" >> "$out" 2>&1
     local exit_code=$?
+    set -e
     local end_ts
     end_ts=$(date +%s)
     local elapsed=$((end_ts - start_ts))
