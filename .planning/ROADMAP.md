@@ -137,10 +137,10 @@ Plans:
 4. **Bench gate post-recovery** — `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)` post-eval. EXIT trap restores fixtures cleanly.
 5. **STATE.md observation note** — Phase 26 + v2.3 milestone close-readiness recorded.
 
-**Plans:** 1 plan expected
+**Plans:** 1 plan
 
 Plans:
-- [ ] 26-01: Re-run CORR-EVAL-02 + update eval doc + STATE.md — pre-flight + `--refactor` invocation + 9 eval doc edit sites + STATE.md update + final mandatory bench gate. (COMP-05, COMP-06)
+- [ ] 26-01: Re-run CORR-EVAL-02 + flip eval doc verdict 87→92 — pre-flight + `--refactor` invocation (up to 3 stochastic attempts) + 11 eval doc edit sites in 9 logical groups + STATE.md/ROADMAP.md/REQUIREMENTS.md update + 26-VERIFICATION.md + mandatory final bench gate + phase-complete docs commit. (COMP-05, COMP-06)
 
 **Plan dependencies:** None internal (single plan); depends on Phase 24 + Phase 25 completion.
 
@@ -185,4 +185,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-28*
-*Last updated: 2026-04-29 — Phase 25 complete (P3 plan-mode pre-flight enumeration shipped; Interpretation B: checkRenameTargetsEnumerated in PlanValidator.fs; bench gate 7/7 PASS preserved; verification 10/10 must-haves passed; test count 284→287); ready for Phase 26 (re-evaluation CORR-EVAL-02)*
+*Last updated: 2026-04-29 — Phase 26 plan created (26-01: re-eval + verdict flip 87→92; 3 tasks; single wave; autonomous). Ready for /gsd:execute-phase 26.*
