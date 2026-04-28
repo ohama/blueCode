@@ -335,11 +335,192 @@ run_langcoverage() {
     echo "  -> exit=$exit_code elapsed=${elapsed}s" | tee -a "$LOG_DIR/timeline.txt"
   done
 }
-run_multiturn()    { echo "multiturn handler implemented in 21-04; not yet available" >&2; exit 4; }
-run_schema_rate()  { echo "schema-rate handler implemented in 21-04; not yet available" >&2; exit 4; }
-run_needle()       { echo "needle handler implemented in 21-04; not yet available" >&2; exit 4; }
-run_coldstart()    { echo "coldstart handler implemented in 21-04 but DISRUPTIVE; gated; not yet available" >&2; exit 4; }
-run_full()         { echo "full handler implemented in 21-04 (orchestrator over all sub-modes); not yet available" >&2; exit 4; }
+run_multiturn() {
+  require_port_8001
+  mkdir -p "$LOG_DIR"
+  local prompts_file="bench/fixtures/multiturn_prompts.txt"
+  if [ ! -f "$prompts_file" ]; then
+    echo "ERROR: $prompts_file missing" >&2; exit 6
+  fi
+  # Load prompts into array
+  local prompts=()
+  while IFS= read -r line || [ -n "$line" ]; do
+    prompts+=("$line")
+  done < "$prompts_file"
+  if [ "${#prompts[@]}" -lt 10 ]; then
+    echo "ERROR: $prompts_file has ${#prompts[@]} lines, need 10" >&2; exit 6
+  fi
+
+  # Schedule: N=1,3,5 → 3 trials each; N=7,10 → 1 trial each
+  local schedule=("1:3" "3:3" "5:3" "7:1" "10:1")
+  for entry in "${schedule[@]}"; do
+    local n="${entry%:*}"
+    local trials="${entry#*:}"
+    local n_dir="$LOG_DIR/multiturn_N${n}"
+    mkdir -p "$n_dir"
+    local t
+    for t in $(seq 1 "$trials"); do
+      local trial_dir="$n_dir/trial${t}"
+      mkdir -p "$trial_dir"
+      local stderr_file="$trial_dir/turn1.stderr"
+      local out_file="$trial_dir/transcript.log"
+      echo "===== multiturn N=$n trial=$t (model=122b) =====" | tee -a "$LOG_DIR/timeline.txt"
+      # Turn 1: --new-session, capture session id
+      echo "TURN 1: ${prompts[0]}" >> "$out_file"
+      set +e
+      /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b --new-session "${prompts[0]}" >> "$out_file" 2>"$stderr_file"
+      local turn1_exit=$?
+      set -e
+      cat "$stderr_file" >> "$out_file"
+      local sid
+      sid=$(grep -oE "Session: [a-zA-Z0-9_-]+" "$stderr_file" | head -1 | awk '{print $2}')
+      if [ -z "$sid" ]; then
+        echo "  ERROR: no session id captured for N=$n t=$t" | tee -a "$LOG_DIR/timeline.txt"
+        echo "exit=99 reason=no-session-id" > "$trial_dir/meta"
+        continue
+      fi
+      echo "  N=$n t=$t turn=1 exit=$turn1_exit sid=$sid"
+      echo "SESSION_ID: $sid" >> "$out_file"
+      # Turns 2..N
+      local k
+      for k in $(seq 2 "$n"); do
+        local idx=$((k - 1))
+        echo "----" >> "$out_file"
+        echo "TURN $k: ${prompts[$idx]}" >> "$out_file"
+        set +e
+        /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b --resume "$sid" "${prompts[$idx]}" >> "$out_file" 2>&1
+        local turnk_exit=$?
+        set -e
+        echo "  N=$n t=$t turn=$k exit=$turnk_exit"
+      done
+      # Per-trial metrics: count InvalidJsonOutput, count step markers, total elapsed
+      local invalid_json
+      invalid_json=$(grep -c "InvalidJsonOutput" "$out_file" 2>/dev/null || true)
+      local step_count
+      step_count=$(grep -cE "Session ok: [0-9]+ steps" "$out_file" 2>/dev/null || true)
+      echo "N=$n trial=$t session=$sid invalid_json=$invalid_json step_markers=$step_count" > "$trial_dir/meta"
+    done
+  done
+  echo "multiturn: directories at $LOG_DIR/multiturn_N{1,3,5,7,10}/"
+}
+run_schema_rate() {
+  require_port_8001
+  mkdir -p "$LOG_DIR"
+  local out="$LOG_DIR/schema_rate.txt"
+  local logs_dir="$LOG_DIR/schema_logs"
+  mkdir -p "$logs_dir"
+  # Mix of T1-style and T6-style prompts (single-turn, force agent loop into JSON output paths)
+  local prompts=(
+    "List the files in bench/fixtures and tell me the count."
+    "Read bench/fixtures/bug_lastchar.fs and tell me what it does in 2 sentences."
+    "What is 2+2? Show the calculation."
+    "List the F# source files in src/BlueCode.Core."
+    "What is the current working directory? Use a tool to find out."
+  )
+  local invalid_total=0
+  local i
+  for i in $(seq 1 50); do
+    local idx=$(( (i - 1) % ${#prompts[@]} ))
+    local label="schema_${i}"
+    # PER-ITERATION log file (not a shared append). This avoids cumulative double-counting:
+    # a single InvalidJsonOutput error from iteration N would otherwise be re-counted in iteration N+1
+    # if the agent's combined stderr/stdout exceeded 200 lines. Per-file grep is exact.
+    local iter_log="$logs_dir/schema_${i}.log"
+    echo "===== $label =====" > "$iter_log"
+    set +e
+    /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "${prompts[$idx]}" >> "$iter_log" 2>&1
+    set -e
+    # Count InvalidJsonOutput in THIS iteration only:
+    local block_invalid
+    block_invalid=$(grep -c "InvalidJsonOutput" "$iter_log" 2>/dev/null || echo 0)
+    if [ "$block_invalid" -gt 0 ]; then
+      invalid_total=$((invalid_total + 1))
+      echo "  $label: InvalidJsonOutput observed (count=$block_invalid in $iter_log)"
+    else
+      echo "  $label: ok"
+    fi
+  done
+  # Cross-check via aggregate file-level count (defense in depth):
+  local files_with_errors
+  files_with_errors=$(grep -l "InvalidJsonOutput" "$logs_dir"/schema_*.log 2>/dev/null | wc -l | tr -d ' ')
+  echo "$invalid_total/50 InvalidJsonOutput" > "$out"
+  echo "schema_rate: $invalid_total/50 InvalidJsonOutput (cross-check files-with-errors=$files_with_errors); per-iter logs at $logs_dir/"
+}
+run_needle() {
+  require_port_8001
+  if [ ! -x "$VENV_PY" ]; then
+    echo "ERROR: $VENV_PY not found. Run: bash $0 --setup" >&2; exit 5
+  fi
+  mkdir -p "$LOG_DIR"
+  "$VENV_PY" bench/eval-needle.py --output "$LOG_DIR/needle.json" --sizes "8000,16000,32000,65536"
+  echo "needle: $LOG_DIR/needle.json"
+}
+run_coldstart() {
+  echo "===== COLDSTART (DISRUPTIVE — kills 122B for ~3min) =====" | tee -a "${LOG_DIR:-/tmp}/timeline.txt"
+  echo "  This will: launchctl kickstart -k gui/$(id -u)/com.ohama.qwen122b"
+  echo "  Then poll /v1/models every 2s with 240s timeout."
+  echo "  Continue? [Ctrl-C to abort, Enter to proceed]"
+  read -r _ || true
+  mkdir -p "$LOG_DIR"
+  local out="$LOG_DIR/coldstart.json"
+  local kicked_at
+  kicked_at=$(date +%s)
+  launchctl kickstart -k "gui/$(id -u)/com.ohama.qwen122b"
+  local timeout_s=240
+  local ready_at=""
+  while [ $(( $(date +%s) - kicked_at )) -lt "$timeout_s" ]; do
+    if curl -fsS "$ENDPOINT/v1/models" >/dev/null 2>&1; then
+      ready_at=$(date +%s)
+      break
+    fi
+    sleep 2
+  done
+  local elapsed
+  if [ -n "$ready_at" ]; then
+    elapsed=$(( ready_at - kicked_at ))
+    jq -nc --argjson t "$kicked_at" --argjson e "$elapsed" \
+      '{kicked_at: $t, elapsed_s: $e, status: "ready"}' > "$out"
+    echo "  ready in ${elapsed}s"
+  else
+    elapsed=$(( $(date +%s) - kicked_at ))
+    jq -nc --argjson t "$kicked_at" --argjson e "$elapsed" \
+      '{kicked_at: $t, elapsed_s: $e, status: "timeout"}' > "$out"
+    echo "  TIMEOUT after ${elapsed}s; service did not become ready"
+  fi
+  echo "coldstart: $out"
+}
+run_full() {
+  require_port_8001
+  if [ ! -x "$VENV_PY" ]; then
+    echo "venv missing; running --setup first..."
+    setup_venv
+  fi
+  mkdir -p "$LOG_DIR"
+  echo "===== FULL EVAL — wall-clock budget ~2hr (cold-start excluded) ====="
+  echo "  LOG_DIR=$LOG_DIR"
+  local started
+  started=$(date +%s)
+  echo "Phase 1/7: throughput (~5 min)"
+  run_throughput
+  echo "Phase 2/7: ttft (~3 min)"
+  run_ttft
+  echo "Phase 3/7: humaneval (~55 min)"
+  run_humaneval
+  echo "Phase 4/7: refactor (~10 min)"
+  run_refactor
+  echo "Phase 5/7: langcoverage (~5 min)"
+  run_langcoverage
+  echo "Phase 6/7: multiturn (~30-60 min)"
+  run_multiturn
+  echo "Phase 7/7: schema-rate (~10 min) and needle (~5 min)"
+  run_schema_rate
+  run_needle
+  local total_s
+  total_s=$(( $(date +%s) - started ))
+  echo "===== FULL EVAL COMPLETE in ${total_s}s ====="
+  echo "  Artifacts in $LOG_DIR/"
+  echo "  Cold-start was SKIPPED (run separately: $0 --coldstart)"
+}
 
 # ---------------------------------------------------------------------------
 # usage — print help text listing all 11 mode flags
