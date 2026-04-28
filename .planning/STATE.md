@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.3 milestone scoped)
 ## Current Position
 
 Milestone: v2.3 Comprehension Layer (started 2026-04-28; scoped from v2.2 audit's COMP-BIAS-01 data-driven first candidate)
-Phase: 24 (Prompt-Level Intervention P1+P2) — in progress
-Plan: 1 of 2-3 complete (Phase 24); Phase 25 + 26 follow
-Status: In progress. Plan 24-01 (P1 enumeration directive) complete. Bench gate 7/7 PASS preserved. Ready for Plan 24-02 (P2 few-shot examples).
-Last activity: 2026-04-28 — Plan 24-01 complete: P1 enumeration directive added to planSystemPromptSuffix (695→879 chars). Bench gate GATE PASS (7/7) confirmed.
+Phase: 24 (Prompt-Level Intervention P1+P2) — complete; Phase 25/26 follow
+Plan: 2 of 2 complete (Phase 24); Phase 25 + 26 follow
+Status: Phase 24 complete. Plans 24-01 (P1 directive) and 24-02 (P2 few-shot) both done. Bench gate 7/7 PASS preserved. Ready for Phase 25 (P3 architectural).
+Last activity: 2026-04-28 — Plan 24-02 complete: P2 few-shot example appended to planSystemPromptSuffix (879→1183 chars). Bench gate GATE PASS (7/7) confirmed. Phase 24 P1+P2 intervention complete.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (Phase 24: 1/2-3 plans; Phase 25/26 follow)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ◆ (Phase 24: 2/2 plans done; Phase 25/26 follow)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -53,6 +53,7 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Usage guidance clause (22-02)** — `planSystemPromptSuffix` updated to "1-10 steps. Use the minimum steps needed; reserve the full budget only for tasks requiring reads across multiple files before editing." First variant held without iteration. T6 used 5/5 steps (at baseline_max; no regression). Suffix char count: 695 chars (≤ 900 budget). `defaultSystemPrompt` and `Role = User` invariant unchanged.
 - **CORR-EVAL-02 persistent bias (22-04 double-FAIL)** — Two independent CORR-EVAL-02 runs both FAIL with orphan_count=1. Agent has a persistent extraction bias toward `add3→sum3`, ignoring `add→sum`. README rewrite (Option A, 2026-04-28) did not fix the bias — step-5 thought was textually identical across both runs. Next resolution path: system prompt guidance for multi-file refactors or fixture redesign. Eval doc remains 82/100 KEEP.
 - **P1 enumeration directive (24-01)** — `planSystemPromptSuffix` extended from 695→879 chars with blank-line-separated paragraph: "When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly in your thought before editing. Do not start editing until the full list is enumerated." Directive is plan-mode-only (no impact on agent-loop path). Bench gate 7/7 PASS preserved. COMP-01 DONE.
+- **P2 few-shot example (24-02)** — `planSystemPromptSuffix` extended from 879→1183 chars with 3-line Example/Targets/Steps block demonstrating the exact `add->sum` AND `add3->sum3` shared-prefix rename failure pattern. One blank line after P1 directive; all three lines left-flush (column 0). Bench gate 7/7 PASS preserved. COMP-02 DONE. Phase 24 complete.
 
 ### Pending Todos (v2.1 candidates)
 
@@ -92,10 +93,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (Phase 24, Plan 01)
-Stopped at: Plan 24-01 complete. P1 enumeration directive added to planSystemPromptSuffix (695→879 chars). Bench gate GATE PASS (7/7). Plan-meta commit docs(24-01) done.
+Last session: 2026-04-28 (Phase 24, Plan 02)
+Stopped at: Plan 24-02 complete. P2 few-shot example appended to planSystemPromptSuffix (879→1183 chars). Bench gate GATE PASS (7/7). Plan-meta commit docs(24-02) done. Phase 24 complete.
 Resume file: None
-Next workflow trigger: `/gsd:plan-phase 24` for Plan 24-02 (P2 few-shot examples in planSystemPromptSuffix)
+Next workflow trigger: `/gsd:plan-phase 25` for Phase 25 (P3 architectural: plan-mode pre-flight enumeration)
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
