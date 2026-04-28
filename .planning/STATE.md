@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-28 after v2.2 milestone scoped)
 ## Current Position
 
 Milestone: v2.2 Multi-file Capability (started 2026-04-28; scoped from v2.1 audit data signal)
-Phase: 22 (PLAN-04 Ceiling Raise) — not started; ready to plan
-Plan: 0 of 4 complete
-Status: Ready to plan via `/gsd:plan-phase 22`. Bench gate 7/7 PASS baseline; tests 282/1/0; eval doc verdict 82/100 KEEP (target post-Phase-22: 87/100).
-Last activity: 2026-04-28 — v2.2 milestone scoped (REQUIREMENTS.md + ROADMAP.md created); ready for Phase 22 planning
+Phase: 22 (PLAN-04 Ceiling Raise) — in progress
+Plan: 1 of 4 complete
+Status: Plan 22-01 complete. Bench gate 7/7 PASS; tests 284/1/0; MaxPlanSteps=10 and MaxLoops=10 in place. Ready for 22-02 (system prompt update).
+Last activity: 2026-04-28 — Completed 22-01-PLAN.md (Core ceiling raise: 5→10)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 0/4 plans; Phase 23 optional)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ◆ (Phase 22: 1/4 plans █░░░; Phase 23 optional)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -47,7 +47,8 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Single-model 122B canonical** (Phase 19) — `blueCode "..."` defaults to 122B with no flag. `--model 32b/72b` retired (exit 2 with retirement error). `--model 35b` requires `--with-35b` opt-in flag AND 35B service loaded. Default invocation never probes port 8000.
 - **Persistence** (v2.0) — `~/.bluecode/sessions/<id>.jsonl` (per-turn TurnComplete envelopes; `version: 2` header). v1 per-step crash log at `~/.bluecode/session_<ts>.jsonl` coexists. `--resume <id>` and `--new-session` Argu flags; mutually-exclusive validation post-parse.
 - **Plan-then-execute** (v2.0) — `--plan` flag enables plan-mode (single-turn only; `--plan --resume <id>` valid; `--plan --with-35b` rejected). `runPlanTurn` returns `Task<Result<Plan, AgentError>>` with 2-attempt retry. PlanGate.fs renders Spectre table + a/r/e/q dispatch via `IKeyReader` port. PlanValidator (3 structural rules in Core) + JSON parse layer (4th schema-invalid rule in Cli) catch all malformed plans before user sees approval prompt.
-- **5-step max preserved** — `Plan.Steps.Length ≤ 5` (PLAN-04). Planning doesn't unlock more steps; just front-loads the decision.
+- **10-step ceiling (22-01)** — `Plan.Steps.Length ≤ 10` (PLAN-04 raised from 5). PlanValidator.MaxPlanSteps=10 and CompositionRoot bootstrap MaxLoops=10 are independent constants (Option 1 preserved). The 5-step structural block on multi-file refactor is removed.
+- **Independent constants pattern confirmed** — PlanValidator.MaxPlanSteps and AgentConfig.MaxLoops remain separate values (not merged into AgentConstants.fs). Rationale: PlanValidator is invoked from QwenHttpClient parse layer without AgentConfig in scope (Phase 16 design invariant).
 
 ### Pending Todos (v2.1 candidates)
 
@@ -66,7 +67,7 @@ For awareness only — DO NOT auto-pull. v2.1 scope comes from observation windo
 
 ### Blockers/Concerns
 
-None. v2.0 closed cleanly; bench gate 7/7 PASS; tests 282/1/0; daily-driver running stable on Qwen 3.5 122B canonical.
+None. v2.2 Phase 22 Plan 01 complete; bench gate 7/7 PASS; tests 284/1/0; daily-driver running stable on Qwen 3.5 122B canonical.
 
 Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 - Phase 20 missing formal `20-VERIFICATION.md` (per-plan SUMMARYs substitute)
@@ -75,10 +76,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-28 (v2.1 milestone closeout)
-Stopped at: v2.1 archived; ready to scope v2.2 or open observation window
+Last session: 2026-04-28 (Phase 22, Plan 01 execution)
+Stopped at: Completed 22-01-PLAN.md; ceiling raised to 10; bench gate 7/7 PASS
 Resume file: None
-Next workflow trigger: `/gsd:new-milestone` (or daily-drive observation before scoping)
+Next workflow trigger: `/gsd:execute-phase 22` for plan 22-02 (system prompt update)
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
@@ -89,7 +90,7 @@ These are the measured baselines from v2.1. Use them as input when scoping v2.2 
 - **Schema rate 0/50 InvalidJsonOutput** — perfect compliance; v2.0 architecture decisions (strict JSON schema + 2-attempt retry + 5-step loop guard + thinking-mode-off) validated under stricter stress
 - **Multi-turn coherence stable through N=7** — refutes mlx-lm#1011 "approximately 5 rounds" community claim in our environment
 - **Needle 4/4 at max_model_len=32768** — mlx_lm.server does not expose YaRN-extended ceiling in /v1/models; 32k is the conservative working assumption
-- **5-step PLAN-04 ceiling structurally blocks multi-file refactor** — CORR-EVAL-02 FAIL with orphan_count=1; first v2.2 candidate, data-driven; needs Core change (Domain.fs Plan validator)
+- **10-step PLAN-04 ceiling (was 5)** — raised in 22-01; CORR-EVAL-02 FAIL structural block resolved; re-evaluation planned in 22-04 to confirm pass@1 improvement
 - **Coding-quality 6/10 (idiomatic F# 1/5)** — generated F# is correct but procedural; pipelines / DU / pattern matching usage is low. Observation window will determine if this becomes a v2.2 candidate (system prompt F# style hint? few-shot?)
 
 For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v2.1-phases/`.
