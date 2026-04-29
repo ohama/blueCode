@@ -18,6 +18,39 @@ v2.4 Coding Quality shipped 2026-04-29. Third **measurement-first data-driven** 
 
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3,2.4}-ROADMAP.md`.
 
+## Current Milestone: v2.5 REPL ergonomics
+
+**Goal:** REPL 인터랙티브 사용성을 daily-driver 가치 수준으로 끌어올림. 4 가지 ergonomic gap 을 한 milestone 에 묶음 — slash commands (메타-제어), $EDITOR multi-line 입력, readline + history (up/down/Ctrl+R). v1.2 Tool ergonomics 와 같은 shape (여러 small ergonomic 개선의 묶음); Cli-layer only, Core purity 보존, bench gate 7/7 / schema 0/50 invariant 유지.
+
+**Why now:** v2.4 가 모든 visible scorecard gap 을 닫았음 (96/100 KEEP, 4 dimensions ≥80%). 다음 신호는 daily-driver UX. 현재 REPL 은 "bare" — Ctrl+C/D 외 quit 방법 없음, session 메타 보이지 않음, plan-mode toggle 불가, prior prompt recall 불가, multi-line 입력 어색. 매 turn 마다 visible 효과를 가지는 4 개 ergonomic 추가가 v1.2 와 동일한 가치 패턴.
+
+**Target features (4 갈래):**
+
+- **SLASH commands** — `/help`, `/status` (token usage 포함; OBS-06 absorbs), `/clear`, `/exit`, `/sessions`, `/resume <id>`, `/plan` toggle. SLASH-01 후보가 v2.0 부터 carried-forward; 이번에 정식 scope.
+- **/edit multi-line input** — `/edit` 호출 시 `$EDITOR` (vim/nano/code 등) 으로 임시 파일 편집; 저장 시 prompt 로 사용. 긴 multi-step prompt 의 ergonomic gap.
+- **PrettyPrompt readline + history** — `Console.ReadLine` 대체. up/down arrow recall, Ctrl+R 검색, line editing, cross-session history persistence (`~/.bluecode/history`). NEW NuGet dependency (Key Decision 추가; § Key Decisions table).
+- **Token visibility (`/status` 안에 흡수)** — char-based token estimate 표시; future COMPACT-01 의 prereq.
+
+**Scope (5 phases):**
+
+- Phase 31: SLASH-01 core (`/help`, `/status`, `/clear`, `/exit`)
+- Phase 32: SLASH-01 sessions (`/sessions`, `/resume <id>`)
+- Phase 33: SLASH-01 plan toggle (`/plan` mid-REPL on/off)
+- Phase 34: EDIT-01 (`/edit` multi-line via $EDITOR)
+- Phase 35: HIST-01..04 (PrettyPrompt readline + history file + Ctrl+R)
+
+Bench gate 7/7 PASS mandatory after each phase; Core purity preserved (전부 Cli layer); schema 0/50 perfect 무관 (slash 는 LLM 호출 가로챔); `bench/baseline.json` 변경 없음 (REPL 은 bench 영역 밖).
+
+**Phase numbering:** continues at 31 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20, v2.1: 21, v2.2: 22-23, v2.3: 24-27, v2.4: 28+30; Phase 29 SKIPPED-by-design).
+
+**Excluded** with explicit rationale (deferred to later milestones):
+- `/model` mid-session switch — `--with-35b` opt-in semantics + 35B service load 검증 비용 큼; v2.6+ 후보
+- `/save <name>` named sessions — bare session id 로 충분; 명명은 future ergonomic
+- Auto-completion of slash commands — PrettyPrompt 가 cheap 하면 future polish
+- Cross-session history search UI — Ctrl+R 가 In-session 에서 일단 충분
+- COMPACT-01 — token visibility 만 v2.5 (`/status`); auto-compaction 은 32k hit 측정 후 v2.6+
+- AGENT-LOOP-FEW-SHOT-01 / COLDSTART-PRISTINE-01 / SUBAG-01 / PLAN-MODE-BENCH-01 / STM-01 / THINK-01 / TOOLCALLS-01 — 직전 milestone 검토에서 동일 사유로 deferred
+
 ## Current Milestone: v2.4 Coding Quality (SHIPPED)
 
 **Goal:** Close the only remaining ≤60%-threshold dimension on the eval scorecard — Coding-quality 6/10 (Idiomatic F# 1/5). v2.2/v2.3 audit hedged that the 1/5 score may be a Python-transcript artifact (HumanEval+ scoring Python answers under chat mode); the real F# generation quality during daily-driver use is not directly measured. This milestone is **measurement-first**: build F# task fixtures, measure idiomatic-F# generation in agent-loop mode, then intervene only if data justifies. Mirrors v2.2's data-driven discipline.
@@ -290,6 +323,9 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 | v2.4 (Phase 29 SKIPPED-by-design): Conditional skip vs blocked record | Phase 29 was conditional from the start; Path A disprove triggered SKIP. Never planned, never executed — no phase directory exists. Cleaner than v2.3 Phase 26 BLOCKED-with-record (which preserved diagnostic value from a partial run). | ✓ Good — recorded in v2.4-MILESTONE-AUDIT.md as Lesson 2. Pattern: SKIP-by-design when conditional doesn't trigger; BLOCKED-with-record when partial-attempt produces diagnostic value. Both are valid milestone paths. |
 | v2.4 (28-01): HARNESS-AUDIT bundling into measurement phase | `documentation/howto/macos-bash-strict-mode-patterns.md` written as part of Phase 28 (same harness file as the new `--fs-idiomatic` mode). Audit pass found Pattern 5 (real bug at line 378) — bundling produced direct value beyond just docs. | ✓ Good — pattern: small standalone docs/cleanup tasks bundle naturally with phases that touch the same file. Not always a separate phase needed. |
 | v2.4: Zero-source-diff milestone (v2.1 + v2.4 now both demonstrate this) | Eval scoring infrastructure expansion + howto documentation only. `git diff milestone-v2.3 HEAD -- src/` empty across entire v2.4. v2.1 also had zero `src/` diff (eval infrastructure). | ✓ Good — pattern: low-risk eval/measurement work doesn't need `src/` changes. Future milestones can lean on the `git diff milestone-v<prev> HEAD -- src/` empty assertion as an established invariant. |
+| v2.5: Bundle 4 REPL ergonomic features in one milestone (v1.2 Tool ergonomics shape) | After v2.4 closed the last visible scorecard gap, fresh signal is daily-driver UX. Slash commands + multi-line input + readline + history all touch REPL layer; bundling matches v1.2's TLX-01/02/03 + TOOL-08 pattern (multiple small ergonomic improvements per milestone). User explicitly chose 갈래 B over single-focus alternatives. | — Pending — outcome verified at v2.5 close |
+| v2.5: Adopt PrettyPrompt NuGet for readline/history (HIST-01..04) | Self-implementing readline (~300-400 LOC, ANSI escape handling, cursor mgmt) is fragile; slash-only history misses up-arrow muscle-memory. PrettyPrompt is well-maintained .NET library providing up/down recall + Ctrl+R search + line editing in ~50 LOC integration. Trade: new NuGet vs custom code. Pattern matches v1.0's deliberate dependency choices (FsToolkit.ErrorHandling, Spectre.Console, JsonSchema.Net) — preferred established libraries over reinventing. PROJECT.md "no new packages without decision" satisfied via this entry. | — Pending — verify version + .NET 10 compat during Phase 35 research; outcome assessed at milestone close |
+| v2.5: `/status` absorbs OBS-06 token visibility (vs separate phase) | OBS-06 (token budget visibility) was carried-forward from v1.3 deferred-list. Implementing as standalone Verbose-mode display is one path; embedding in `/status` slash command output bundles the visibility with REPL meta-control surface. Cheaper for user (one command shows everything) and naturally extensible (`/status` can grow other meta info). | — Pending — usefulness verified by daily-driver use post-v2.5 |
 | v2.4 (28-02): FSI fixture skeleton pattern | `dotnet fsi <file>.fs </dev/null` always exits 1 on interactive EOF; compile verification uses absence of `error FS` in output, not exit code. Fixtures use direct top-level `try...with` (no `[<EntryPoint>]` since FSI doesn't invoke it). | ✓ Good — load-bearing for future F# fixture work; documented in STATE.md decisions log. |
 | v2.4 (Plan-checker quota exhaustion handled twice): Self-applied quality gate is sufficient when plan structure mirrors well-templated precedent | Phase 27 (v2.3) + Phase 30 (v2.4) both had checker-quota exhaustion. Both proceeded with planner's self-applied quality gate + structural mirror with prior canonical close-plan. Both executed cleanly. | ✓ Good — risk model: when the plan is procedurally simple and the executor has executed close-plans before, the checker's marginal value is low. Not a license to skip checkers in general; only when the plan is well-templated. |
 
@@ -304,4 +340,4 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-29 after shipping v2.4 Coding Quality milestone — measurement-first Path A disprove yielded Coding-quality 6/10→10/10 + Total 92→96/100 KEEP; F# fixture infrastructure shipped reusably; 5th macOS bash-strict-mode pattern codified; zero `src/` diff; 10 milestones shipped (v2.4 closed).*
+*Last updated: 2026-04-29 after starting v2.5 REPL ergonomics milestone — 4 ergonomic gaps bundled (slash commands + $EDITOR multi-line + PrettyPrompt readline + history + token visibility); 5 phases planned; v1.2 Tool ergonomics shape; Cli-layer only.*

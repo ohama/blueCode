@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.4 milestone shipped)
+See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics milestone started)
 
 **Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.4 verdict 96/100 KEEP; all 4 dimensions ≥80%; widest KEEP margin in project history)
-**Current focus:** Between milestones. v2.4 shipped 2026-04-29 with F# fixture rescore Path A disprove (Coding-quality 6/10→10/10; Total 92→96/100). v2.5 scoping observation-driven (next via `/gsd:new-milestone`).
+**Current focus:** v2.5 REPL ergonomics — bundling slash commands (SLASH-01..07) + `/edit` multi-line input + PrettyPrompt readline + history + token visibility. Cli-layer only; Core purity preserved; bench/schema invariants untouched.
 
 ## Current Position
 
-Milestone: v2.4 Coding Quality ✓ SHIPPED 2026-04-29
-Phase: None (between milestones)
-Plan: None
-Status: v2.4 milestone archived to `.planning/milestones/v2.4-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `.planning/milestones/v2.4-phases/{28,30}-*/`. Phase 29 SKIPPED-by-design (never created). ROADMAP.md and REQUIREMENTS.md deleted (fresh ones via `/gsd:new-milestone`). 5/5 unconditional + 2/2 conditional SKIPPED requirements.
-Last activity: 2026-04-29 — v2.4 milestone complete + tagged `milestone-v2.4`. Ready for v2.5 scoping.
+Milestone: v2.5 REPL ergonomics (started 2026-04-29)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-29 — Milestone v2.5 started; PROJECT.md updated with Current Milestone section + 3 Key Decision entries (bundle shape, PrettyPrompt NuGet, `/status` absorbs OBS-06)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → v2.5 (next; observation-driven)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress)**
 
 ## Performance Metrics (cumulative, frozen)
 
