@@ -35,6 +35,21 @@ type private TurnEnvelope =
       writtenAt: DateTimeOffset
       steps: Step list }       // cumulative session.Steps
 
+/// Lightweight metadata for a persisted session, used by /sessions listing.
+/// Cli-layer-only (Core purity invariant — see CLAUDE.md). Constructed by
+/// listRecent below; consumed by Rendering.renderSessions.
+///
+/// FirstPromptExcerpt is a proxy: the user's prompt is NOT stored in the jsonl
+/// (only LLM steps are). The best available signal is the FIRST envelope's
+/// FIRST step's Thought text — the LLM's first reasoning trace. Truncated to
+/// ≤80 chars; empty string for sessions with no completed turns. Research § Q10
+/// + Open Question #1 (recommended resolution: "first thought" semantic).
+type SessionMeta =
+    { Id: SessionId
+      StartedAt: DateTimeOffset
+      TurnCount: int
+      FirstPromptExcerpt: string }
+
 /// Compute the per-session JSONL path: ~/.bluecode/sessions/<id>.jsonl.
 /// Creates ~/.bluecode/sessions/ if it does not exist.
 let buildSessionPath (SessionId id) : string =
@@ -144,3 +159,62 @@ type FileSessionStore() =
                     // Defensive catch — surface as SessionCorrupt with detail (SC3: no stack traces).
                     return Error (SessionCorrupt (sprintf "Load failed: %s" ex.Message))
             }
+
+/// List the most-recent N persisted sessions under ~/.bluecode/sessions/.
+/// Sorted by File.GetLastWriteTimeUtc descending (newest first), truncated to N.
+///
+/// Returns [] if the sessions directory does not exist (e.g., user has never
+/// run blueCode in multi-turn mode). Per-file parse failures are silently
+/// skipped — research § Pitfall 1, "listRecent silently swallowing exceptions"
+/// resolution: skip-and-continue instead of all-or-nothing failure, so one
+/// corrupt session does not hide the other 533.
+///
+/// Performance: O(file_count) stat calls + O(N) ReadAllLines + O(N) JSON
+/// deserializations. Research § Q9 confirms this is sub-millisecond on local
+/// NVMe with 534 sessions.
+///
+/// Synchronous (research § Q15): every call site (Repl /sessions arm) is
+/// already inside `task {}` and can call this without `let!`. Returning
+/// `SessionMeta list` directly rather than `Task<>` keeps the API simple
+/// and matches the existing buildSessionPath/newSessionId style.
+let listRecent (n: int) : SessionMeta list =
+    try
+        let home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        let dir = Path.Combine(home, ".bluecode", "sessions")
+        if not (Directory.Exists dir) then []
+        else
+            Directory.GetFiles(dir, "*.jsonl")
+            |> Array.sortByDescending (fun p -> File.GetLastWriteTimeUtc p)
+            |> Array.truncate (max 0 n)
+            |> Array.toList
+            |> List.choose (fun path ->
+                try
+                    let lines = File.ReadAllLines(path)
+                    if lines.Length = 0 then None
+                    else
+                        let header = JsonSerializer.Deserialize<SessionHeader>(lines.[0], jsonOptions)
+                        if header.version <> 2 then None
+                        else
+                            // Turn count = number of non-empty envelope lines (skip header).
+                            let envelopeLines =
+                                lines
+                                |> Array.skip 1
+                                |> Array.filter (fun s -> not (String.IsNullOrWhiteSpace s))
+                            let excerpt =
+                                if envelopeLines.Length > 0 then
+                                    try
+                                        let env = JsonSerializer.Deserialize<TurnEnvelope>(envelopeLines.[0], jsonOptions)
+                                        match env.steps with
+                                        | step :: _ ->
+                                            let (Thought t) = step.Thought
+                                            if t.Length > 80 then t.Substring(0, 80) else t
+                                        | [] -> ""
+                                    with _ -> ""
+                                else ""
+                            Some
+                                { Id = SessionId header.sessionId
+                                  StartedAt = header.createdAt
+                                  TurnCount = envelopeLines.Length
+                                  FirstPromptExcerpt = excerpt }
+                with _ -> None)
+    with _ -> []
