@@ -11,11 +11,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.3 milestone shipped)
 
 Milestone: v2.4 Coding Quality (started 2026-04-29; data-driven from v2.2/v2.3 audit's Coding-quality 1/5 hedge)
 Phase: 28 (F# Coding Quality Measurement) — in progress
-Plan: 01 and 02 of N complete (wave 1)
+Plan: 03 of N complete (wave 2)
 Status: In progress
-Last activity: 2026-04-28 — Completed 28-01-PLAN.md (HARNESS-AUDIT-01 howto + Pattern 5 fix; bench gate 7/7 PASS)
+Last activity: 2026-04-29 — Completed 28-03-PLAN.md (--fs-idiomatic harness mode; smoke 3/3 PASS; bench gate 7/7 PASS)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: 28-01 + 28-02 done)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: 28-01 + 28-02 + 28-03 done)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -74,10 +74,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-04-28
-Stopped at: Completed 28-02-PLAN.md — 6 F# idiomatic fixtures created under bench/fixtures/fs_idiomatic/ (25eb35d); FS-EVAL-01 satisfied
+Last session: 2026-04-29
+Stopped at: Completed 28-03-PLAN.md — --fs-idiomatic harness mode added to bench/eval-qwen35-122b.sh (b7611a8); smoke 3/3 PASS; bench gate 7/7 PASS; FS-EVAL-02 satisfied
 Resume file: None
-Next workflow trigger: Continue Phase 28 plans (28-03 harness mode handler, 28-04 rubric review)
+Next workflow trigger: Continue Phase 28 — 28-04 formal scoring run (kickstart pre-flight + manual rubric scoring)
 
 ## Empirical Baselines (post-v2.3)
 
