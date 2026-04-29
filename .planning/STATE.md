@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.3 milestone shipped)
 ## Current Position
 
 Milestone: v2.4 Coding Quality (started 2026-04-29; data-driven from v2.2/v2.3 audit's Coding-quality 1/5 hedge)
-Phase: 28 (F# Coding Quality Measurement) — not started; defining requirements
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-29 — v2.4 milestone started; measurement-first scope on Coding-quality dimension; FS-EVAL + HARNESS-AUDIT + conditional FS-INTERVENE structure
+Phase: 28 (F# Coding Quality Measurement) — in progress
+Plan: 01 and 02 of N complete (wave 1)
+Status: In progress
+Last activity: 2026-04-28 — Completed 28-01-PLAN.md (HARNESS-AUDIT-01 howto + Pattern 5 fix; bench gate 7/7 PASS)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: defining)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: 28-01 + 28-02 done)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -53,7 +53,7 @@ Stable patterns established across milestones (load-bearing for next session):
 - **PlanValidator pre-flight `checkRenameTargetsEnumerated`** (Phase 25-01) — heuristic regex `\brename\s+\`?([A-Za-z_]\w+)\`?\s+to\s+\`?([A-Za-z_]\w+)\`?` extracts targets from user prompt; coverage check via `_raw` JSON `old_string` field on `edit_file` steps. Interpretation B: missing-target list encoded as structured detail string within existing `PlanInvalid of detail: string` case (no DU change). PlanValidator.fs:108; bound at validatePlan:143; called from AgentLoop.fs:484. Plan-mode only.
 - **Plan-mode vs agent-loop distinction is load-bearing** (v2.3 lesson) — `defaultSystemPrompt` is sent for ALL invocations; `planSystemPromptSuffix` only when `--plan`; `PlanValidator.checkRenameTargetsEnumerated` only in `runPlanTurn`. Future prompt or validator changes must explicitly state which mode(s) they target. Bench gate fixtures use agent-loop (no `--plan`); CORR-EVAL-02 eval harness uses agent-loop (no `--plan`).
 - **Mandatory `launchctl kickstart` pre-flight for evaluations** (v2.3 Phase 26 Diagnostic D) — `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears KV cache contamination. Long-running 122B sessions accumulate contamination that produces hallucination failure modes. Confirmed empirically.
-- **macOS bash-strict-mode patterns documented** (4 patterns across v2.1-v2.3): set-e/dotnet-exit (v2.1 21-04); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01); orphan-grep-zero-match-exit-1 (v2.3 27-02). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE` exits 1 on zero-match; guard with `|| true`.
+- **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01); orphan-grep-zero-match-exit-1 (v2.3 27-02); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
 
 ### Pending Todos
 
@@ -73,10 +73,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-04-29 (v2.4 milestone started)
-Stopped at: PROJECT.md updated with v2.4 Current Milestone; STATE.md reset; defining REQUIREMENTS.md next
+Last session: 2026-04-28
+Stopped at: Completed 28-01-PLAN.md — HARNESS-AUDIT-01 howto (5 patterns) + Pattern 5 fix (94d905c) + howto commit (280677a); bench gate 7/7 PASS
 Resume file: None
-Next workflow trigger: `/gsd:plan-phase 28` after ROADMAP.md is created by roadmapper
+Next workflow trigger: Continue Phase 28 plans (28-03 harness mode handler, 28-04 rubric review)
 
 ## Empirical Baselines (post-v2.3)
 
