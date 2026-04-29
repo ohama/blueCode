@@ -24,6 +24,11 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 5. Bench gate 7/7 PASS preserved (REPL 은 bench 영역 밖이지만 변경 회귀 방지)
 6. 신규 `Cli/SlashCommand.fs` 모듈 + `Cli/Repl.fs` dispatcher 통합 + `Cli/Rendering.fs` `renderHelp`/`renderStatus`
 
+**Plans:** 2 plans
+
+- [ ] 31-01-parser-PLAN.md — Pure SlashCommand parser DU + 17 unit tests (Wave 1)
+- [ ] 31-02-rendering-and-dispatch-PLAN.md — renderHelp/renderStatus + Repl integration + 12 tests + bench gate (Wave 2)
+
 ### Phase 32: SLASH session commands
 
 **Goal:** Session 메타-management 명령 — `/sessions` (목록) + `/resume <id>` (in-place switch).
