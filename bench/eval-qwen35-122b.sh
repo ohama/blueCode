@@ -375,7 +375,9 @@ run_multiturn() {
       set -e
       cat "$stderr_file" >> "$out_file"
       local sid
-      sid=$(grep -oE "Session: [a-zA-Z0-9_-]+" "$stderr_file" | head -1 | awk '{print $2}')
+      # Use || true: grep -oE exits 1 on no match; without guard, set -euo pipefail
+      # aborts before the "if [ -z "$sid" ]" check can run the safe continue path.
+      sid=$(grep -oE "Session: [a-zA-Z0-9_-]+" "$stderr_file" 2>/dev/null | head -1 | awk '{print $2}' || true)
       if [ -z "$sid" ]; then
         echo "  ERROR: no session id captured for N=$n t=$t" | tee -a "$LOG_DIR/timeline.txt"
         echo "exit=99 reason=no-session-id" > "$trial_dir/meta"
