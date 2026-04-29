@@ -90,9 +90,30 @@ let tests =
               Expect.stringContains h "/plan" "must list /plan"
               Expect.stringContains h "/edit" "must list /edit"
 
-          testCase "renderHelp marks future commands as [coming in v2.5]" <| fun _ ->
+          testCase "renderHelp marks future commands as [coming in v2.5] (Phase 32-02: 2 stubs remaining — /plan + /edit)" <| fun _ ->
               let h = renderHelp
-              Expect.stringContains h "[coming in v2.5]" "future commands flagged"
+              // After Phase 32-02, /sessions and /resume are live. Only /plan and /edit
+              // retain the [coming in v2.5] marker. Phase 33 will reduce this to 1; Phase 34 to 0.
+              let occurrences =
+                  let mutable count = 0
+                  let mutable i = 0
+                  while i >= 0 do
+                      i <- h.IndexOf("[coming in v2.5]", i)
+                      if i >= 0 then
+                          count <- count + 1
+                          i <- i + "[coming in v2.5]".Length
+                  count
+              Expect.equal occurrences 2 "exactly 2 [coming in v2.5] markers (/plan + /edit)"
+              // Confirm the live commands no longer carry the marker — find the line for each.
+              let lines = h.Split([| '\n' |])
+              let sessionsLine = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/sessions"))
+              let resumeLine   = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/resume"))
+              let planLine     = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/plan"))
+              let editLine     = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/edit"))
+              Expect.isFalse (sessionsLine.Contains("[coming in v2.5]")) "/sessions has no [coming in v2.5]"
+              Expect.isFalse (resumeLine.Contains("[coming in v2.5]"))   "/resume has no [coming in v2.5]"
+              Expect.isTrue  (planLine.Contains("[coming in v2.5]"))     "/plan still has [coming in v2.5]"
+              Expect.isTrue  (editLine.Contains("[coming in v2.5]"))     "/edit still has [coming in v2.5]"
 
           testCase "renderHelp does NOT call LLM (it's a constant string)" <| fun _ ->
               // This test exists primarily to document the contract:
