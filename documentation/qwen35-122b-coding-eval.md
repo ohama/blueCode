@@ -246,15 +246,15 @@ Wall-clock: 8.26s total for 2 steps. PASS.
 
 This section expands the §2.2 CORR-EVAL-02 analysis with the CORR-EVAL-02 scoring authority.
 
-`bench/runs/qwen35-eval-20260428-093852/refactor_orphan_count.txt`:
+`bench/runs/qwen35-eval-20260429-105907/refactor_orphan_count.txt`:
 ```
-1
+0
 ```
 
 Post-refactor file state (captured before bench/run.sh EXIT trap restored fixtures):
-- `Calculator.fs`: `add3` renamed to `sum3` but original `let add` remains (not renamed to `sum`)
-- `Main.fs`: unchanged (still calls `Calculator.add3`, `Calculator.add`)
-- `Tests.fs`: unchanged (still calls `Calculator.add3`, `Calculator.add`)
+- `Calculator.fs`: `let add` renamed to `let sum`; `let add3` renamed to `let sum3` (both renames complete)
+- `Main.fs`: updated — calls `Calculator.sum 2 3` and `Calculator.sum3 1 2 3`
+- `Tests.fs`: updated — calls `Calculator.sum 2 3` and `Calculator.sum3 1 2 3`
 
 orphan_count=1 means: at least one `add` reference still exists across the 3 .fs files post-refactor.
 The CORR-EVAL-02 scoring rule is strict: **N=0 → 5 pts; N>0 → 0 pts**.
@@ -279,11 +279,11 @@ consistently extracts only the more-complex variant as the rename target, regard
 specification is worded. Ceiling raise was a necessary but insufficient fix. The comprehension layer
 is the new constraint surfaced for v2.3 scoping.
 
-§2.4 verdict: FAIL — orphan_count=1 (persistent extraction bias on shared-prefix function names; v2.2 ceiling raise revealed comprehension layer as new bottleneck). Score: **0/5**.
+§2.4 verdict: PASS — orphan_count=0 (v2.3 multi-prong intervention resolved the comprehension-layer bias surfaced in v2.2; CORR-EVAL-02 re-run in Phase 27 produced clean PASS after Plan 27-01 migrated P1 enumeration directive into defaultSystemPrompt to reach the agent-loop eval path). Score: **5/5**.
 
 ---
 
-**§2 total: 15 + 11 + 5 + 0 = 31/40**
+**§2 total: 15 + 11 + 5 + 5 = 36/40**
 
 ---
 
@@ -847,8 +847,8 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 | Correctness | HumanEval+ pass@1 (chat, ≥75% top band) | 15 | 15 |
 | Correctness | F# bug-fix (4 fixtures, 3.75 pts each) | 11 | 15 |
 | Correctness | Language coverage (Python + TypeScript) | 5 | 5 |
-| Correctness | Multi-file refactor (all-or-nothing) | 0 | 5 |
-| **Correctness subtotal** | | **31** | **40** |
+| Correctness | Multi-file refactor (all-or-nothing) | 5 | 5 |
+| **Correctness subtotal** | | **36** | **40** |
 | Performance | Throughput tok/s (34.60 median ≥ 30) | 10 | 10 |
 | Performance | TTFT ms (222 ms median ≤ 500) | 5 | 5 |
 | Performance | Cold-start (37s ≤ 180s top band; v2.2 Phase 23) | 5 | 5 |
@@ -867,7 +867,7 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 
 | Dimension | Score / Max | Pct | ≥60%? |
 |-----------|-------------|-----|-------|
-| Correctness | 31/40 | 77.5% | YES |
+| Correctness | 36/40 | 90.0% | YES |
 | Performance | 25/25 | 100.0% | YES |
 | Reliability | 25/25 | 100.0% | YES |
 | Coding quality | 6/10 | 60.0% | YES (exactly at threshold) |
@@ -878,7 +878,7 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 - <60 OR multi-turn degrades before turn 5 OR HumanEval+ <30%: ESCALATE
 
 **Applying rules:**
-- Grand total: 31 + 25 + 25 + 6 = **87/100** → ≥80 band
+- Grand total: 36 + 25 + 25 + 6 = **92/100** → ≥80 band
 - No dimension is <60% of its max (coding quality is exactly 60%)
 - Multi-turn degradation: first at N=10 (not before turn 5)
 - HumanEval+ chat: 93.9% (far above 30% ESCALATE trigger)
@@ -910,13 +910,26 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 5. **Mac-only.** The Apple Silicon MoE routing via MLX is not directly comparable to CUDA-based
    deployments. Throughput and TTFT numbers are M-series specific.
 
-6. **Multi-file refactor: two-stage finding (v2.1 + v2.2).** v2.1 hypothesized the 5-step PLAN-04
-   hard cap as the sole structural constraint. v2.2 raised the ceiling to 10 and re-ran CORR-EVAL-02
-   twice (once with original README, once with explicitly-enumerated rewrite). Both attempts produced
-   identical orphan_count=1 with textually identical step-5 thoughts. The model exhibits a persistent
-   extraction bias on shared-prefix function names (`add` vs `add3`) — extracting only the
-   more-complex variant as the rename target regardless of spec wording. Ceiling raise was necessary
-   but insufficient; comprehension layer is the new bottleneck. v2.3 candidate.
+6. **Multi-file refactor: four-stage progression (v2.1 → v2.2 → v2.3 → v2.3+27, RESOLVED in v2.3 Phase 27).** v2.1
+   hypothesized the 5-step PLAN-04 hard cap as the sole structural constraint. v2.2 raised the ceiling
+   to 10 and re-ran CORR-EVAL-02 twice (once with original README, once with explicitly-enumerated
+   rewrite); both attempts produced identical orphan_count=1 with textually identical step-5 thoughts,
+   exposing a persistent extraction bias on shared-prefix function names (`add` vs `add3`) where the
+   model extracted only the more-complex variant as a rename target regardless of spec wording.
+   Ceiling raise was necessary but insufficient. v2.3 shipped a multi-prong intervention attacking
+   the comprehension layer at three angles: P1 system prompt enumeration directive
+   (`planSystemPromptSuffix` 695→879 chars, Phase 24-01), P2 inline few-shot example demonstrating the
+   exact `add`/`add3` shared-prefix case (suffix 879→1183 chars, Phase 24-02), P3 PlanValidator
+   pre-flight `checkRenameTargetsEnumerated` heuristic that returns `PlanInvalid` when the LLM's plan
+   omits any rename target named in the user prompt (Phase 25-01, Interpretation B detail-string
+   encoding — no Domain.fs DU change). Phase 26 attempted the empirical close but discovered an
+   architectural gap: P1+P2+P3 were all plan-mode-only (`planSystemPromptSuffix` is `--plan`-only;
+   PlanValidator runs only in `runPlanTurn`), while the eval harness invokes blueCode without `--plan`.
+   Phase 27 closed the gap by migrating P1 from `planSystemPromptSuffix` into `defaultSystemPrompt`
+   (Plan 27-01) so it reaches the agent-loop path, then re-ran CORR-EVAL-02 with mandatory
+   `launchctl kickstart` pre-flight to clear KV cache contamination (a real failure mode discovered
+   in Phase 26 Diagnostic D). Result: orphan_count=0 PASS confirmed. The historical multi-stage
+   finding is preserved here as context for the empirical close.
 
 7. **Coding quality F# score (1/5) reflects transcript selection.** The 2 multi-turn transcripts
    reviewed are Python-task sessions. If F# tasks were used for multi-turn evaluation, the idiomatic
@@ -950,11 +963,17 @@ Re-run this full evaluation if any of the following change:
    should be re-run and CORR-EVAL-02 re-scored~~ **RESOLVED in v2.2**: cap raised 5→10; CORR-EVAL-02
    re-run produced identical FAIL twice (with original and rewritten README). Comprehension layer is
    the new constraint, not the ceiling. See §2.4 two-stage finding.
-8. **Comprehension layer fix attempts (v2.3 candidate)** — if a multi-prong intervention is shipped
+8. **Comprehension layer fix attempts (v2.3 candidate)** — ~~if a multi-prong intervention is shipped
    (e.g., system prompt enumeration guidance + plan-mode pre-flight rename-target enumeration +
    few-shot multi-file refactor examples), the multi-file refactor should be re-run and CORR-EVAL-02
-   re-scored. The persistent extraction bias on shared-prefix function names is the load-bearing
-   measurement target for any such intervention.
+   re-scored~~ **RESOLVED in v2.3 (Phase 27)**: multi-prong intervention shipped (Phase 24-01 P1 system prompt
+   enumeration directive; Phase 24-02 P2 inline few-shot example; Phase 25-01 P3 PlanValidator
+   pre-flight `checkRenameTargetsEnumerated` heuristic). Phase 26 discovered the architectural gap
+   (all three prongs plan-mode-only; eval harness uses agent-loop). Phase 27 migrated P1 into
+   `defaultSystemPrompt` (Plan 27-01) and re-ran CORR-EVAL-02 with `launchctl kickstart` pre-flight
+   (Plan 27-02) — orphan_count=0 PASS confirmed. Correctness 31/40 → 36/40; Total 87 → 92.
+   See §2.4 + §8 caveat 6 for the empirical close. Aggregate verdict KEEP preserved (now ≥80 by a
+   wider margin).
 7. **evalplus version change** — macOS RLIMIT_AS and sanitize fixes are baked into the harness; a
    new evalplus version may change either behavior.
 
@@ -1029,4 +1048,4 @@ fixtures after gate runs.
 
 ---
 
-**Total: 87/100, Recommendation: KEEP**
+**Total: 92/100, Recommendation: KEEP**
