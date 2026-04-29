@@ -29,7 +29,7 @@ Success criterion is pre-defined by v2.2 audit: CORR-EVAL-02 PASS (orphan_count=
 - [x] **Phase 24: Prompt-Level Intervention (P1+P2)** — 2 plans (system prompt enumeration guidance + few-shot multi-file examples; bench gate regression hold) ✓ 2026-04-28
 - [x] **Phase 25: Plan-Mode Pre-Flight Enumeration (P3)** — 3 plans (PlanValidator.fs new pre-flight pass [Interpretation B — detail-string encoding within existing PlanInvalid case; no Domain.fs DU change; no Rendering.fs/buildCorrection cascade] + tests +3 + bench gate regression hold) ✓ 2026-04-29
 - [ ] **Phase 26: Re-Evaluation (CORR-EVAL-02 PASS + verdict flip)** — 1 plan (re-run --refactor; eval doc §2.4/§7/§8/§9 + final scorecard line 87 → 92) **Status: blocked (2026-04-29) — CORR-EVAL-02 FAIL x3; P1/P2/P3 intervention did not reach agent-loop eval path; hallucination failure mode resolved by kickstart but extraction bias persists; superseded by Phase 27**
-- [ ] **Phase 27: Default-Prompt P1 Migration + Re-Eval** — TBD plans (move P1 enumeration directive from `planSystemPromptSuffix` to `defaultSystemPrompt`; re-run CORR-EVAL-02 with kickstart pre-flight; on PASS, flip eval doc verdict 87→92)
+- [x] **Phase 27: Default-Prompt P1 Migration + Re-Eval** — 3 plans (P1 migration + bench gate hold; kickstart pre-flight + CORR-EVAL-02 stochastic re-run; eval doc 11 edit sites + STATE/ROADMAP/REQ + final bench gate + phase-close) ✓ 2026-04-28
 
 ---
 
@@ -178,12 +178,14 @@ Plans:
 5. **Mandatory final bench gate post-eval** — `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)` post-eval. EXIT trap restores fixtures cleanly.
 6. **STATE.md observation note** — Phase 27 + v2.3 milestone close-readiness recorded.
 
-**Plans:** TBD (run `/gsd:plan-phase 27` to break down)
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 27 to break down)
+- [x] 27-01-PLAN.md — Migrate P1 enumeration directive from planSystemPromptSuffix into defaultSystemPrompt; bench gate 7/7 PASS hold ✓ 2026-04-28
+- [x] 27-02-PLAN.md — launchctl kickstart pre-flight + warmup probe + CORR-EVAL-02 stochastic re-run (up to 3 attempts) ✓ 2026-04-28
+- [x] 27-03-PLAN.md — Eval doc 11 edit sites (87→92) + STATE/ROADMAP/REQUIREMENTS + 27-VERIFICATION.md + final bench gate + phase-complete commit ✓ 2026-04-28
 
-**Plan dependencies:** TBD
+**Plan dependencies:** 27-01 → 27-02 → 27-03 (sequential; migration must compile and gate-pass before re-run; re-run PASS produces run timestamp consumed by eval doc edit; eval doc + state updates require empirical PASS evidence)
 
 **Architectural invariants:**
 
@@ -215,8 +217,8 @@ Plans:
 |-------|-----------|--------------|----------------|--------|-----------|
 | 24. Prompt-Level Intervention (P1+P2) | v2.3 | COMP-01, COMP-02, COMP-04 (3 reqs) | 2/2 | ✓ Complete | 2026-04-28 |
 | 25. Plan-Mode Pre-Flight Enumeration (P3) | v2.3 | COMP-03, COMP-04 (2 reqs) | 3/3 | ✓ Complete | 2026-04-29 |
-| 26. Re-Evaluation | v2.3 | COMP-05, COMP-06 (2 reqs) | 0/1 | Blocked (2026-04-29) | - |
-| 27. Default-Prompt P1 Migration + Re-Eval | v2.3 | COMP-05, COMP-06 (reassigned from Phase 26) | 0/TBD | Not started | - |
+| 26. Re-Evaluation | v2.3 | COMP-05, COMP-06 (reassigned to Phase 27) | 0/1 | Blocked → superseded by Phase 27 | - |
+| 27. Default-Prompt P1 Migration + Re-Eval | v2.3 | COMP-05, COMP-06 (reassigned from Phase 26) | 3/3 | ✓ Complete | 2026-04-28 |
 
 ---
 
@@ -235,4 +237,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-28*
-*Last updated: 2026-04-29 — Phase 27 added (Default-Prompt P1 Migration + Re-Eval) to close the architectural gap exposed by Phase 26 BLOCKED. Diagnostic D (kickstart) confirmed hallucination was KV cache contamination but extraction bias is real and reproducible. P1 directive moves from planSystemPromptSuffix → defaultSystemPrompt to reach agent-loop path. COMP-05 + COMP-06 reassigned from Phase 26 to Phase 27. Phase 26 stays as historical BLOCKED record. v2.3 milestone alive; closes when Phase 27 delivers CORR-EVAL-02 PASS + verdict flip 87→92.*
+*Last updated: 2026-04-28 — Phase 27 complete. P1 migration to defaultSystemPrompt closed the plan-mode-only architectural gap surfaced by Phase 26 BLOCKED. CORR-EVAL-02 PASS empirical (orphan_count=0) after launchctl kickstart pre-flight. Eval doc verdict 87→92 (Correctness 31→36; aggregate KEEP preserved by wider margin). v2.3 milestone close-ready (3/4 phases ✓ + 1 superseded; 6/6 requirements ✓; bench gate 7/7 PASS preserved through entire milestone).*

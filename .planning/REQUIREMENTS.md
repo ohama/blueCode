@@ -31,7 +31,7 @@ The data-driven core of v2.3 — three independent prongs attacking the persiste
   - **Validation:** `grep -n "checkRenameTargetsEnumerated\|rename targets not enumerated" src/BlueCode.Core/PlanValidator.fs` matches **both anchors**: the function name (definition + chain bind site) AND the literal sprintf detail string that surfaces in the [PLAN INVALID] correction. New PlanValidatorTests cover: (a) plan covering all targets PASSES; (b) plan missing one target FAILS with named reason; (c) user prompt with no rename targets PASSES (vacuous truth — heuristic returns empty list).
   - **Threshold:** 2-attempt retry path works (existing PLAN-04 retry mechanism extends to this new reason); validator runs in pure-function manner (no I/O in Core).
 
-- [ ] **COMP-04**: Tests + bench gate regression hold across all three prongs
+- [x] **COMP-04**: Tests + bench gate regression hold across all three prongs — ✓ delivered across Phase 24 (bench gate 7/7 PASS post-P1+P2), Phase 25 (bench gate 7/7 PASS post-P3; test count 284→287), Phase 27 (bench gate 7/7 PASS post-P1-migration + final gate post-eval)
   - **Goal:** All bench fixtures (W1/W2/B2/T1/T5/T6/MT) complete in same step counts as v2.2 baseline; test count grows ≥4 (PlanValidator new cases for P3 + AgentLoop + possible Cli prompt-content tests); bench gate `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)` after each phase.
   - **Behavior:** Sequential verification: after Phase 24 (P1+P2 prompt changes), gate held; after Phase 25 (P3 architectural), gate held + new tests added. If any fixture regresses on step count: iterate the prompt or pre-flight heuristic — DO NOT modify `bench/baseline.json`.
   - **Validation:** Per-fixture step counts stay within baseline_max throughout all 3 phases. Test count 284 → ≥287 (Phase 25 adds ≥3 tests; Phase 24 was Cli-only with 0 test growth — confirmed empirically: `git log 038b78e..41e859d -- tests/` returned empty). `git diff bench/baseline.json` empty post-milestone.
@@ -41,13 +41,13 @@ The data-driven core of v2.3 — three independent prongs attacking the persiste
 
 Closes the v2.2 audit's COMP-BIAS-01 candidate by empirically re-running the same fixture that previously FAIL'd twice.
 
-- [ ] **COMP-05**: CORR-EVAL-02 re-run produces orphan_count=0 (PASS)
+- [x] **COMP-05**: CORR-EVAL-02 re-run produces orphan_count=0 (PASS) — ✓ delivered in Plan 27-02 (orphan_count=0 in `bench/runs/qwen35-eval-20260429-105907/refactor_orphan_count.txt`; PASS verdict line confirmed)
   - **Goal:** Re-run multi-file refactor task with all 3 prongs in place; verify agent successfully renames `add` → `sum` AND `add3` → `sum3` across all 3 F# files in `bench/fixtures/refactor_multifile/` without orphan references. Same fixture as v2.2 attempts (rewritten 2128-char README).
   - **Behavior:** Pre-flight `git checkout -- bench/fixtures/refactor_multifile/` to ensure clean state. `bash bench/eval-qwen35-122b.sh --refactor` runs full agent loop. Post-run: `bench/runs/qwen35-eval-<ts>/refactor_orphan_count.txt` contains `0`; `refactor_multifile_diff.txt` contains `CORR-EVAL-02 PASS:` line. Bench gate immediately after restores fixtures via EXIT trap.
   - **Validation:** Single integer in `refactor_orphan_count.txt` = 0; verdict line `CORR-EVAL-02 PASS: 0 orphan 'add' references remain` in transcript.
   - **Threshold:** All-or-nothing PASS. If FAIL on first attempt, document agent's step trace; allow up to 3 re-runs to account for stochastic variance (sampling temp=0.7 introduces some run-to-run variation). If FAIL ≥3 times: STOP and pause for diagnosis (extraction bias may be deeper than prompt+validator can fix; would warrant v2.4+ further work).
 
-- [ ] **COMP-06**: Eval doc updated; scorecard re-aggregated (Total 87 → 92)
+- [x] **COMP-06**: Eval doc updated; scorecard re-aggregated (Total 87 → 92) — ✓ delivered in Plan 27-03 (eval doc 11 edit sites; final scorecard line strict-format match confirmed)
   - **Goal:** `documentation/qwen35-122b-coding-eval.md` §2.4 (Multi-file refactor) flipped from FAIL to PASS with new orphan_count=0 evidence; §7 Verdict scorecard re-aggregated (Multi-file refactor row 0/5 → 5/5; Correctness subtotal 31 → 36; Total 87 → 92); §8 Caveats — multi-file caveat replaced with v2.2 → v2.3 progression note; §9 Re-evaluation — "Comprehension layer fix attempts" item marked **resolved**; final verdict line updated to `**Total: 92/100, Recommendation: KEEP**`.
   - **Behavior:** Inline edits to existing eval doc. STATE.md observation note updated. CLAUDE.md Bench section cross-reference unchanged.
   - **Validation:** `grep -E "^\\*\\*Total: 92/100, Recommendation: KEEP\\*\\*$" documentation/qwen35-122b-coding-eval.md` matches; v2.1 audit-style format check passes; all section verdict lines present.
@@ -95,8 +95,8 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 | COMP-02 | Phase 24 | ✓ Complete (2026-04-28) |
 | COMP-03 | Phase 25 | ✓ Complete (2026-04-29) |
 | COMP-04 | Phase 24 + 25 (regression hold per phase) | Phase 24 ✓ Complete; Phase 25 portion ✓ Complete (2026-04-29) |
-| COMP-05 | Phase 26 | Pending |
-| COMP-06 | Phase 26 | Pending |
+| COMP-05 | Phase 27 (was Phase 26) | ✓ Complete (2026-04-28) |
+| COMP-06 | Phase 27 (was Phase 26) | ✓ Complete (2026-04-28) |
 
 **Coverage:**
 - v2.3 requirements: 6 total
@@ -105,4 +105,4 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-04-29 — Phase 25 complete: COMP-03 delivered (checkRenameTargetsEnumerated heuristic; Interpretation B — detail-string encoding within existing PlanInvalid case); COMP-04 Phase 25 portion satisfied (bench gate 7/7 PASS preserved; test count 284→287). Phase 26 (COMP-05 + COMP-06) follows.*
+*Last updated: 2026-04-28 — Phase 27 complete: COMP-05 delivered (CORR-EVAL-02 PASS empirically; orphan_count=0; RUN_TS=20260429-105907; Plan 27-02); COMP-06 delivered (eval doc 11 edit sites; scorecard 87→92; strict-format final line confirmed; Plan 27-03). All 6/6 v2.3 requirements complete. v2.3 milestone close-ready.*
