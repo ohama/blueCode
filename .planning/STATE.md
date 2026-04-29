@@ -5,17 +5,17 @@
 See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.3 milestone shipped)
 
 **Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.3 verdict 92/100 KEEP; v2.4 measurement-first: F# fixture scoring 13/15 → 5/5 → passed_disprove_1of5; §5 1/5→5/5; total 92→96)
-**Current focus:** v2.4 Coding Quality milestone (started 2026-04-29) — 28-04 COMPLETE: passed_disprove_1of5; Phase 29 SKIP. Proceed to 28-05 (eval doc §5+§7 update) + 28-06 (close decision).
+**Current focus:** v2.4 Coding Quality milestone (started 2026-04-29) — 28-05 COMPLETE: eval doc updated (92/100 → 96/100; §5.1 1/5 → 5/5; §7 Coding-quality 6/10 → 10/10). Proceed to 28-06 (close decision + Phase 29 SKIP rationale).
 
 ## Current Position
 
 Milestone: v2.4 Coding Quality (started 2026-04-29; data-driven from v2.2/v2.3 audit's Coding-quality 1/5 hedge)
 Phase: 28 (F# Coding Quality Measurement) — in progress
-Plan: 04 of N complete (wave 3)
+Plan: 05 of N complete (wave 4)
 Status: In progress
-Last activity: 2026-04-29 — Completed 28-04-PLAN.md (formal scoring run; 13/15 grand total; 5/5 mapped; passed_disprove_1of5; bench gate 7/7 PASS)
+Last activity: 2026-04-29 — Completed 28-05-PLAN.md (eval doc update; §5.1 1/5→5/5; §7 6/10→10/10; total 92→96; commit a36cc35; bench gate 7/7 PASS)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: 28-01 + 28-02 + 28-03 + 28-04 done)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: 28-01 + 28-02 + 28-03 + 28-04 + 28-05 done)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -75,9 +75,9 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 ## Session Continuity
 
 Last session: 2026-04-29
-Stopped at: Completed 28-04-PLAN.md — formal scoring run (13/15 grand total; 5/5 mapped; passed_disprove_1of5; bench gate 7/7 PASS; FS-EVAL-02 satisfied; commit 1413111)
+Stopped at: Completed 28-05-PLAN.md — eval doc updated (§5.1 1/5→5/5; §7 Coding-quality 6/10→10/10; total 92→96; FS-EVAL-03 satisfied; commit a36cc35)
 Resume file: None
-Next workflow trigger: Continue Phase 28 — 28-05 eval doc update (§5 1/5→5/5; §7 6/10→10/10; total 92→96) + 28-06 decision-point classification
+Next workflow trigger: Continue Phase 28 — 28-06 decision-point classification (passed_disprove_1of5; Phase 29 SKIP rationale; milestone close prep)
 
 ## Empirical Baselines (post-v2.3)
 
@@ -91,7 +91,7 @@ Load-bearing measurements for v2.4+ scoping:
 - **Cold-start 37s warm-OS-cache** (v2.2 Phase 23) — kernel preserves model weight pages even when launchctl kickstart kills the process; v2.0's "up to 240s" estimate stays valid for first-boot pristine case (v2.4 candidate COLDSTART-PRISTINE-01)
 - **10-step PLAN-04 ceiling** (Phase 22-01) — sufficient for genuine multi-file refactor (CORR-EVAL-02 used 8/10 steps in PASSing run); ceiling no longer the constraint
 - **CORR-EVAL-02 PASS** (Phase 27-02; 2026-04-29) — orphan_count=0 with all 3 v2.3 prongs in production INCLUDING P1 in `defaultSystemPrompt`. Step-2 thought from PASSing run: "I need to rename `add` to `sum` and `add3` to `sum3` across three files" — both targets enumerated explicitly. P1 effect directly observable.
-- **Coding-quality 6/10 (idiomatic F# 1/5)** (v2.1; PENDING UPDATE post-v2.4 28-04) — 28-04 formal F# scoring: 13/15 grand total → 5/5 mapped → passed_disprove_1of5. §5 will update 1/5→5/5; §7 will update 6/10→10/10 in 28-05. Prior 1/5 was Python-transcript artifact.
-- **Aggregate verdict 92/100 KEEP** (post-v2.3; PENDING 28-05 UPDATE to 96/100) — Correctness 36/40, Performance 25/25, Reliability 25/25, Coding-quality 6/10→10/10 pending. Empirically useful for daily F# coding via blueCode (≥80 threshold; all dimensions ≥60%; multi-file refactor PASS post-v2.3 intervention).
+- **Coding-quality 10/10 (idiomatic F# 5/5)** (v2.4 Phase 28; UPDATED from 6/10 in v2.1/v2.3) — 28-04 formal F# fixture scoring: 13/15 grand total → 5/5 mapped → passed_disprove_1of5. Prior 1/5 was Python-transcript artifact (category mismatch). v2.3 score 1/5 revised to 5/5 in 28-05 (commit a36cc35).
+- **Aggregate verdict 96/100 KEEP** (post-v2.4 Phase 28-05; UPDATED from 92/100 post-v2.3) — Correctness 36/40, Performance 25/25, Reliability 25/25, Coding-quality 10/10. Empirically useful for daily F# coding via blueCode (≥80 threshold; all dimensions ≥80%; multi-file refactor PASS post-v2.3 intervention).
 
 For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v{1.0..2.3}-phases/`.
