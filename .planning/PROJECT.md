@@ -4,9 +4,11 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current State (post-v2.3)
+## Current State (post-v2.4)
 
-v2.3 Comprehension Layer shipped 2026-04-29. Second **data-driven** milestone (after v2.2 set the precedent) — scoped from v2.2 audit's CORR-EVAL-02 FAIL constraint discovery #2 (persistent extraction bias on shared-prefix function names). Four-phase milestone with mid-flight architectural pivot: Phase 24 prompt-level intervention (P1+P2) + Phase 25 plan-mode pre-flight enumeration (P3, Interpretation B detail-string encoding) + Phase 26 BLOCKED diagnostic (architectural scope mismatch: prongs were plan-mode-only, eval uses agent-loop) + Phase 27 default-prompt P1 migration + re-eval (closes the gap; CORR-EVAL-02 PASS empirically; orphan_count=0). Final verdict **87 → 92/100, KEEP** (Correctness 31/40 → 36/40; CORR-EVAL-02 0→5). Bench gate 7/7 PASS preserved throughout; zero `bench/baseline.json` diff. Tests 284 → 287. Nine milestones shipped. Daily-driver use ongoing.
+v2.4 Coding Quality shipped 2026-04-29. Third **measurement-first data-driven** milestone (v2.2 + v2.3 set the data-driven precedent; v2.4 inverted the pattern to measure-first vs intervene-first). Two-phase milestone (Phase 28 + Phase 30; Phase 29 SKIPPED-by-design — conditional that didn't trigger). **Path A (1/5 disproved) won** — F# fixture rescore yielded grand_total 13/15 → mapped_score 5/5 → `passed_disprove_1of5`. Final verdict **92 → 96/100, KEEP** (Coding-quality 6/10 → 10/10; +4 free points without code change). All 4 dimensions now ≥80%; widest KEEP margin in project history. Bench gate 7/7 PASS preserved throughout. **Zero `src/` diff** across entire v2.4 milestone. 10 milestones shipped. Daily-driver use ongoing.
+
+**v2.3 (prior, 2026-04-29):** Comprehension Layer. CORR-EVAL-02 PASS empirically via P1 migration to `defaultSystemPrompt`; verdict 87 → 92/100 KEEP. Phase 26 BLOCKED diagnostic preserved as architectural scope mismatch lesson.
 
 **v2.2 (prior, 2026-04-28):** Multi-file Capability. PLAN-04 ceiling raise 5→10 + cold-start empirical (37s warm-OS-cache); verdict 82 → 87/100 KEEP. CORR-EVAL-02 still FAIL x2; surfaced persistent extraction bias as v2.3 first candidate.
 
@@ -14,9 +16,9 @@ v2.3 Comprehension Layer shipped 2026-04-29. Second **data-driven** milestone (a
 
 **v2.0 (prior, 2026-04-27):** Persistence + Planning. Multi-turn REPL memory + JSONL session persistence + `--resume <id>` + plan-then-execute + Qwen 3.5 122B canonical + Qwen 2.5 retirement (-85 GB disk).
 
-Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3}-ROADMAP.md`.
+Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3,2.4}-ROADMAP.md`.
 
-## Current Milestone: v2.4 Coding Quality
+## Current Milestone: v2.4 Coding Quality (SHIPPED)
 
 **Goal:** Close the only remaining ≤60%-threshold dimension on the eval scorecard — Coding-quality 6/10 (Idiomatic F# 1/5). v2.2/v2.3 audit hedged that the 1/5 score may be a Python-transcript artifact (HumanEval+ scoring Python answers under chat mode); the real F# generation quality during daily-driver use is not directly measured. This milestone is **measurement-first**: build F# task fixtures, measure idiomatic-F# generation in agent-loop mode, then intervene only if data justifies. Mirrors v2.2's data-driven discipline.
 
@@ -122,6 +124,15 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - ✓ Eval doc verdict 87 → 92 — 11 edit sites in `documentation/qwen35-122b-coding-eval.md`; Correctness 31/40 → 36/40; aggregate KEEP preserved by wider margin; final scorecard `**Total: 92/100, Recommendation: KEEP**` strict-format match — v2.3 (27-03)
 - ✓ Bench gate stability preserved through entire v2.3 — 7/7 PASS held across 4 phases; per-fixture step counts unchanged vs v2.2 baseline; `bench/baseline.json` byte-for-byte preserved — v2.3 (COMP-04)
 - ✓ Fourth macOS bash-strict-mode pattern documented — `9f8e06e fix(27-02): guard orphan grep against set -e abort on PASS case`. `grep -cE` exits 1 on zero-match (PASS case); `|| true` guard required under `set -euo pipefail` — v2.3 (27-02)
+
+- ✓ F# fixture infrastructure for idiomatic-F# scoring — `bench/fixtures/fs_idiomatic/{pipeline,dupatternmatch,optionhandling}.{task.md,fs}` (3 fixture pairs); each `.task.md` ≤500 bytes; each `.fs` skeleton compiles standalone via `failwith "TODO"` — v2.4 (28-02; FS-EVAL-01)
+- ✓ `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` (lines 328-391) mirroring `run_refactor()` template — v2.4 (28-03; FS-EVAL-02 part 1)
+- ✓ Idiomatic F# 1/5 disproved as Python-transcript artifact — F# fixture rescore via research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate (≥12→5/5, etc.); per-fixture pipeline 5/5, dupatternmatch 5/5, optionhandling 3/5; grand_total 13/15 → mapped 5/5 → `passed_disprove_1of5` — v2.4 (28-04; FS-EVAL-02 part 2)
+- ✓ Eval doc verdict 92→96 KEEP — 7 edit sites applied; §5 Idiomatic F# 1/5 → 5/5; §7 Coding-quality subtotal 6/10 → 10/10; Grand total 92/100 → 96/100; final scorecard `**Total: 96/100, Recommendation: KEEP**` strict-format match — v2.4 (28-05; FS-EVAL-03)
+- ✓ Fifth macOS bash-strict-mode pattern documented + auto-fixed — `94d905c fix(28-01): guard grep -oE session-id capture against pipefail abort`. Real bug found at line 378 of `bench/eval-qwen35-122b.sh` during HARNESS-AUDIT-01 audit pass; same `|| true` pipeline guard pattern as Pattern 4 — v2.4 (28-01)
+- ✓ HARNESS-AUDIT-01 howto codified — `documentation/howto/macos-bash-strict-mode-patterns.md` with 5 patterns (4 carried-forward + Pattern 5); each pattern has symptom/cause/canonical-fix/commit-ref structure — v2.4 (28-01; HARNESS-01)
+- ✓ Bench gate 7/7 PASS preserved through entire v2.4 — milestone-wide invariants held; `git diff milestone-v2.3 HEAD -- src/` empty; `bench/baseline.json` byte-for-byte preserved; zero source-code change milestone — v2.4 (REGRESSION-01; Phase 28 + Phase 30 both verified)
+- ✓ Conditional Phase 29 SKIPPED-by-design pattern established — Phase 29 never created (cleaner than v2.3 Phase 26 BLOCKED-with-record); FS-INTERVENE-01..02 marked SKIPPED in REQUIREMENTS.md traceability — v2.4 (Path A clean disprove)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -274,6 +285,13 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 | v2.3 (27-01): Byte-invariant transformation for prompt migration | Combined plan-mode prompt char count (defaultSystemPrompt + "\n\n" + planSystemPromptSuffix) was provably invariant before/after migration (1968 = 1968). | ✓ Good — char count invariants are powerful audit tools; when designing prompt changes, look for transformations that conserve a measurable quantity |
 | v2.3 (27-02): Fourth macOS bash-strict-mode pattern + Rule 3 auto-fix | `grep -cE` exits 1 on zero-match (PASS case); `set -euo pipefail` aborts before writing `refactor_orphan_count.txt`. Auto-fixed with `|` true` guard in `bench/eval-qwen35-122b.sh` per Rule 3 (auto-fix-blockers). Conflict with ROADMAP §Phase 27 "do not modify eval-qwen35-122b.sh body" guardrail. | ✓ Good (with caveat) — Rule 3 auto-fix-blockers correctly overrode the guardrail because the success path could not report success otherwise. Documented in v2.3-MILESTONE-AUDIT.md as in-scope deviation. Future eval harness changes should ride formal phases per the original guardrail intent. |
 | v2.3 (Audit): Plan-mode vs agent-loop distinction is now load-bearing repo knowledge | The distinction surfaced as audit-worthy after v2.3 made it consequential. `defaultSystemPrompt` is for both modes; `planSystemPromptSuffix` is plan-mode-only; `PlanValidator.checkRenameTargetsEnumerated` runs only in `runPlanTurn`. | ✓ Good — recorded in v2.3-MILESTONE-AUDIT.md lessons section. Future prompt or validator changes must explicitly state which mode(s) they target. Bench gate fixtures use agent-loop (no `--plan`); CORR-EVAL-02 eval harness uses agent-loop (no `--plan`). |
+| v2.4: Measurement-first scoping (vs v2.2/v2.3 intervention-first) | Inverted v2.2/v2.3's pattern — measure first, intervene only if data justifies. v2.4's IDIOMATIC-FS-01 Path A disprove yielded free +4 points (Coding-quality 6/10→10/10) without modifying `src/`, `defaultSystemPrompt`, or `planSystemPromptSuffix`. | ✓ Good — recorded in v2.4-MILESTONE-AUDIT.md as Lesson 1. *"Is the score real, or is the measurement instrument wrong?"* — applies to any benchmarking dimension where prior evidence is category-mismatched. |
+| v2.4 (28-04): Sum-then-scale band table aggregate (vs round(average)) | For [5,5,0]: average rounds to 3 (loses signal); sum-band gives 4 (preserves signal). Plan-checker iter-1 BLOCKER 2 caught this. | ✓ Good — Phase 28-04 SUMMARY.md documents the choice; band table self-contained in plan (not just referenced from research). Reusable for future multi-fixture rubric scoring. |
+| v2.4 (Phase 29 SKIPPED-by-design): Conditional skip vs blocked record | Phase 29 was conditional from the start; Path A disprove triggered SKIP. Never planned, never executed — no phase directory exists. Cleaner than v2.3 Phase 26 BLOCKED-with-record (which preserved diagnostic value from a partial run). | ✓ Good — recorded in v2.4-MILESTONE-AUDIT.md as Lesson 2. Pattern: SKIP-by-design when conditional doesn't trigger; BLOCKED-with-record when partial-attempt produces diagnostic value. Both are valid milestone paths. |
+| v2.4 (28-01): HARNESS-AUDIT bundling into measurement phase | `documentation/howto/macos-bash-strict-mode-patterns.md` written as part of Phase 28 (same harness file as the new `--fs-idiomatic` mode). Audit pass found Pattern 5 (real bug at line 378) — bundling produced direct value beyond just docs. | ✓ Good — pattern: small standalone docs/cleanup tasks bundle naturally with phases that touch the same file. Not always a separate phase needed. |
+| v2.4: Zero-source-diff milestone (v2.1 + v2.4 now both demonstrate this) | Eval scoring infrastructure expansion + howto documentation only. `git diff milestone-v2.3 HEAD -- src/` empty across entire v2.4. v2.1 also had zero `src/` diff (eval infrastructure). | ✓ Good — pattern: low-risk eval/measurement work doesn't need `src/` changes. Future milestones can lean on the `git diff milestone-v<prev> HEAD -- src/` empty assertion as an established invariant. |
+| v2.4 (28-02): FSI fixture skeleton pattern | `dotnet fsi <file>.fs </dev/null` always exits 1 on interactive EOF; compile verification uses absence of `error FS` in output, not exit code. Fixtures use direct top-level `try...with` (no `[<EntryPoint>]` since FSI doesn't invoke it). | ✓ Good — load-bearing for future F# fixture work; documented in STATE.md decisions log. |
+| v2.4 (Plan-checker quota exhaustion handled twice): Self-applied quality gate is sufficient when plan structure mirrors well-templated precedent | Phase 27 (v2.3) + Phase 30 (v2.4) both had checker-quota exhaustion. Both proceeded with planner's self-applied quality gate + structural mirror with prior canonical close-plan. Both executed cleanly. | ✓ Good — risk model: when the plan is procedurally simple and the executor has executed close-plans before, the checker's marginal value is low. Not a license to skip checkers in general; only when the plan is well-templated. |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -286,4 +304,4 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-29 after starting v2.4 Coding Quality milestone — measurement-first scope on Coding-quality 6/10 (Idiomatic F# 1/5 may be Python-transcript artifact); 9 milestones shipped (v2.4 in progress).*
+*Last updated: 2026-04-29 after shipping v2.4 Coding Quality milestone — measurement-first Path A disprove yielded Coding-quality 6/10→10/10 + Total 92→96/100 KEEP; F# fixture infrastructure shipped reusably; 5th macOS bash-strict-mode pattern codified; zero `src/` diff; 10 milestones shipped (v2.4 closed).*

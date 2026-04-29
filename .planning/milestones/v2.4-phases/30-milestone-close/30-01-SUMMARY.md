@@ -59,7 +59,7 @@ Fixtures restored to canonical state by EXIT trap (git diff empty post-gate).
 
 | Hash | Subject | Boundary |
 |------|---------|----------|
-| see below | `docs(30): complete milestone-close phase` | phase-complete (5 files) |
+| `3d3252b` | `docs(30): complete milestone-close phase` | phase-complete (5 files) |
 
 Plan-meta commit collapsed into phase-complete commit (single plan = single commit boundary; mirrors Phase 26-01 pattern).
 

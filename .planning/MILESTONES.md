@@ -1,5 +1,54 @@
 # Project Milestones: blueCode
 
+## v2.4 Coding Quality (Shipped: 2026-04-29)
+
+**Delivered:** Third **measurement-first data-driven** milestone (v2.2 + v2.3 set the data-driven precedent; v2.4 inverted the pattern to measure-first vs intervene-first). Scoped from v2.2/v2.3 audits' carried-forward IDIOMATIC-FS-01 candidate (Coding-quality 1/5 sub-score may be Python-transcript artifact). **Path A (1/5 disproved) won** — Phase 28's F# fixture rescore yielded grand_total 13/15 → mapped_score 5/5 → `passed_disprove_1of5`. Phase 29 SKIPPED-by-design (never created — cleaner than v2.3's BLOCKED-with-record). Phase 30 closed with aggregate verdict **92 → 96/100, KEEP** (Coding-quality 6/10 → 10/10; +4 free points without code change). All 4 dimensions now ≥80%; widest KEEP margin in project history.
+
+**Phases completed:** 28, 30 (2 actual phases — Phase 29 was conditional and never created; never planned, never executed)
+
+**Plans completed:** 7 total (6 in Phase 28; 1 in Phase 30; Phase 29 had 0 plans)
+
+**Key accomplishments:**
+
+- **Idiomatic F# 1/5 disproved as Python-transcript artifact (Phase 28; FS-EVAL-01..03):** v2.1-era 1/5 was scored against HumanEval+ Python answers (chat-mode wrapping artifacts). v2.4 built proper F# fixtures (`bench/fixtures/fs_idiomatic/{pipeline,dupatternmatch,optionhandling}.{task.md,fs}`); rescored via research Q4 verbatim binary 5-criterion rubric (C1 Idiomatic pattern present / C2 Anti-pattern absent / C3 Type signatures preserved / C4 Code structurally valid F# / C5 Task goal met) with sum-then-scale band table aggregate. Per-fixture: pipeline 5/5, dupatternmatch 5/5, optionhandling 3/5 (compile error on `Option.ofObj` for value-type tuple from `Int32.TryParse`); grand_total 13/15 → band ≥12 → mapped_score 5/5 → `passed_disprove_1of5`. Free +4 points without modifying `src/`, `defaultSystemPrompt`, or `planSystemPromptSuffix`.
+
+- **F# fixture infrastructure shipped reusably (Phase 28-02 + 28-03):** `bench/fixtures/fs_idiomatic/` with 3 fixture pairs (each `.task.md` ≤500 bytes; each `.fs` skeleton compiles standalone via `failwith "TODO"` body). New `--fs-idiomatic` mode added to `bench/eval-qwen35-122b.sh` at line 328 mirroring `run_refactor()` template (require_port_8001 + reminder-only kickstart + per-fixture `git checkout` + agent-loop run + transcript/diff/meta capture). HTTP-only invariant preserved. Reusable for future F# coding-quality work.
+
+- **HARNESS-AUDIT-01 howto with 5 patterns (Phase 28-01; HARNESS-01):** `documentation/howto/macos-bash-strict-mode-patterns.md` codifies all 4 carried-forward patterns (set-e/dotnet-exit; grep-c/pipefail double-output; mkdir-before-tee; grep-cE-zero-match-exit-1) PLUS Pattern 5 found during the audit pass — `grep -oE` session-id capture at line 378 of `bench/eval-qwen35-122b.sh` lacked `|| true` guard under `set -euo pipefail`. Real bug auto-fixed in commit `94d905c`. Each pattern has symptom/cause/canonical-fix/commit-ref structure.
+
+- **Conditional Phase 29 SKIP-by-design pattern established:** v2.4's Path-A SKIP is structurally cleaner than v2.3's Phase 26 BLOCKED-with-record. Phase 26 had a partial run (3 stochastic FAIL attempts) producing diagnostic value, so it was preserved. v2.4 Phase 29 was never planned, never executed — it's a **conditional that didn't trigger**, not a phase that failed. The directory wasn't created. This is the cleanest possible skip pattern; reusable for future conditional-on-data milestones.
+
+- **Eval doc verdict 92→96 KEEP (Phase 28-05; FS-EVAL-03):** 7 edit sites applied (§5.1 verdict line 686; §5 total line 766; §7 Idiomatic F# row line 877; §7 Coding-quality subtotal line 880; §7 Dimension coverage row line 889 — drop "exactly at threshold" qualifier; §7 Grand total line 897; final scorecard line 1064). New "F# fixture evidence (v2.4 Phase 28)" subsection added in §5. Strict-format final scorecard line `**Total: 96/100, Recommendation: KEEP**` regex match confirmed.
+
+- **Bench gate stability preserved milestone-wide:** `bash bench/run.sh --gate` 7/7 PASS held across all 7 plans of Phase 28 + Phase 30. Per-fixture step counts unchanged vs v2.3 baseline (= v2.2 baseline; preserved through v2.3). `bench/baseline.json` byte-for-byte preserved (`git diff milestone-v2.3 HEAD -- bench/baseline.json` empty). `git diff milestone-v2.3 HEAD -- src/` empty (zero source-code change milestone). Eval harness diff confined to `--fs-idiomatic` mode + Pattern 5 fix.
+
+- **FSI fixture skeleton pattern discovered (Phase 28-02):** `dotnet fsi <file>.fs </dev/null` always exits 1 on interactive EOF; compile verification uses absence of `error FS` in output, not exit code. Fixtures use direct top-level `try...with` (no `[<EntryPoint>]` since FSI doesn't invoke it). Documented in STATE.md as load-bearing for future F# fixture work.
+
+**Stats:**
+
+- 2 actual phases (28, 30; Phase 29 SKIPPED-by-design — never created), 7 plans, 7 requirements (5 unconditional ✓ + 2 conditional SKIPPED)
+- 287 tests (unchanged — Phase 28 added bench fixtures, not Expecto tests)
+- 37 files changed (+6,816 / -38 LOC; heavily docs/eval/research-driven)
+- 21 commits in milestone range
+- Bench gate 7/7 PASS preserved throughout
+- Wall-clock: ~3 hours same-day (2026-04-29 13:07 → 15:59)
+- **Zero `src/` diff** across entire milestone
+
+**Git range:** `8ce7b2f docs: start milestone v2.4 Coding Quality` → `3ab6102 fix(30): correct stale commit hash in REQUIREMENTS.md HARNESS-01 validation`
+
+**What's next:**
+
+v2.5 candidates (observation-driven; not pulled into v2.4):
+- **AGENT-LOOP-FEW-SHOT-01** (carried-forward from v2.3) — P2 migration to `defaultSystemPrompt` if observation surfaces value
+- **COLDSTART-PRISTINE-01** (low; carried-forward) — Post-reboot pristine cold-start measurement
+- **SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01** — observation-driven (no daily-driver pain signal); v2.5+ candidates
+- **STM-01** — deferred 10th cycle as of v2.4 close
+- **F# fixture expansion** — if v2.5+ surfaces signal that warrants more fixtures or tighter rubric
+
+**Audit note:** v2.4 ran `/gsd:audit-milestone` post-Phase-30 (status: passed; 5/5 unconditional + 2/2 conditional SKIPPED-by-design; 12/12 integration checks; 1/1 E2E flow; **zero tech debt**). One audit-time orchestrator correction (REQUIREMENTS.md HARNESS-01 validation clause: `4bcd8a4` → `a6159c4` per actual commit hash; commit `3ab6102`). 6 lessons recorded in `.planning/milestones/v2.4-MILESTONE-AUDIT.md`. Notable repo-level lessons: **measurement-first scoping yields free score improvements when prior measurements are based on category-mismatched evidence** (v2.4 added +4 points without modifying `src/`); **conditional SKIP-by-design is structurally cleaner than BLOCKED-with-record** (Phase 29 never-created vs v2.3 Phase 26 partial-attempt-preserved); **zero-source-diff milestones are real** (v2.1 + v2.4 both shipped meaningful capability without touching `src/`).
+
+---
+
 ## v2.3 Comprehension Layer (Shipped: 2026-04-29)
 
 **Delivered:** Second **data-driven** milestone, scoped from v2.2 audit's CORR-EVAL-02 FAIL constraint discovery #2 (persistent extraction bias on shared-prefix function names — `add`/`add3` shared prefix where the model renamed `add3→sum3` but ignored `add→sum`, identical step-5 thoughts across two different READMEs). Multi-prong intervention (P1 system prompt enumeration directive + P2 few-shot multi-file examples + P3 plan-mode pre-flight rename-target enumeration) with mid-flight architectural pivot (Phase 26 BLOCKED → Phase 27 added) when prongs proved scoped to plan-mode while eval harness uses agent-loop. Final verdict **87 → 92/100, KEEP** (Correctness 31/40 → 36/40 via CORR-EVAL-02 PASS).

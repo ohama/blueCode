@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.3 milestone shipped)
+See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.4 milestone shipped)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.3 verdict 92/100 KEEP; v2.4 measurement-first: F# fixture scoring 13/15 → 5/5 → passed_disprove_1of5; §5 1/5→5/5; total 92→96)
-**Current focus:** v2.4 Coding Quality milestone close-ready (Phase 30 complete 2026-04-29) — Path A 1/5 DISPROVED (passed_disprove_1of5); Phase 29 SKIPPED. Run `/gsd:audit-milestone` then `/gsd:complete-milestone v2.4`.
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.4 verdict 96/100 KEEP; all 4 dimensions ≥80%; widest KEEP margin in project history)
+**Current focus:** Between milestones. v2.4 shipped 2026-04-29 with F# fixture rescore Path A disprove (Coding-quality 6/10→10/10; Total 92→96/100). v2.5 scoping observation-driven (next via `/gsd:new-milestone`).
 
 ## Current Position
 
-Milestone: v2.4 Coding Quality (close-ready 2026-04-29; data-driven from v2.2/v2.3 audit's Coding-quality 1/5 hedge — Path A 1/5 DISPROVED)
-Phase: 30 complete (milestone-close gate; bench gate 7/7 PASS; v2.4 close-ready)
-Plan: 01 of 01 complete (all plans done)
-Status: Phase 28 complete; Phase 29 SKIPPED; Phase 30 complete; v2.4 close-ready (run /gsd:audit-milestone next)
-Last activity: 2026-04-29 — Phase 30 verified; final bench gate 7/7 PASS; out-of-scope invariants milestone-wide (zero src/ diff, baseline byte-equal, run.sh untouched); 30-VERIFICATION.md records v2.4 Path A aggregate 92→96 KEEP
+Milestone: v2.4 Coding Quality ✓ SHIPPED 2026-04-29
+Phase: None (between milestones)
+Plan: None
+Status: v2.4 milestone archived to `.planning/milestones/v2.4-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `.planning/milestones/v2.4-phases/{28,30}-*/`. Phase 29 SKIPPED-by-design (never created). ROADMAP.md and REQUIREMENTS.md deleted (fresh ones via `/gsd:new-milestone`). 5/5 unconditional + 2/2 conditional SKIPPED requirements.
+Last activity: 2026-04-29 — v2.4 milestone complete + tagged `milestone-v2.4`. Ready for v2.5 scoping.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ close-ready (Phase 28: 6/6 ✓; Phase 29 SKIPPED; Phase 30: 1/1 ✓)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → v2.5 (next; observation-driven)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -24,78 +24,82 @@ Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 
 **v1.2:** 3 phases, 8 plans, 242 tests (+24), Core diff confined to AgentLoop.fs/Domain.fs, 43 commits, ~3 days
 **v1.3:** 2 phases, 6 plans, 243 tests (+1), bench harness in repo + 54% prompt shrink + B2 recovery, 25 commits, ~1 day
 **v1.4:** 2 phases, 2 plans, 243 tests (unchanged), zero src/ diff, 7 commits, ~1 day
-**v2.0:** 7 phases, 19 plans, 282 tests (+39), 41 files +3993/-335 LOC, 106 commits, ~2 days, -85 GB disk (Qwen 2.5 retirement); bench gate trajectory 8/8→6/6→7/7
-**v2.1:** 1 phase (single), 5 plans, 282 tests (unchanged — observational), 31 files +6463/-26 LOC, ~25 commits, ~1.5 days; verdict 82/100 KEEP; bench gate 7/7 PASS preserved; zero src/ diff
-**v2.2:** 2 phases (22, 23), 5 plans (4+1), 284 tests (+2 boundary), 27 files +3569/-81 LOC, 19 commits, ~1 day; verdict 82→87/100 KEEP (Performance 20→25 via cold-start +5; Correctness stays 31/40 because CORR-EVAL-02 FAIL x2); bench gate 7/7 PASS preserved; src/ diff confined to 5 files (PlanValidator/AgentLoop/Domain/CompositionRoot/Rendering)
-**v2.3:** 4 phases (24, 25, 26 BLOCKED-historical, 27), 9 plans (8+1 blocked-by-design), 287 tests (+3 PlanValidator boundary), 34 files +9152/-54 LOC (heavily docs/eval/research-driven), 31 commits, ~2 days; verdict 87→92/100 KEEP (Correctness 31→36 via CORR-EVAL-02 PASS; aggregate KEEP preserved by wider margin); bench gate 7/7 PASS preserved; src/ diff confined to 4 files (CompositionRoot, PlanValidator, AgentLoop, PlanValidatorTests)
+**v2.0:** 7 phases, 19 plans, 282 tests (+39), 41 files +3993/-335 LOC, 106 commits, ~2 days, -85 GB disk; bench gate trajectory 8/8→6/6→7/7
+**v2.1:** 1 phase (single), 5 plans, 282 tests (unchanged — observational), 31 files +6463/-26 LOC, ~25 commits, ~1.5 days; verdict 82/100 KEEP; zero src/ diff
+**v2.2:** 2 phases (22, 23), 5 plans (4+1), 284 tests (+2 boundary), 27 files +3569/-81 LOC, 19 commits, ~1 day; verdict 82→87/100 KEEP
+**v2.3:** 4 phases (24, 25, 26 BLOCKED-historical, 27), 9 plans (8+1 blocked-by-design), 287 tests (+3 PlanValidator boundary), 34 files +9152/-54 LOC, 31 commits, ~2 days; verdict 87→92/100 KEEP; bench gate 7/7 PASS preserved; src/ diff confined to 4 files
+**v2.4:** 2 actual phases (28, 30; Phase 29 SKIPPED-by-design — never created), 7 plans, 287 tests (unchanged — F# bench fixtures, not Expecto), 37 files +6816/-38 LOC (heavily docs/eval/research-driven), 21 commits, ~3 hours same-day; verdict 92→96/100 KEEP (Coding-quality 6/10→10/10 via F# fixture Path A disprove); bench gate 7/7 PASS preserved; **zero src/ diff**
 
-Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3}-phases/`.
+Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3,2.4}-phases/`.
 
 ## Accumulated Context
 
 ### Decisions
 
-Cumulative log in `.planning/PROJECT.md` Key Decisions table. See PROJECT.md for outcomes through v2.3.
+Cumulative log in `.planning/PROJECT.md` Key Decisions table. See PROJECT.md for outcomes through v2.4.
 
 Stable patterns established across milestones (load-bearing for next session):
 
 - **Core purity** — `src/BlueCode.Core/**` no Serilog/Spectre/Argu/HttpClient/file I/O; `task {}` only (CI-enforced via `scripts/check-no-async.sh`).
 - **Test discovery** — explicit `rootTests` list in `RouterTests.fs` + ordered `<Compile Include>` in `BlueCode.Tests.fsproj`. New test modules need BOTH places.
 - **Canonical test runner** — `dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj` (NOT `dotnet test`).
-- **Bench gate** — `bash bench/run.sh --gate` is the structural authority. 7/7 PASS post-v2.3 with single-model 122B (T6/T5/B2/T1/W1/W2/MT).
+- **Bench gate** — `bash bench/run.sh --gate` is the structural authority. 7/7 PASS post-v2.4 with single-model 122B (T6/T5/B2/T1/W1/W2/MT).
 - **Atomic commits** — `{type}({phase}-{plan}): {name}` per task; plan-meta separate; phase-complete bundles. NEVER `git add -A` or `git add .`.
 - **Role = User invariant** (Phase 17-02 + Phase 20-03) — Qwen 3.5 122B REJECTS mid-conversation `Role = System` with HTTP 404. ALL mid-conversation injections are `Role = User`.
 - **Single-model 122B canonical** (Phase 19) — `blueCode "..."` defaults to 122B; 35B requires `--with-35b` opt-in flag AND service loaded.
 - **10-step PLAN-04 ceiling** (Phase 22-01) — `PlanValidator.MaxPlanSteps = 10` + `AgentConfig.MaxLoops = 10` (independent constants).
-- **P1 enumeration directive in `defaultSystemPrompt`** (Phase 27-01) — "When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly in your thought before editing. Do not start editing until the full list is enumerated." Applies to BOTH agent-loop and plan-mode invocations. Char count: 967 (was 783).
-- **P2 few-shot example in `planSystemPromptSuffix`** (Phase 24-02; stays plan-mode-only post-Phase-27) — 3-line Example/Targets/Steps block demonstrating shared-prefix `add`/`add3` rename. Suffix char count: 999 (was 1183 pre-Phase-27 P1 removal).
-- **Combined plan-mode prompt char count INVARIANT post-v2.3** — defaultSystemPrompt(967) + "\n\n" + planSystemPromptSuffix(999) = 1968 chars; same as before Phase 27 migration.
-- **PlanValidator pre-flight `checkRenameTargetsEnumerated`** (Phase 25-01) — heuristic regex `\brename\s+\`?([A-Za-z_]\w+)\`?\s+to\s+\`?([A-Za-z_]\w+)\`?` extracts targets from user prompt; coverage check via `_raw` JSON `old_string` field on `edit_file` steps. Interpretation B: missing-target list encoded as structured detail string within existing `PlanInvalid of detail: string` case (no DU change). PlanValidator.fs:108; bound at validatePlan:143; called from AgentLoop.fs:484. Plan-mode only.
-- **Plan-mode vs agent-loop distinction is load-bearing** (v2.3 lesson) — `defaultSystemPrompt` is sent for ALL invocations; `planSystemPromptSuffix` only when `--plan`; `PlanValidator.checkRenameTargetsEnumerated` only in `runPlanTurn`. Future prompt or validator changes must explicitly state which mode(s) they target. Bench gate fixtures use agent-loop (no `--plan`); CORR-EVAL-02 eval harness uses agent-loop (no `--plan`).
-- **Mandatory `launchctl kickstart` pre-flight for evaluations** (v2.3 Phase 26 Diagnostic D) — `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears KV cache contamination. Long-running 122B sessions accumulate contamination that produces hallucination failure modes. Confirmed empirically.
-- **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01); orphan-grep-zero-match-exit-1 (v2.3 27-02); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
-- **FSI fixture skeleton pattern** (Phase 28-02) — `.fs` skeletons use `module` decl + top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code. `dotnet fsi --exec` gives exit 0 when required.
-- **Phase 28 classification passed_disprove_1of5** (v2.4 Phase 28-04) — grand total 13/15 (band ≥12) → mapped_score 5/5 → passed_disprove_1of5. Phase 29 SKIP. F# fixture infrastructure reusable via `bench/eval-qwen35-122b.sh --fs-idiomatic`; transcripts archived under `.planning/phases/28-.../transcripts/`. Band-table (sum-then-scale) overrides arithmetic mean for robust multi-fixture scoring.
-- **Phase 29 SKIP is definitive** (v2.4 Phase 28-06) — FS-INTERVENE-01..02 marked SKIPPED in REQUIREMENTS.md. Classification `passed_disprove_1of5` (M ≥ 3) triggers ROADMAP §Phase 28 SC #6 path (b). Next: `/gsd:plan-phase 30` (Milestone Close).
-- **Phase 30 close-pattern reusable** (v2.4 Phase 30-01) — single-plan close-phase consolidates plan-meta and phase-complete commits into one (`docs(30): complete milestone-close phase`; 5 files: VERIFICATION + SUMMARY + STATE + ROADMAP + REQUIREMENTS). Mirrors Phase 26-01 pattern when plan-boundary equals phase-boundary. Saves one commit + one round of planning-meta noise.
-- **v2.4 Path A canonical** (v2.4 close, 2026-04-29) — measurement-first conditional milestone discipline validated empirically: Phase 28 measurement disproved a v2.2/v2.3 hedge (idiomatic-F# 1/5 was Python-transcript artifact, not real F# generation quality); Path A produced +4 points (92→96 KEEP) with zero source code change; Phase 29 (intervention) SKIPPED per disprove threshold. Conditional milestone structure (measurement → conditional intervention → close) is now reusable repo knowledge.
+- **P1 enumeration directive in `defaultSystemPrompt`** (Phase 27-01) — Conditional clause "When the task requires renaming or restructuring multiple symbols..." applies to BOTH agent-loop and plan-mode invocations. Char count: 967.
+- **P2 few-shot example in `planSystemPromptSuffix`** (Phase 24-02; plan-mode-only) — 3-line Example/Targets/Steps block. Suffix char count: 999.
+- **Combined plan-mode prompt char count INVARIANT post-v2.3** — defaultSystemPrompt(967) + "\n\n" + planSystemPromptSuffix(999) = 1968 chars.
+- **PlanValidator pre-flight `checkRenameTargetsEnumerated`** (Phase 25-01) — Interpretation B detail-string encoding; PlanValidator.fs:108; bound at validatePlan:143; called from AgentLoop.fs:484. Plan-mode only.
+- **Plan-mode vs agent-loop distinction is load-bearing** (v2.3 lesson; preserved through v2.4) — `defaultSystemPrompt` for ALL invocations; `planSystemPromptSuffix` only when `--plan`; `PlanValidator.checkRenameTargetsEnumerated` only in `runPlanTurn`.
+- **Mandatory `launchctl kickstart` pre-flight for evaluations** (v2.3 Phase 26 Diagnostic D; reused in v2.4 Phase 28-04) — `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears KV cache contamination.
+- **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01, commit `a6159c4`); orphan-grep-zero-match-exit-1 (v2.3 27-02, commit `9f8e06e`); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
+- **F# fixture infrastructure** (v2.4 Phase 28) — `bench/fixtures/fs_idiomatic/` with 3 fixture pairs; `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` lines 328-391. Reusable for future F# coding-quality work. Research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate.
+- **FSI fixture skeleton pattern** (v2.4 Phase 28-02) — `.fs` skeletons use direct top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code.
+- **Sum-then-scale band table aggregate (v2.4 Phase 28-04)** — For multi-fixture rubric scoring, band table beats round(average) for outlier robustness.
+- **Conditional SKIP-by-design pattern (v2.4 Phase 29)** — When a conditional phase doesn't trigger, never create the phase directory (cleaner than BLOCKED-with-record). Use BLOCKED preservation only when partial-attempt produces diagnostic value (v2.3 Phase 26).
+- **Zero-source-diff milestone pattern (v2.1 + v2.4)** — Eval/measurement work can ship meaningful capability without `src/` changes. `git diff milestone-v<prev> HEAD -- src/` empty assertion is an established invariant for these milestones.
+- **Measurement-first scoping (v2.4)** — Inverted v2.2/v2.3's intervention-first pattern. When prior measurement evidence is category-mismatched (HumanEval+ Python answers vs Idiomatic F# scoring), proper category-matched fixtures may yield free score improvement. *"Is the score real, or is the measurement instrument wrong?"*
 
 ### Pending Todos
 
-None pending. v2.4 scoping comes from observation window via `/gsd:new-milestone`.
+None pending. v2.5 scoping comes from observation window via `/gsd:new-milestone`.
 
 ### Blockers/Concerns
 
-None active. All v2.2/v2.3 surfaced bottlenecks resolved:
-- ~~CORR-EVAL-02 FAIL (v2.2 + Phase 26)~~ — RESOLVED in v2.3 Phase 27 (orphan_count=0; PASS verdict; RUN_TS=20260429-105907)
+None active. All v2.2/v2.3/v2.4 surfaced bottlenecks resolved:
+- ~~CORR-EVAL-02 FAIL (v2.2 + Phase 26)~~ — RESOLVED in v2.3 Phase 27
 - ~~Persistent extraction bias on shared-prefix function names~~ — RESOLVED via P1 directive in `defaultSystemPrompt`
 - ~~Architectural scope mismatch (P1+P2+P3 plan-mode-only vs agent-loop eval)~~ — RESOLVED via Phase 27 P1 migration
+- ~~Idiomatic F# 1/5 sub-score (Python-transcript artifact)~~ — RESOLVED in v2.4 Phase 28 via F# fixture rescore (5/5)
 
-Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; eligible for v2.4 cleanup):
+Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; eligible for v2.5 cleanup):
 - Phase 20 missing formal `20-VERIFICATION.md` (per-plan SUMMARYs substitute)
 - CLAUDE.md Key Seams has 1 stale "72B" sentence (historical)
 - `documentation/` retains legacy 32B/72B install docs (kept as historical reference)
 
 ## Session Continuity
 
-Last session: 2026-04-29
-Stopped at: Completed 30-01-PLAN.md — Phase 30 closed (final bench gate 7/7 PASS; v2.4 milestone close-readiness gate satisfied; 30-VERIFICATION.md records Path A aggregate 92→96 KEEP; STATE/ROADMAP/REQUIREMENTS updated)
+Last session: 2026-04-29 (v2.4 milestone complete; archived; tagged)
+Stopped at: v2.4 archival commit + tag `milestone-v2.4`. Ready for next milestone scoping.
 Resume file: None
-Next workflow trigger: `/gsd:audit-milestone` (then `/gsd:complete-milestone v2.4`)
+Next workflow trigger: `/gsd:new-milestone` for v2.5 scoping (questioning → research → requirements → roadmap)
 
-## Empirical Baselines (post-v2.3)
+## Empirical Baselines (post-v2.4)
 
-Load-bearing measurements for v2.4+ scoping:
+Load-bearing measurements for v2.5+ scoping:
 
 - **HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902** (v2.1) — re-evaluation trigger if mlx_lm.server major version, Qwen 3.5 model card update / YaRN config change, or sampling defaults change
 - **Throughput median 34.6 tok/s; TTFT median 222 ms warm** (v2.1) — interactive UX baseline
-- **Schema rate 0/50 InvalidJsonOutput** (v2.1) — perfect compliance; v2.0 architecture decisions validated
-- **Multi-turn coherence stable through N=7** (v2.1) — refutes mlx-lm#1011 "approximately 5 rounds" community claim in our environment
-- **Needle 4/4 at max_model_len=32768** (v2.1) — mlx_lm.server does not expose YaRN-extended ceiling; 32k is conservative working assumption
-- **Cold-start 37s warm-OS-cache** (v2.2 Phase 23) — kernel preserves model weight pages even when launchctl kickstart kills the process; v2.0's "up to 240s" estimate stays valid for first-boot pristine case (v2.4 candidate COLDSTART-PRISTINE-01)
-- **10-step PLAN-04 ceiling** (Phase 22-01) — sufficient for genuine multi-file refactor (CORR-EVAL-02 used 8/10 steps in PASSing run); ceiling no longer the constraint
-- **CORR-EVAL-02 PASS** (Phase 27-02; 2026-04-29) — orphan_count=0 with all 3 v2.3 prongs in production INCLUDING P1 in `defaultSystemPrompt`. Step-2 thought from PASSing run: "I need to rename `add` to `sum` and `add3` to `sum3` across three files" — both targets enumerated explicitly. P1 effect directly observable.
-- **Coding-quality 10/10 (idiomatic F# 5/5)** (v2.4 Phase 28; UPDATED from 6/10 in v2.1/v2.3) — 28-04 formal F# fixture scoring: 13/15 grand total → 5/5 mapped → passed_disprove_1of5. Prior 1/5 was Python-transcript artifact (category mismatch). v2.3 score 1/5 revised to 5/5 in 28-05 (commit a36cc35).
-- **Aggregate verdict 96/100 KEEP** (post-v2.4 Phase 28-05; UPDATED from 92/100 post-v2.3) — Correctness 36/40, Performance 25/25, Reliability 25/25, Coding-quality 10/10. Empirically useful for daily F# coding via blueCode (≥80 threshold; all dimensions ≥80%; multi-file refactor PASS post-v2.3 intervention).
+- **Schema rate 0/50 InvalidJsonOutput** (v2.1) — perfect compliance
+- **Multi-turn coherence stable through N=7** (v2.1)
+- **Needle 4/4 at max_model_len=32768** (v2.1)
+- **Cold-start 37s warm-OS-cache** (v2.2 Phase 23)
+- **10-step PLAN-04 ceiling** (Phase 22-01)
+- **CORR-EVAL-02 PASS** (Phase 27-02; 2026-04-29) — orphan_count=0 with all 3 v2.3 prongs in production
+- **Idiomatic F# 5/5** (v2.4 Phase 28-04; UPDATED from 1/5 in v2.1) — F# fixture rescore: grand_total 13/15 (band ≥12) → mapped 5/5 → `passed_disprove_1of5`. Prior 1/5 was Python-transcript artifact (category mismatch).
+- **Coding-quality 10/10** (v2.4 Phase 28-05; UPDATED from 6/10 in v2.1/v2.3) — Idiomatic F# 5/5 + Tests compile+pass 3/3 + Bug identification 2/2 = 10/10 (100%).
+- **Aggregate verdict 96/100 KEEP** (post-v2.4) — Correctness 36/40, Performance 25/25, Reliability 25/25, Coding-quality 10/10. **All 4 dimensions ≥80%.** Widest KEEP margin in project history.
 
-For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v{1.0..2.3}-phases/`.
+For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v{1.0..2.4}-phases/`.
