@@ -15,6 +15,7 @@
     <Compile Include="Adapters/JsonlSink.fs" />
     <Compile Include="Adapters/FileSessionStore.fs" />
     <Compile Include="Rendering.fs" />
+    <Compile Include="SlashCommand.fs" />
     <Compile Include="CompositionRoot.fs" />
     <Compile Include="PlanGate.fs" />
     <Compile Include="Repl.fs" />
