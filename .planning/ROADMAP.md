@@ -48,11 +48,11 @@ Either path produces useful empirical data. The conditional structure reflects v
 5. **Bench gate 7/7 PASS held** — `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)` after Phase 28 lands. Per-fixture step counts within v2.3 baseline_max for ALL 7 fixtures.
 6. **Decision point at phase end** — Phase 28 SUMMARY.md records the §5 score outcome and explicitly states: (a) if 1/5 confirmed → trigger `/gsd:add-phase 29` for F# Style Intervention; (b) if 1/5 disproved (≥3/5) → skip Phase 29; proceed directly to Phase 30 milestone close with new total.
 
-**Plans:** 5-6 plans expected
+**Plans:** 6 plans
 
 Plans:
 - [ ] 28-01: HARNESS-AUDIT-01 — write `documentation/howto/macos-bash-strict-mode-patterns.md` capturing 4 patterns with commit refs; light audit pass on `bench/eval-qwen35-122b.sh` for any 5th pattern; bench gate 7/7 PASS hold. (HARNESS-01)
-- [ ] 28-02: F# fixture design — create `bench/fixtures/fs_idiomatic/` with 3-5 fixtures (proposed: `pipeline.fs` + `pipeline.task.md` for `|>` use; `dupatternmatch.fs` for DU exhaustive match; `resultbind.fs` for `Result.bind` chain; `optionhandling.fs` for `Option.map`/`Option.defaultValue`; `recordwith.fs` for record update). Each `.fs` compiles standalone; each `.task.md` ≤500 chars. (FS-EVAL-01)
+- [ ] 28-02: F# fixture design — create `bench/fixtures/fs_idiomatic/` with 3 fixtures: `pipeline.fs` + `pipeline.task.md` for `|>` use; `dupatternmatch.fs` for DU exhaustive match; `optionhandling.fs` for `Option.map`/`Option.defaultValue`. Each `.fs` compiles standalone; each `.task.md` ≤500 chars. (FS-EVAL-01)
 - [ ] 28-03: `--fs-idiomatic` mode added to `bench/eval-qwen35-122b.sh` — kickstart pre-flight + per-fixture `git checkout` + agent-loop run + transcript capture; idempotent across runs. (FS-EVAL-02)
 - [ ] 28-04: Run fixtures + score against rubric — `bash bench/eval-qwen35-122b.sh --fs-idiomatic` produces transcripts; manual review per rubric (pipeline / DU pattern matching / Result/Option / idiomatic naming); per-fixture score documented in plan SUMMARY. (FS-EVAL-02)
 - [ ] 28-05: Eval doc §5 + §7 update — apply new score; §5 expanded with F# fixture evidence section; §7 Coding-quality subtotal re-aggregated; Total updated; final scorecard line strict-format match. Atomic commit `docs(28-05): update eval doc with F# fixture evidence`. (FS-EVAL-03)
