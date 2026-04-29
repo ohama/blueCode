@@ -44,6 +44,11 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 4. `FileSessionStore` 에 `listRecent: int -> SessionMeta list` + `loadById: string -> Result<Session, AgentError>` 메서드 추가 (load 는 v2.0 이미 존재; list 만 신규)
 5. Bench gate 7/7 PASS preserved
 
+**Plans:** 2 plans
+
+- [ ] 32-01-data-and-rendering-PLAN.md — SessionMeta + listRecent in FileSessionStore + renderSessions in Rendering + 12 unit tests (Wave 1)
+- [ ] 32-02-repl-dispatch-PLAN.md — /sessions and /resume dispatcher arms in Repl + 5 integration tests + bench gate (Wave 2)
+
 ### Phase 33: SLASH plan toggle
 
 **Goal:** `/plan` mid-REPL on/off — 다음 turn 부터 plan-mode 적용. `--plan` flag 와 동등한 path 를 REPL 안에서 toggle 가능하게.
