@@ -1,0 +1,17 @@
+diff --git a/bench/fixtures/fs_idiomatic/pipeline.fs b/bench/fixtures/fs_idiomatic/pipeline.fs
+index 4a875ae..7328cec 100644
+--- a/bench/fixtures/fs_idiomatic/pipeline.fs
++++ b/bench/fixtures/fs_idiomatic/pipeline.fs
+@@ -3,7 +3,11 @@ module Pipeline
+ /// Returns the sum of squares of even numbers in the list, multiplied by 2.
+ /// Idiomatic implementation should use a |> pipeline.
+ let transform (xs: int list) : int =
+-    failwith "TODO: implement transform using a pipeline of List.filter, List.map, List.sum"
++    xs
++    |> List.filter (fun x -> x % 2 = 0)
++    |> List.map (fun x -> x * x)
++    |> List.sum
++    |> (*) 2
+ 
+ let result = try transform [1; 2; 3; 4; 5; 6] with _ -> 0
+ printfn "transform [1;2;3;4;5;6] = %d (expected 112)" result

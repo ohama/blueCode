@@ -1,0 +1,16 @@
+diff --git a/bench/fixtures/fs_idiomatic/dupatternmatch.fs b/bench/fixtures/fs_idiomatic/dupatternmatch.fs
+index 43d308f..97e1d0e 100644
+--- a/bench/fixtures/fs_idiomatic/dupatternmatch.fs
++++ b/bench/fixtures/fs_idiomatic/dupatternmatch.fs
+@@ -8,7 +8,10 @@ type Shape =
+ /// Returns the area of the given shape.
+ /// Idiomatic implementation should use exhaustive match-over-DU.
+ let area (s: Shape) : float =
+-    failwith "TODO: implement area using match over Shape"
++    match s with
++    | Circle radius -> System.Math.PI * radius * radius
++    | Rectangle (width, height) -> width * height
++    | Triangle (base', height, _) -> 0.5 * base' * height
+ 
+ let shapes = [ Circle 1.0; Rectangle (2.0, 3.0); Triangle (4.0, 5.0, 6.4) ]
+ for s in shapes do
