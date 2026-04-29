@@ -208,11 +208,47 @@ let runMultiTurnWithSession
                         { Id = newId; Steps = []; CreatedAt = now; LastActivityAt = now }
                     let (SessionId newIdStr) = newId
                     printfn "Session cleared. New session: %s" newIdStr
-                | Some (Slash (Sessions | Resume _ | Plan | Edit)) ->
-                    // Phase 32 (Sessions, Resume), Phase 33 (Plan), Phase 34 (Edit) stubs.
-                    // Future-proofing: parser already accepts these so user input does not
-                    // crash; dispatcher prints the future-phase notice. Each future phase
-                    // replaces its arm here with a real handler.
+                | Some (Slash Sessions) ->
+                    // Phase 32 (SLASH-05): list the 10 most-recent sessions on disk.
+                    // listRecent returns SessionMeta list (sorted mtime-desc, capped at 10);
+                    // renderSessions formats it as a multi-line plain string.
+                    // No LLM call (in-process meta-control).
+                    let metas = BlueCode.Cli.Adapters.FileSessionStore.listRecent 10
+                    printfn "%s" (Rendering.renderSessions metas)
+                | Some (Slash (Resume "")) ->
+                    // Phase 32 (SLASH-06): empty-arg guard. The parser produces
+                    // `Resume ""` when the user typed `/resume` alone. Match this
+                    // case BEFORE the general `Resume id` so we don't call
+                    // sessionStore.Load with an empty SessionId (research § Pitfall 4).
+                    printfn "usage: /resume <session-id>"
+                | Some (Slash (Resume id)) ->
+                    // Phase 32 (SLASH-06): in-place session switch.
+                    // sessionStore.Load returns Result<Session, AgentError>:
+                    //   Ok loaded             → currentSession <- loaded; print confirmation
+                    //   Error SessionNotFound → friendly "Session not found: <id>" message
+                    //   Error SessionCorrupt  → friendly "Session file corrupt: <detail>" message
+                    //   Error other           → defensive fallback (research § Q6: any other
+                    //                           AgentError shouldn't reach here from Load,
+                    //                           but match `_` for total compile-time coverage)
+                    // REPL stays alive on every error variant (roadmap SC-3).
+                    let! loadResult = sessionStore.Load (SessionId id) CancellationToken.None
+                    match loadResult with
+                    | Ok loaded ->
+                        currentSession <- loaded
+                        let (SessionId newIdStr) = loaded.Id
+                        printfn "Resumed session: %s (%d steps)" newIdStr loaded.Steps.Length
+                    | Error (SessionNotFound _) ->
+                        printfn "Session not found: %s" id
+                    | Error (SessionCorrupt detail) ->
+                        printfn "Session file corrupt: %s" detail
+                    | Error other ->
+                        // Defensive — Load doesn't return other variants in current
+                        // FileSessionStore impl (lines 142-145 catch all to SessionCorrupt),
+                        // but ISessionStore is an interface and a future store could.
+                        printfn "Resume failed: %A" other
+                | Some (Slash (Plan | Edit)) ->
+                    // Phase 33 (Plan) and Phase 34 (Edit) future-stubs.
+                    // Sessions and Resume have moved to real handlers above.
                     printfn "(not yet implemented — coming in a future v2.5 phase)"
                 | Some (Prompt prompt) ->
                     let! (code, newSteps) =

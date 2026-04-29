@@ -133,8 +133,8 @@ let renderHelp : string =
   /clear             reset session in-place (new session id, keep REPL running)
   /exit              save session and quit
   /quit              alias for /exit
-  /sessions          list recent sessions [coming in v2.5]
-  /resume <id>       switch to a saved session [coming in v2.5]
+  /sessions          list 10 most-recent sessions
+  /resume <id>       switch to a saved session in-place
   /plan              toggle plan-mode for next turn [coming in v2.5]
   /edit              open $EDITOR for multi-line input [coming in v2.5]"""
 
