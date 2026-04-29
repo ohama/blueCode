@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 31 (not started; ready to plan)
-Plan: —
-Status: Roadmap created; ready for `/gsd:plan-phase 31`
-Last activity: 2026-04-29 — Milestone v2.5 scoped: 12 reqs across 3 categories (SLASH 7 + EDIT 1 + HIST 4); roadmap 5 phases (31-35); Cli-layer only; Phase 31 = slash core (root), Phases 32-35 stack independently above
+Phase: 31 (slash-command-core) — in progress
+Plan: 1 of 2 in current phase complete
+Status: In progress
+Last activity: 2026-04-29 — Completed 31-01-parser-PLAN.md (SlashCommand DU + parse + 17 tests; 287→304 tests)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phase 31 Plan 1/2 done)**
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -81,10 +81,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-04-29 (v2.4 milestone complete; archived; tagged)
-Stopped at: v2.4 archival commit + tag `milestone-v2.4`. Ready for next milestone scoping.
+Last session: 2026-04-29T08:52:25Z
+Stopped at: Completed 31-01-parser-PLAN.md
 Resume file: None
-Next workflow trigger: `/gsd:new-milestone` for v2.5 scoping (questioning → research → requirements → roadmap)
+Next workflow trigger: `/gsd:execute-phase 31` for Plan 31-02 (REPL integration — wires parse into Repl.runMultiTurnWithSession)
 
 ## Empirical Baselines (post-v2.4)
 
