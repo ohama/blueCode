@@ -8,10 +8,10 @@
 
 ### Slash commands (7 reqs)
 
-- [ ] **SLASH-01**: User can type `/help` in REPL to see a list of available slash commands with one-line descriptions
-- [ ] **SLASH-02**: User can type `/status` in REPL to see current session id, current model, step count for current turn, accumulated char count, and 32k context utilization percentage (absorbs OBS-06 token visibility)
-- [ ] **SLASH-03**: User can type `/clear` to reset priorSteps and start a fresh session id in-place without exiting the REPL
-- [ ] **SLASH-04**: User can type `/exit` or `/quit` to gracefully exit the REPL with final session state saved
+- [x] **SLASH-01**: User can type `/help` in REPL to see a list of available slash commands with one-line descriptions
+- [x] **SLASH-02**: User can type `/status` in REPL to see current session id, current model, step count for current turn, accumulated char count, and 32k context utilization percentage (absorbs OBS-06 token visibility)
+- [x] **SLASH-03**: User can type `/clear` to reset priorSteps and start a fresh session id in-place without exiting the REPL
+- [x] **SLASH-04**: User can type `/exit` or `/quit` to gracefully exit the REPL with final session state saved
 - [ ] **SLASH-05**: User can type `/sessions` to see a list of recent N persisted sessions (id, started_at, turn count, first prompt excerpt)
 - [ ] **SLASH-06**: User can type `/resume <id>` to switch to another persisted session in-place, threading its priorSteps into the current REPL
 - [ ] **SLASH-07**: User can type `/plan` to toggle plan-mode for subsequent turns (`/plan` on; `/plan` again off); takes effect from the next prompt
@@ -59,10 +59,10 @@ Tracked for awareness; not pulled into v2.5. Observation-driven scoping after v2
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLASH-01 | Phase 31 | Pending |
-| SLASH-02 | Phase 31 | Pending |
-| SLASH-03 | Phase 31 | Pending |
-| SLASH-04 | Phase 31 | Pending |
+| SLASH-01 | Phase 31 | Complete |
+| SLASH-02 | Phase 31 | Complete |
+| SLASH-03 | Phase 31 | Complete |
+| SLASH-04 | Phase 31 | Complete |
 | SLASH-05 | Phase 32 | Pending |
 | SLASH-06 | Phase 32 | Pending |
 | SLASH-07 | Phase 33 | Pending |

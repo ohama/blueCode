@@ -8,7 +8,7 @@
 
 REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomics shape; Cli-layer only; Core purity / bench gate / schema 0/50 / `bench/baseline.json` byte-equal invariant 모두 보존.
 
-### Phase 31: SLASH command core
+### Phase 31: SLASH command core ✓ (completed 2026-04-29)
 
 **Goal:** Slash command parser + dispatcher + 4 in-process commands (`/help`, `/status`, `/clear`, `/exit`/`/quit`) — LLM 호출 없이 REPL 메타-제어 surface 확립.
 
@@ -26,8 +26,8 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 
 **Plans:** 2 plans
 
-- [ ] 31-01-parser-PLAN.md — Pure SlashCommand parser DU + 17 unit tests (Wave 1)
-- [ ] 31-02-rendering-and-dispatch-PLAN.md — renderHelp/renderStatus + Repl integration + 12 tests + bench gate (Wave 2)
+- [x] 31-01-parser-PLAN.md — Pure SlashCommand parser DU + 17 unit tests (Wave 1)
+- [x] 31-02-rendering-and-dispatch-PLAN.md — renderHelp/renderStatus + Repl integration + 12 tests + bench gate (Wave 2)
 
 ### Phase 32: SLASH session commands
 
