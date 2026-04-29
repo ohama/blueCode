@@ -4,18 +4,18 @@
 
 See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.3 milestone shipped)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.3 verdict 92/100 KEEP; multi-file refactor end-to-end via P1 enumeration directive in `defaultSystemPrompt`)
-**Current focus:** Between milestones. v2.3 shipped 2026-04-29 with CORR-EVAL-02 PASS empirically; eval doc 87→92/100. v2.4 scoping observation-driven (next via `/gsd:new-milestone`).
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.3 verdict 92/100 KEEP; v2.4 measurement-first close on Coding-quality 6/10 via F# fixtures)
+**Current focus:** v2.4 Coding Quality milestone (started 2026-04-29) — measurement-first scope on Idiomatic F# 1/5 sub-score; possibly Python-transcript artifact. Phase 28 designs F# fixtures + measures; Phase 29 (conditional) intervenes if data justifies; Phase 30 (or 29 if no intervention) closes.
 
 ## Current Position
 
-Milestone: v2.3 Comprehension Layer ✓ SHIPPED 2026-04-29
-Phase: None (between milestones)
-Plan: None
-Status: v2.3 milestone archived to `.planning/milestones/v2.3-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `.planning/milestones/v2.3-phases/{24,25,26,27}-*/`. Phase 26 BLOCKED preserved as historical diagnostic. ROADMAP.md and REQUIREMENTS.md deleted (fresh ones via `/gsd:new-milestone`). All 6 v2.3 requirements ✓.
-Last activity: 2026-04-29 — v2.3 milestone complete + tagged `milestone-v2.3`. Ready for v2.4 scoping.
+Milestone: v2.4 Coding Quality (started 2026-04-29; data-driven from v2.2/v2.3 audit's Coding-quality 1/5 hedge)
+Phase: 28 (F# Coding Quality Measurement) — not started; defining requirements
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-29 — v2.4 milestone started; measurement-first scope on Coding-quality dimension; FS-EVAL + HARNESS-AUDIT + conditional FS-INTERVENE structure
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 (next; observation-driven)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: defining)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -73,10 +73,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-04-29 (v2.3 milestone complete; archived; tagged)
-Stopped at: v2.3 archival commit + tag `milestone-v2.3`. Ready for next milestone scoping.
+Last session: 2026-04-29 (v2.4 milestone started)
+Stopped at: PROJECT.md updated with v2.4 Current Milestone; STATE.md reset; defining REQUIREMENTS.md next
 Resume file: None
-Next workflow trigger: `/gsd:new-milestone` for v2.4 scoping (questioning → research → requirements → roadmap)
+Next workflow trigger: `/gsd:plan-phase 28` after ROADMAP.md is created by roadmapper
 
 ## Empirical Baselines (post-v2.3)
 

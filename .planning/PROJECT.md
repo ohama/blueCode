@@ -16,13 +16,40 @@ v2.3 Comprehension Layer shipped 2026-04-29. Second **data-driven** milestone (a
 
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3}-ROADMAP.md`.
 
-## Future Milestone Goals (post-v2.3)
+## Current Milestone: v2.4 Coding Quality
 
-v2.4 candidates (observation-driven; not yet scoped):
+**Goal:** Close the only remaining ≤60%-threshold dimension on the eval scorecard — Coding-quality 6/10 (Idiomatic F# 1/5). v2.2/v2.3 audit hedged that the 1/5 score may be a Python-transcript artifact (HumanEval+ scoring Python answers under chat mode); the real F# generation quality during daily-driver use is not directly measured. This milestone is **measurement-first**: build F# task fixtures, measure idiomatic-F# generation in agent-loop mode, then intervene only if data justifies. Mirrors v2.2's data-driven discipline.
 
-- **AGENT-LOOP-FEW-SHOT-01** (newly-surfaced from v2.3) — Migrate or adapt P2 (currently plan-mode-only; `Targets:`/`Steps:` notation is plan-mode-specific) for agent-loop mode if observation surfaces a need. Phase 27 deliberately left P2 in plan-mode for MVP scope discipline.
-- **HARNESS-AUDIT-01** (low; newly-surfaced) — `bench/eval-qwen35-122b.sh` accumulated four macOS-bash-strict-mode patches across v2.1-v2.3 (set-e/dotnet-exit; grep-c-pipefail; mkdir-before-tee; orphan-grep-zero-match-exit-1). Worth a one-pass audit + howto entry codifying the pattern.
-- **IDIOMATIC-FS-01** (medium; carried-forward from v2.2 audit) — Coding-quality 1/5 sub-score may be Python-transcript artifact; needs F# task fixtures + transcript review before drawing conclusions
+**Why now:** v2.3 closed the only Correctness gap (CORR-EVAL-02 PASS) and surfaced no new constraint discoveries. The eval scorecard's `Coding quality 6/10` is the only dimension at threshold (60.0%; 1 step from KEEP-WITH-CAVEATS). Either the score is real (intervention needed) or the score is artifact (re-measure with proper F# fixtures yields free +2~4 points). Both paths are useful; both start with the same Phase 28 measurement.
+
+**Target features (3 prongs, conditional structure):**
+
+- **FS-EVAL: F# task fixture design + measurement** — 3-5 idiomatic-F#-requiring tasks under `bench/fixtures/fs_idiomatic/` (pipeline `|>`, DU pattern matching, `Result.bind`/`Option` chains, record `with`-update); new `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh`; transcript review against rubric; eval doc §5 re-score
+- **FS-INTERVENE (conditional): F# style hint** — only if FS-EVAL confirms low score. F# style directive added to `defaultSystemPrompt` (conditional clause; mirrors v2.3 P1 pattern); re-run F# fixtures; re-score
+- **HARNESS-AUDIT: bash-strict-mode patterns codified** — `bench/eval-qwen35-122b.sh` accumulated 4 macOS bash-strict-mode patches across v2.1-v2.3; one-pass audit + new `documentation/howto/macos-bash-strict-mode-patterns.md` codifying the rule
+
+**Scope (per user-approved recommendation 2026-04-29):**
+
+- 2-3 phases (28, 29-conditional, 30): measurement + harness audit → conditional intervention → close
+- Phase 29 added via `/gsd:add-phase` only if Phase 28 measurement confirms 1/5 (data-driven; mirrors v2.3's Phase 27 supersession pattern in spirit)
+- Bench gate 7/7 PASS mandatory after each phase; Core purity preserved (any intervention is Cli-only via `defaultSystemPrompt`)
+- No `bench/baseline.json` modifications
+
+**Phase numbering:** continues at 28 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20, v2.1: 21, v2.2: 22-23, v2.3: 24-27).
+
+**Excluded** with explicit rationale (deferred to later milestones):
+- AGENT-LOOP-FEW-SHOT-01 — v2.3 closed CORR-EVAL-02 without it; Phase 27 deliberately left P2 in plan-mode. v2.5+ candidate if observation surfaces value
+- COLDSTART-PRISTINE-01 — Post-reboot pristine case still untested; needs scheduled disruption window; v2.5+ candidate (low urgency)
+- SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01 — observation-driven (no daily-driver pain signal); v2.5+ candidates
+- THINK-01 — defer indefinitely (thinking-OFF gives perfect schema 0/50)
+- TOOLCALLS-01 — v3.0 territory
+- STM-01 — deferred 9th cycle; defer pattern is the signal
+
+## Future Milestone Goals (post-v2.4)
+
+v2.5+ candidates (observation-driven; not yet scoped):
+
+- **AGENT-LOOP-FEW-SHOT-01** (carried-forward from v2.3) — Migrate or adapt P2 for agent-loop mode if observation surfaces a need
 - **COLDSTART-PRISTINE-01** (low; carried-forward) — Post-reboot pristine cold-start measurement (warm-OS-cache 37s already documented in v2.2)
 - **SLASH-01** — `/sessions`, `/plan`, `/clear` slash commands inside REPL (carried-forward; observation-driven)
 - **COMPACT-01** — Auto-compaction when session approaches 80% of `max_model_len` (carried-forward; observation-driven)
@@ -259,4 +286,4 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-29 after shipping v2.3 Comprehension Layer milestone — CORR-EVAL-02 PASS empirically (orphan_count=0; RUN_TS=20260429-105907); eval doc verdict 87 → 92/100 KEEP; 9 milestones shipped (v2.3 closed).*
+*Last updated: 2026-04-29 after starting v2.4 Coding Quality milestone — measurement-first scope on Coding-quality 6/10 (Idiomatic F# 1/5 may be Python-transcript artifact); 9 milestones shipped (v2.4 in progress).*
