@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 31 (slash-command-core) — in progress
-Plan: 1 of 2 in current phase complete
-Status: In progress
-Last activity: 2026-04-29 — Completed 31-01-parser-PLAN.md (SlashCommand DU + parse + 17 tests; 287→304 tests)
+Phase: 31 (slash-command-core) — **COMPLETE** (both plans done)
+Plan: 2 of 2 complete
+Status: Phase complete — ready for `/gsd:verify-work 31` UAT
+Last activity: 2026-04-29 — Completed 31-02-rendering-and-dispatch-PLAN.md (renderHelp/renderStatus + dispatcher; 304→316 tests; bench gate 7/7 PASS)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phase 31 Plan 1/2 done)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phase 31 COMPLETE; 2/2 plans done)**
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -54,6 +54,9 @@ Stable patterns established across milestones (load-bearing for next session):
 - **PlanValidator pre-flight `checkRenameTargetsEnumerated`** (Phase 25-01) — Interpretation B detail-string encoding; PlanValidator.fs:108; bound at validatePlan:143; called from AgentLoop.fs:484. Plan-mode only.
 - **Plan-mode vs agent-loop distinction is load-bearing** (v2.3 lesson; preserved through v2.4) — `defaultSystemPrompt` for ALL invocations; `planSystemPromptSuffix` only when `--plan`; `PlanValidator.checkRenameTargetsEnumerated` only in `runPlanTurn`.
 - **Mandatory `launchctl kickstart` pre-flight for evaluations** (v2.3 Phase 26 Diagnostic D; reused in v2.4 Phase 28-04) — `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears KV cache contamination.
+- **renderStatus primitive-arg signature** (Phase 31-02) — `renderStatus` takes `(Session, Model option, int)` not `AppComponents`; `Rendering.fs` compiles before `CompositionRoot.fs` so passing `AppComponents` would be a forward reference. Caller extracts fields at call site.
+- **No Save on /clear** (Phase 31-02) — `FileSessionStore.Save` creates `.jsonl` lazily on first write; empty new session has nothing to persist; old session jsonl stays untouched by design.
+- **Slash dispatcher test pattern** (Phase 31-02) — Repl integration tests use `stubLlm []` (throws on first call) to assert 0 LLM calls from in-process slash commands; any routing leak fails fast.
 - **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01, commit `a6159c4`); orphan-grep-zero-match-exit-1 (v2.3 27-02, commit `9f8e06e`); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
 - **F# fixture infrastructure** (v2.4 Phase 28) — `bench/fixtures/fs_idiomatic/` with 3 fixture pairs; `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` lines 328-391. Reusable for future F# coding-quality work. Research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate.
 - **FSI fixture skeleton pattern** (v2.4 Phase 28-02) — `.fs` skeletons use direct top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code.
@@ -81,10 +84,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-04-29T08:52:25Z
-Stopped at: Completed 31-01-parser-PLAN.md
+Last session: 2026-04-29T09:00:53Z
+Stopped at: Completed 31-02-rendering-and-dispatch-PLAN.md (Phase 31 complete)
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 31` for Plan 31-02 (REPL integration — wires parse into Repl.runMultiTurnWithSession)
+Next workflow trigger: `/gsd:verify-work 31` for Phase 31 UAT; then plan Phase 32 (session listing) or next v2.5 phase
 
 ## Empirical Baselines (post-v2.4)
 
