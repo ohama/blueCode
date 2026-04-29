@@ -119,3 +119,53 @@ let renderError (err: AgentError) : string =
     | SessionCorrupt detail -> sprintf "Session file corrupt: %s" detail
     | PlanInvalid detail -> sprintf "Plan invalid: %s" detail
     | PathRetired path -> sprintf "Path retired in Phase 19: %s. Re-run with --model 122b (or no flag)." path
+
+/// 9-command help text shown by `/help`. Static string, no parameters.
+/// Includes both `/exit` and `/quit` as separate entries (counted separately
+/// per Phase 31 success criterion 1: "9 commands list — 7 in-milestone + future-stub").
+/// Uses `printfn`-friendly plain text (NOT Spectre markup) so that tests capturing
+/// Console.SetOut see the exact string. CLAUDE.md "Stream separation" + research § Pitfall 1.
+let renderHelp : string =
+    """slash commands:
+  /help              show this help
+  /status            session info: id, model, steps, context %
+  /clear             reset session in-place (new session id, keep REPL running)
+  /exit              save session and quit
+  /quit              alias for /exit
+  /sessions          list recent sessions [coming in v2.5]
+  /resume <id>       switch to a saved session [coming in v2.5]
+  /plan              toggle plan-mode for next turn [coming in v2.5]
+  /edit              open $EDITOR for multi-line input [coming in v2.5]"""
+
+/// Render the `/status` output. Pure: takes the current Session, ForcedModel option, and MaxModelLen,
+/// returns a multi-line string. NO Spectre markup (CLAUDE.md "Stream separation";
+/// `/status` output is captured by Console.SetOut in tests).
+///
+/// Fields per Phase 31 success criterion 2:
+///   - session id (32-char hex from SessionId)
+///   - model name ("122b" / "35b" / "122b (default)")
+///   - step count (currentSession.Steps.Length — accumulated across all turns in this session)
+///   - accumulated char count (sum of "%A" Action + "%A" ToolResult per step — same heuristic as runSingleTurn)
+///   - context % (estimatedChars * 100 / (MaxModelLen * 4))
+///
+/// `MaxModelLen` is the v1.1 startup FLOOR (8192) — the real per-port value lives in the
+/// QwenHttpClient lazy probe and is not surfaced to AppComponents. Awaiting that probe
+/// here would block /status for up to 300s on cold-start. Label the output to make this
+/// explicit (research § Q3, Pitfall 2 of research § Anti-Patterns).
+let renderStatus (session: Session) (forcedModel: Model option) (maxModelLen: int) : string =
+    let (SessionId idStr) = session.Id
+    let modelName =
+        match forcedModel with
+        | Some Qwen122B -> "122b"
+        | Some Qwen35B  -> "35b"
+        | None          -> "122b (default)"
+    let steps = session.Steps.Length
+    let accChars =
+        session.Steps
+        |> List.sumBy (fun s ->
+            (sprintf "%A" s.Action).Length + (sprintf "%A" s.ToolResult).Length)
+    let maxChars = maxModelLen * 4   // tokens * ~4 chars/token
+    let pct = if maxChars > 0 then accChars * 100 / maxChars else 0
+    sprintf
+        "session:  %s\nmodel:    %s\nsteps:    %d\nchars:    %d / ~%d (%d%%) [floor; probed on first LLM call]"
+        idStr modelName steps accChars maxChars pct
