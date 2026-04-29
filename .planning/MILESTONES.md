@@ -1,5 +1,54 @@
 # Project Milestones: blueCode
 
+## v2.3 Comprehension Layer (Shipped: 2026-04-29)
+
+**Delivered:** Second **data-driven** milestone, scoped from v2.2 audit's CORR-EVAL-02 FAIL constraint discovery #2 (persistent extraction bias on shared-prefix function names — `add`/`add3` shared prefix where the model renamed `add3→sum3` but ignored `add→sum`, identical step-5 thoughts across two different READMEs). Multi-prong intervention (P1 system prompt enumeration directive + P2 few-shot multi-file examples + P3 plan-mode pre-flight rename-target enumeration) with mid-flight architectural pivot (Phase 26 BLOCKED → Phase 27 added) when prongs proved scoped to plan-mode while eval harness uses agent-loop. Final verdict **87 → 92/100, KEEP** (Correctness 31/40 → 36/40 via CORR-EVAL-02 PASS).
+
+**Phases completed:** 24-27 (4 phases, 9 plans total — 2 in Phase 24; 3 in Phase 25; 1 BLOCKED in Phase 26 [historical diagnostic]; 3 in Phase 27)
+
+**Key accomplishments:**
+
+- **Persistent extraction bias resolved (Phases 24+25+27; COMP-01..06):** CORR-EVAL-02 PASS empirically (orphan_count=0; RUN_TS=20260429-105907) on first attempt with kickstart pre-flight. Step-2 thought from PASSing run: "I need to rename `add` to `sum` and `add3` to `sum3` across three files" — both targets enumerated explicitly before any edits. P1 directive now reaches agent-loop mode via `defaultSystemPrompt` (post-Phase-27 migration). Eval doc verdict 87→92; 11 edit sites applied; final scorecard `**Total: 92/100, Recommendation: KEEP**` strict-format match.
+
+- **Architectural scope discovery via Phase 26 BLOCKED (constructive failure):** Phase 26's 3 stochastic CORR-EVAL-02 attempts ALL FAIL despite all 3 v2.3 prongs being in production. Diagnosis exposed that `planSystemPromptSuffix` is `--plan`-only and `PlanValidator.checkRenameTargetsEnumerated` runs only in `runPlanTurn` — the eval harness invokes blueCode WITHOUT `--plan` (agent-loop), so none of the v2.3 prongs reached the agent during the eval. Plus pre-kickstart attempts surfaced KV cache contamination as a separate failure mode (agent hallucinated "subtract function" task). Phase 26 stays as historical BLOCKED record (commit `7837ad5`); Phase 27 was added mid-flight via `/gsd:add-phase` to close the architectural gap.
+
+- **P1 migration with byte-invariant char count (Phase 27-01):** P1 directive moved from `planSystemPromptSuffix` to `defaultSystemPrompt`. Combined plan-mode prompt char count INVARIANT (1968 = 1968). Conditional clause "When the task requires renaming or restructuring multiple symbols..." dormant for all 7 bench gate fixtures (verified by 27-RESEARCH.md Q5: zero `rename`/`restructur` keywords in any prompt). Bench gate 7/7 PASS preserved on first attempt; zero phrasing iterations needed.
+
+- **PlanValidator pre-flight enumeration (Phase 25; COMP-03 Interpretation B):** New `checkRenameTargetsEnumerated: userPrompt: string -> Plan -> Result<Plan, AgentError>` heuristic added to `PlanValidator.fs:108`; bound at `validatePlan:143`; called from `AgentLoop.fs:484` inside `runPlanTurn`. Interpretation B chosen: missing-target list encoded as structured detail string within existing `PlanInvalid of detail: string` case; no `Domain.fs` DU change; no compile cascade across `Rendering.fs`/`buildCorrection`. Smaller diff; same observable LLM-correction behavior. F# big-bang atomic commit (PlanValidator + AgentLoop + 6 PlanValidatorTests callers in single commit; mirrors v1.1 LlmResponse pattern). Test count 284 → 287.
+
+- **Bench gate stability preserved through entire milestone:** `bash bench/run.sh --gate` 7/7 PASS held across all 4 phases. Per-fixture step counts unchanged vs v2.2 baseline (T6=4-5/5, W1=3/3, W2=3/3, T1=1/3, T5=3/4, B2=2/3, MT=2/4). `bench/baseline.json` byte-for-byte preserved (`git diff milestone-v2.2 HEAD -- bench/baseline.json` empty). `git diff src/` confined to 4 source files (CompositionRoot.fs, PlanValidator.fs, AgentLoop.fs, PlanValidatorTests.fs). Core purity clean.
+
+- **Plan-mode vs agent-loop distinction now load-bearing repo knowledge:** This milestone made the distinction explicit and consequential. `defaultSystemPrompt` is sent for ALL invocations (agent-loop AND plan-mode); `planSystemPromptSuffix` is sent ONLY when `--plan` is used; `PlanValidator.checkRenameTargetsEnumerated` runs ONLY in `runPlanTurn`. Future prompt or validator changes must explicitly state which mode(s) they target. Repo lesson recorded in v2.3-MILESTONE-AUDIT.md.
+
+- **KV cache contamination empirically established (Phase 26 Diagnostic D):** `launchctl kickstart -k gui/501/com.ohama.qwen122b` is now mandatory pre-flight for evaluation runs. Long-running 122B sessions accumulate contamination that produces hallucination failure modes (e.g., reading "rename" task as "add subtract function").
+
+- **Fourth macOS bash-strict-mode pattern documented (Phase 27-02; commit `9f8e06e`):** `bench/eval-qwen35-122b.sh` had `grep -cE` exits 1 on zero-match (which is the SUCCESS case for orphan count check); `set -euo pipefail` aborted before writing `refactor_orphan_count.txt`. Auto-fixed with `|| true` guard per Rule 3 (auto-fix-blockers). Fourth pattern after v2.1's set-e/dotnet-exit + grep-c pipefail double-output and v2.2's mkdir-before-tee.
+
+**Stats:**
+
+- 4 phases (24, 25, 26 BLOCKED-historical, 27), 9 plans (8 completed + 1 blocked-by-design), 6 requirements (6/6 ✓)
+- 284 → 287 tests (+3 new boundary tests for `checkRenameTargetsEnumerated` in Phase 25-02)
+- 34 files changed (+9152 / -54 LOC; heavily docs/eval/research-driven)
+- 31 commits in milestone range
+- Bench gate 7/7 PASS preserved throughout
+- Wall-clock: ~2 days (2026-04-28 → 2026-04-29)
+- Core source diff confined to 4 files (CompositionRoot.fs, PlanValidator.fs, AgentLoop.fs, PlanValidatorTests.fs)
+
+**Git range:** `cbf6e5a docs: start milestone v2.3 Comprehension Layer` → `b304c5c docs(27): complete default-prompt-p1-migration-re-eval phase`
+
+**What's next:**
+
+v2.4 candidates (observation-driven; not pulled into v2.3):
+- **AGENT-LOOP-FEW-SHOT-01** (newly-surfaced from v2.3) — Migrate or adapt P2 (currently plan-mode-only) for agent-loop mode if observation surfaces value. Phase 27 deliberately left P2 in plan-mode (its `Targets:`/`Steps:` format is plan-mode-specific).
+- **HARNESS-AUDIT-01** (low; newly-surfaced) — `bench/eval-qwen35-122b.sh` accumulated four macOS-bash-strict-mode patches across v2.1-v2.3. Worth a one-pass audit + howto entry codifying the pattern.
+- **IDIOMATIC-FS-01** (medium; carried-forward from v2.2 audit) — Coding-quality 1/5 sub-score may be Python-transcript artifact; needs F# task fixtures + transcript review
+- **COLDSTART-PRISTINE-01** (low; carried-forward) — post-reboot pristine cold-start untested
+- v2.0/v2.1 deferred candidates (SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01, STM-01) — observation-window dependent
+
+**Audit note:** v2.3 ran `/gsd:audit-milestone` post-Phase-27 (status: passed; 6/6 requirements; 12/12 integration checks; 3/3 E2E flows). One in-scope deviation (harness `|| true` fix in commit `9f8e06e` per Rule 3 auto-fix-blockers; documented). Phase 26 BLOCKED preserved as intentional historical record per ROADMAP supersession pattern. 6 lessons recorded in `.planning/milestones/v2.3-MILESTONE-AUDIT.md`. Notable repo-level lesson: **for each intervention, explicitly check which code paths exercise it and which paths bypass it** — the architectural-scope-mismatch pattern surfaced for the second milestone in a row (v2.2: ceiling raise was necessary-but-insufficient; v2.3: prongs were plan-mode-scoped while eval is agent-loop).
+
+---
+
 ## v2.2 Multi-file Capability (Shipped: 2026-04-28)
 
 **Delivered:** First **data-driven** v2.2 candidate (vs deferred-list draining) — scoped from v2.1 audit's CORR-EVAL-02 FAIL constraint discovery. Two-phase milestone: Phase 22 architectural ceiling raise (PLAN-04 5→10 across 4 source files) + Phase 23 cold-start empirical measurement (deferred from v2.1). Final verdict **82 → 87/100, KEEP** (Performance 20/25 → 25/25 via cold-start +5).

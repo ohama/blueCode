@@ -4,57 +4,33 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current State (post-v2.2)
+## Current State (post-v2.3)
 
-v2.2 Multi-file Capability shipped 2026-04-28. First **data-driven** v2.2 candidate (vs deferred-list draining) — scoped from v2.1 audit's CORR-EVAL-02 FAIL constraint discovery. Two-phase milestone: Phase 22 architectural ceiling raise (PLAN-04 5→10 across 4 source files; tests 282 → 284) + Phase 23 cold-start empirical measurement (37s warm-OS-cache; refutes v2.0's "up to 240s" estimate for common case). Final verdict **82 → 87/100, KEEP** (Performance 20→25 via cold-start +5; Correctness 31/40 stayed because CORR-EVAL-02 FAIL x2 surfaced persistent extraction bias on shared-prefix function names as v2.3 first candidate). Bench gate 7/7 PASS preserved throughout; zero `bench/baseline.json` diff. Eight milestones shipped. Daily-driver use ongoing.
+v2.3 Comprehension Layer shipped 2026-04-29. Second **data-driven** milestone (after v2.2 set the precedent) — scoped from v2.2 audit's CORR-EVAL-02 FAIL constraint discovery #2 (persistent extraction bias on shared-prefix function names). Four-phase milestone with mid-flight architectural pivot: Phase 24 prompt-level intervention (P1+P2) + Phase 25 plan-mode pre-flight enumeration (P3, Interpretation B detail-string encoding) + Phase 26 BLOCKED diagnostic (architectural scope mismatch: prongs were plan-mode-only, eval uses agent-loop) + Phase 27 default-prompt P1 migration + re-eval (closes the gap; CORR-EVAL-02 PASS empirically; orphan_count=0). Final verdict **87 → 92/100, KEEP** (Correctness 31/40 → 36/40; CORR-EVAL-02 0→5). Bench gate 7/7 PASS preserved throughout; zero `bench/baseline.json` diff. Tests 284 → 287. Nine milestones shipped. Daily-driver use ongoing.
 
-**v2.1 (prior, 2026-04-28):** Empirical Qwen 3.5 122B Coding Evaluation. Single-phase observation-only milestone closing v2.0's measurement gap. `documentation/qwen35-122b-coding-eval.md` (983 lines, 10 sections); verdict 82/100 KEEP. HumanEval+ chat 0.939/0.902; schema 0/50 perfect; multi-turn N=7 stable; needle 4/4 at 32k.
+**v2.2 (prior, 2026-04-28):** Multi-file Capability. PLAN-04 ceiling raise 5→10 + cold-start empirical (37s warm-OS-cache); verdict 82 → 87/100 KEEP. CORR-EVAL-02 still FAIL x2; surfaced persistent extraction bias as v2.3 first candidate.
+
+**v2.1 (prior, 2026-04-28):** Empirical Qwen 3.5 122B Coding Evaluation. Single-phase observation-only milestone closing v2.0's measurement gap. `documentation/qwen35-122b-coding-eval.md` (now 1051 lines, 10 sections); verdict was 82/100, now 92/100 post-v2.3.
 
 **v2.0 (prior, 2026-04-27):** Persistence + Planning. Multi-turn REPL memory + JSONL session persistence + `--resume <id>` + plan-then-execute + Qwen 3.5 122B canonical + Qwen 2.5 retirement (-85 GB disk).
 
-Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2}-ROADMAP.md`.
+Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3}-ROADMAP.md`.
 
-## Current Milestone: v2.3 Comprehension Layer
+## Future Milestone Goals (post-v2.3)
 
-**Goal:** Resolve the persistent extraction bias on shared-prefix function names that v2.2 audit surfaced as the new bottleneck (CORR-EVAL-02 FAIL x2 with textually identical step-5 thoughts across two completely different READMEs). Multi-prong intervention: system prompt enumeration guidance + few-shot multi-file examples + plan-mode pre-flight rename-target enumeration. Verify by re-running CORR-EVAL-02 to PASS (orphan_count=0); flips Correctness 31/40 → 36/40 → Total 87 → 92.
+v2.4 candidates (observation-driven; not yet scoped):
 
-**Why now:** Data-driven from v2.2 audit (`milestones/v2.2-MILESTONE-AUDIT.md`). v2.2 disproved the v2.1 hypothesis that the 5-step ceiling alone was the constraint; the comprehension layer is now the load-bearing layer to fix. Two README variants (902-char prose vs 2128-char enumerated rewrite) produced textually identical step-5 thoughts — README clarity cannot fix the bias. Multi-prong attack required.
-
-**Target features (1 candidate, 3 prongs):**
-
-- **P1: System prompt enumeration guidance** — `defaultSystemPrompt` or `planSystemPromptSuffix` updated with hint instructing the agent to enumerate ALL rename targets from spec before editing
-- **P2: Few-shot multi-file examples** — Plan-mode prompt includes 1-2 inline correct multi-file refactor plan examples
-- **P3: Plan-mode pre-flight rename-target enumeration** — Domain.fs Plan validator extended; new validator pass checks all rename targets from user prompt are enumerated as plan steps; new `RenameTargetsNotEnumerated` PlanInvalid reason; 2-attempt retry path
-
-**Scope (per v2.3 scope agreement 2026-04-28):**
-
-- 3 phases (24, 25, 26): Prompt-level (P1+P2 bundled) → Architectural (P3) → Re-eval + verdict
-- ~4-5 days estimated; v2.0-style mid-size milestone but architecturally cleaner (one bottleneck, three prongs)
-- bench gate stability mandatory after each phase
-- Test count grows (P3 adds new validator + tests); target 284 → ~290+
-- No `bench/baseline.json` modifications
-
-**Phase numbering:** continues at 24 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20, v2.1: 21, v2.2: 22-23).
-
-**Excluded** with explicit rationale (deferred to later milestones):
-- IDIOMATIC-FS-01 — Coding-quality 1/5 medium-priority; may be Python-transcript artifact; needs F# task fixtures; v2.4+ candidate
-- COLDSTART-PRISTINE-01 — Post-reboot pristine case untested; needs scheduled disruption window; v2.4+ candidate (low urgency)
-- SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01 — Carried-forward from v2.0/v2.1; observation-driven (no daily-driver pain signal); v2.4+ candidates
-- THINK-01 — v2.1 data says thinking-OFF gives perfect schema 0/50; ON regresses; defer indefinitely
-- TOOLCALLS-01 — Custom JSON schema is 0/50 perfect; v3.0 territory
-- STM-01 — Deferred 8x; TTFT 222ms warm is already instant; defer pattern is the signal
-
-## Future Milestone Goals (post-v2.1)
-
-After v2.1 produces empirical evidence, observation-driven v2.2 picks 2-3 candidates from the v2.0-deferred set based on measured pain:
-
-- **Compaction (COMPACT-01)** — PERSIST-02 saves full session JSONL; long sessions hit 80% context warning faster
-- **Slash commands (SLASH-01)** — `/sessions`, `/plan`, `/clear`. UX layer over CLI flags
-- **Sub-agent delegation (SUBAG-01)** — Now meaningful since memory + planning landed
-- **Plan-mode bench fixture** — Deferred from Phase 16; mocked-IKeyReader pattern
-- **Thinking-mode-on (THINK-01)** — Consume `<think>` blocks; `max_tokens` 1024→2048-4096
-- **Native OpenAI `tool_calls` (TOOLCALLS-01)** — Replaces custom JSON schema
-- **Streaming output (STM-01)** — Deferred 7th cycle
+- **AGENT-LOOP-FEW-SHOT-01** (newly-surfaced from v2.3) — Migrate or adapt P2 (currently plan-mode-only; `Targets:`/`Steps:` notation is plan-mode-specific) for agent-loop mode if observation surfaces a need. Phase 27 deliberately left P2 in plan-mode for MVP scope discipline.
+- **HARNESS-AUDIT-01** (low; newly-surfaced) — `bench/eval-qwen35-122b.sh` accumulated four macOS-bash-strict-mode patches across v2.1-v2.3 (set-e/dotnet-exit; grep-c-pipefail; mkdir-before-tee; orphan-grep-zero-match-exit-1). Worth a one-pass audit + howto entry codifying the pattern.
+- **IDIOMATIC-FS-01** (medium; carried-forward from v2.2 audit) — Coding-quality 1/5 sub-score may be Python-transcript artifact; needs F# task fixtures + transcript review before drawing conclusions
+- **COLDSTART-PRISTINE-01** (low; carried-forward) — Post-reboot pristine cold-start measurement (warm-OS-cache 37s already documented in v2.2)
+- **SLASH-01** — `/sessions`, `/plan`, `/clear` slash commands inside REPL (carried-forward; observation-driven)
+- **COMPACT-01** — Auto-compaction when session approaches 80% of `max_model_len` (carried-forward; observation-driven)
+- **SUBAG-01** — Sub-agent delegation via Agent tool (carried-forward; observation-driven; now meaningful since memory + planning + plan-mode all shipped)
+- **PLAN-MODE-BENCH-01** — Plan-mode bench fixture via mocked-IKeyReader (carried-forward; complementary not load-bearing)
+- **STM-01** — SSE token streaming (deferred 9th cycle; TTFT 222ms warm is instant; defer pattern is the signal)
+- **THINK-01** — Thinking-mode-on consumption of `<think>` blocks (defer indefinitely; v2.1 says thinking-OFF gives perfect schema 0/50)
+- **TOOLCALLS-01** — Native OpenAI `tool_calls` (v3.0 territory; custom JSON schema is 0/50 perfect)
 
 ## Core Value
 
@@ -110,19 +86,15 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - ✓ Constraint discovery #2: persistent extraction bias on shared-prefix function names — CORR-EVAL-02 re-run produced FAIL twice with textually identical step-5 thoughts across two completely different READMEs (902-char prose + 2128-char enumerated rewrite). Disproves v2.1 hypothesis that ceiling alone was the constraint; surfaces comprehension layer as new bottleneck. Documented in eval doc §2.4 + §8 Caveat #6 + §9 item 8 — v2.2 (PLAN-CAP-04..05 partial-by-design per Option C)
 - ✓ Third macOS bash-strict-mode pattern documented — `4bcd8a4 fix(23-01): move mkdir before tee in run_coldstart`. Pattern: under `set -euo pipefail`, any I/O command must verify its target dir exists first — v2.2 (23-01)
 
-### Active (v2.3 Comprehension Layer)
-
-<!-- v2.3 scope agreed 2026-04-28 from v2.2 audit's COMP-BIAS-01 first candidate. Multi-prong (P1+P2+P3) full intervention. -->
-
-#### Comprehension intervention
-- [ ] **COMP-01**: System prompt instructs agent to enumerate ALL rename targets from spec before editing (P1 prong)
-- [ ] **COMP-02**: Plan-mode prompt includes 1-2 inline few-shot examples of correct multi-file refactor plans (P2 prong)
-- [ ] **COMP-03**: Plan validator new pre-flight pass checks user-prompt rename targets are enumerated as plan steps; new `RenameTargetsNotEnumerated` PlanInvalid reason; 2-attempt retry (P3 prong)
-- [ ] **COMP-04**: Tests + bench gate regression hold (PlanValidator new tests; AgentLoop new tests; 7/7 PASS held; per-fixture step counts unchanged for W1/W2/B2/T1/T5/T6/MT)
-
-#### Re-evaluation
-- [ ] **COMP-05**: CORR-EVAL-02 re-run produces orphan_count=0 PASS (`bench/eval-qwen35-122b.sh --refactor`)
-- [ ] **COMP-06**: Eval doc updated; scorecard re-aggregated (Correctness 31/40 → 36/40; Total 87 → 92; final line `**Total: 92/100, Recommendation: KEEP**`)
+- ✓ P1 enumeration directive added to plan-mode system prompt — `planSystemPromptSuffix` 695→879 chars; "When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly..." — v2.3 (24-01; later migrated to `defaultSystemPrompt` in 27-01)
+- ✓ P2 few-shot multi-file refactor example in plan-mode — Example/Targets/Steps block demonstrating shared-prefix `add`/`add3` rename; suffix 879→1183 chars — v2.3 (24-02)
+- ✓ PlanValidator pre-flight rename-target enumeration — `checkRenameTargetsEnumerated: userPrompt: string -> Plan -> Result<Plan, AgentError>` heuristic in `src/BlueCode.Core/PlanValidator.fs:108`; bound at `validatePlan:143`; called from `AgentLoop.fs:484`. Interpretation B: missing-target list encoded as structured detail string within existing `PlanInvalid of detail: string` case; no `Domain.fs` DU change. F# big-bang atomic commit (PlanValidator + AgentLoop + 6 PlanValidatorTests callers) — v2.3 (25-01)
+- ✓ Boundary tests for `checkRenameTargetsEnumerated` — PASS / FAIL / vacuous PASS; tests 284 → 287 — v2.3 (25-02)
+- ✓ P1 directive migration from `planSystemPromptSuffix` → `defaultSystemPrompt` — closes architectural scope mismatch surfaced by Phase 26 BLOCKED; combined plan-mode prompt char count INVARIANT (1968 = 1968); reaches agent-loop path used by CORR-EVAL-02 eval harness — v2.3 (27-01)
+- ✓ CORR-EVAL-02 PASS empirically — `bench/runs/qwen35-eval-20260429-105907/refactor_orphan_count.txt` = 0; PASS verdict line confirmed; agent enumerated both `add`/`add3` targets in step-2 thought (P1 effect directly observable). Mandatory `launchctl kickstart -k gui/501/com.ohama.qwen122b` pre-flight clears KV cache contamination — v2.3 (27-02)
+- ✓ Eval doc verdict 87 → 92 — 11 edit sites in `documentation/qwen35-122b-coding-eval.md`; Correctness 31/40 → 36/40; aggregate KEEP preserved by wider margin; final scorecard `**Total: 92/100, Recommendation: KEEP**` strict-format match — v2.3 (27-03)
+- ✓ Bench gate stability preserved through entire v2.3 — 7/7 PASS held across 4 phases; per-fixture step counts unchanged vs v2.2 baseline; `bench/baseline.json` byte-for-byte preserved — v2.3 (COMP-04)
+- ✓ Fourth macOS bash-strict-mode pattern documented — `9f8e06e fix(27-02): guard orphan grep against set -e abort on PASS case`. `grep -cE` exits 1 on zero-match (PASS case); `|| true` guard required under `set -euo pipefail` — v2.3 (27-02)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -266,6 +238,15 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 | v2.2 (Option C): accept CORR-EVAL-02 partial closure + document persistent extraction bias as v2.3 candidate | After README rewrite (Option A) attempt failed identically, two consecutive FAILs with completely different prose textually identical step-5 thoughts is decisive empirical signal. Symptom (README ambiguity) is not the disease (model bias). | ✓ Good — intellectually honest; v2.2 verdict went UP via Phase 23 cold-start path (different mechanism, same numeric end state 87/100); v2.3 has cleanly-scoped first candidate with multi-prong intervention space (system prompt + few-shot + plan-mode pre-flight) |
 | v2.2 (23-01): cold-start handler had `tee` before `mkdir` under `set -euo pipefail` | First `--coldstart` invocation aborted silently before kickstart fired (tee failed → pipefail abort). Service was NOT killed; no actual disruption. | ✓ Good — fixed in commit; third macOS bash-strict-mode pattern documented in 23-01 SUMMARY for future bash handler authors. Lesson: under `set -euo pipefail`, any I/O command must verify its target dir exists first |
 | v2.2: 37s warm-OS-cache cold-start refutes v2.0's "up to 240s" estimate for common case | Empirical measurement is ~6× faster than v2.0 SUMMARY's ceiling estimate. Likely cause: kernel preserves model weight pages even when launchctl kickstart kills the process. | ✓ Good — measurement preserved as authoritative for warm-cache case; v2.0 estimate stays valid for first-boot pristine case (untested in v2.2; v2.3 candidate COLDSTART-PRISTINE-01) |
+| v2.3 (24-01..24-02): P1+P2 added to `planSystemPromptSuffix` (plan-mode-only) | Conservative MVP scope; P1 = single-line directive, P2 = 3-line Example/Targets/Steps block; suffix 695→1183 chars (under 1500 cap). Original v2.3 design assumed plan-mode reach was sufficient. | ⚠ Revisit (resolved by 27-01) — Phase 26 BLOCKED proved plan-mode reach was insufficient because eval harness uses agent-loop. Phase 27-01 migrated P1 to `defaultSystemPrompt`; P2 stays plan-mode-only (its `Targets:`/`Steps:` format is plan-mode-specific) |
+| v2.3 (25-01): Interpretation B for COMP-03 — `PlanInvalid of detail: string` unchanged; missing-target list encoded as structured sub-string | Original ROADMAP wording suggested new `RenameTargetsNotEnumerated of (string list)` DU variant. Researcher discovered codebase has single-case `PlanInvalid of string`. Interpretation B avoids compile cascade across `Rendering.fs:120` + `AgentLoop.buildCorrection`; same observable LLM-correction behavior; smaller diff. | ✓ Good — load-bearing decision; `Domain.fs` byte-for-byte unchanged across Phase 25; verified by 25-VERIFICATION.md `git diff` empty assertion |
+| v2.3 (25-01): F# big-bang atomic commit for signature change | `validatePlan` signature change `Plan → string * Plan` requires updating ALL callers atomically (1 production at AgentLoop.fs:484; 6 in PlanValidatorTests.fs). No valid intermediate build state. Mirrors v1.1 LlmResponse Phase 7 pattern. | ✓ Good — single commit lands clean; pattern reusable for future Core signature changes |
+| v2.3 (Phase 26 BLOCKED): Architectural scope mismatch surfaced as constructive failure | All 3 v2.3 prongs were plan-mode-scoped (P1+P2 in `planSystemPromptSuffix`; P3 in `runPlanTurn`). CORR-EVAL-02 eval harness invokes blueCode WITHOUT `--plan` (agent-loop). Phase 26's 3 stochastic FAILs exposed the gap. | ✓ Good (resolved by Phase 27) — repo lesson: for each intervention, explicitly check which code paths exercise it and which paths bypass it. The architectural-scope-mismatch pattern surfaced for the second milestone in a row (v2.2 ceiling raise was necessary-but-insufficient; v2.3 prongs were plan-mode-scoped). Phase 26 stays as historical BLOCKED record (commit `7837ad5`) per supersession pattern |
+| v2.3 (Phase 26 Diagnostic D): KV cache contamination as a real failure mode | Long-running 122B service accumulates KV cache contamination that produces hallucination (e.g., reading "rename" task as "add subtract function"). `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears it. | ✓ Good — mandatory pre-flight for evaluation runs going forward; documented in v2.3-MILESTONE-AUDIT.md and v2.3-ROADMAP.md archive |
+| v2.3 (Phase 27 mid-flight `/gsd:add-phase`): Supersession pattern preserves milestone | After Phase 26 BLOCKED, options were (a) bump to v2.4, (b) add Phase 27 inside v2.3, (c) accept partial closure. User chose (b). Phase 27 took over COMP-05/06 delivery; Phase 26 stays as historical diagnostic. Milestone shipped clean despite non-linearity. | ✓ Good — supersession pattern (preserve old phase as historical, add new phase that takes over requirements) is reusable; first time used in this project |
+| v2.3 (27-01): Byte-invariant transformation for prompt migration | Combined plan-mode prompt char count (defaultSystemPrompt + "\n\n" + planSystemPromptSuffix) was provably invariant before/after migration (1968 = 1968). | ✓ Good — char count invariants are powerful audit tools; when designing prompt changes, look for transformations that conserve a measurable quantity |
+| v2.3 (27-02): Fourth macOS bash-strict-mode pattern + Rule 3 auto-fix | `grep -cE` exits 1 on zero-match (PASS case); `set -euo pipefail` aborts before writing `refactor_orphan_count.txt`. Auto-fixed with `|` true` guard in `bench/eval-qwen35-122b.sh` per Rule 3 (auto-fix-blockers). Conflict with ROADMAP §Phase 27 "do not modify eval-qwen35-122b.sh body" guardrail. | ✓ Good (with caveat) — Rule 3 auto-fix-blockers correctly overrode the guardrail because the success path could not report success otherwise. Documented in v2.3-MILESTONE-AUDIT.md as in-scope deviation. Future eval harness changes should ride formal phases per the original guardrail intent. |
+| v2.3 (Audit): Plan-mode vs agent-loop distinction is now load-bearing repo knowledge | The distinction surfaced as audit-worthy after v2.3 made it consequential. `defaultSystemPrompt` is for both modes; `planSystemPromptSuffix` is plan-mode-only; `PlanValidator.checkRenameTargetsEnumerated` runs only in `runPlanTurn`. | ✓ Good — recorded in v2.3-MILESTONE-AUDIT.md lessons section. Future prompt or validator changes must explicitly state which mode(s) they target. Bench gate fixtures use agent-loop (no `--plan`); CORR-EVAL-02 eval harness uses agent-loop (no `--plan`). |
 
 ## v2 후보 (notional, scoping 전)
 
@@ -278,4 +259,4 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-28 after starting v2.3 Comprehension Layer milestone — multi-prong (P1+P2+P3) intervention on persistent extraction bias surfaced by v2.2 audit. Target: CORR-EVAL-02 PASS → Total 87 → 92/100. 8 milestones shipped (v2.3 in progress).*
+*Last updated: 2026-04-29 after shipping v2.3 Comprehension Layer milestone — CORR-EVAL-02 PASS empirically (orphan_count=0; RUN_TS=20260429-105907); eval doc verdict 87 → 92/100 KEEP; 9 milestones shipped (v2.3 closed).*
