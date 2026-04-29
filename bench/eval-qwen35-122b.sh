@@ -292,10 +292,12 @@ run_refactor() {
   # they will contain `add` again — so we MUST capture the count NOW and persist it to a file
   # 21-05 reads (refactor_orphan_count.txt) for CORR-EVAL-02 scoring (5 pts if 0; 0 pts otherwise).
   local orphan_count
-  orphan_count=$(grep -cE '\b(let |Calculator\.)add\b' \
+  # Use || true inside the subshell: grep exits 1 when no matches found (the PASS case);
+  # without this guard, set -euo pipefail aborts the script before writing refactor_orphan_count.txt.
+  orphan_count=$( (grep -cE '\b(let |Calculator\.)add\b' \
       "$fixture_dir/Calculator.fs" \
       "$fixture_dir/Main.fs" \
-      "$fixture_dir/Tests.fs" 2>/dev/null | awk -F: '{sum+=$2} END {print sum+0}')
+      "$fixture_dir/Tests.fs" 2>/dev/null || true) | awk -F: '{sum+=$2} END {print sum+0}')
   echo "$orphan_count" > "$LOG_DIR/refactor_orphan_count.txt"
   echo "orphan_add_references=$orphan_count" >> "$out"
   if [ "$orphan_count" -gt 0 ]; then
@@ -305,7 +307,7 @@ run_refactor() {
     # subsequent bench gate run can restore fixtures via its EXIT trap. 21-05 reads
     # refactor_orphan_count.txt and applies pass/fail (5 pts if 0; 0 pts otherwise).
   else
-    echo "CORR-EVAL-02 PASS: 0 orphan 'add' references remain" | tee -a "$LOG_DIR/timeline.txt"
+    echo "CORR-EVAL-02 PASS: 0 orphan 'add' references remain" | tee -a "$LOG_DIR/timeline.txt" "$out"
   fi
   echo "label=refactor_multifile model=122b exit=$exit_code elapsed=${elapsed}s orphan_add_refs=$orphan_count" > "$meta"
   echo "  -> exit=$exit_code elapsed=${elapsed}s orphan_add_refs=$orphan_count" | tee -a "$LOG_DIR/timeline.txt"
