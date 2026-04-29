@@ -54,6 +54,7 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Plan-mode vs agent-loop distinction is load-bearing** (v2.3 lesson) — `defaultSystemPrompt` is sent for ALL invocations; `planSystemPromptSuffix` only when `--plan`; `PlanValidator.checkRenameTargetsEnumerated` only in `runPlanTurn`. Future prompt or validator changes must explicitly state which mode(s) they target. Bench gate fixtures use agent-loop (no `--plan`); CORR-EVAL-02 eval harness uses agent-loop (no `--plan`).
 - **Mandatory `launchctl kickstart` pre-flight for evaluations** (v2.3 Phase 26 Diagnostic D) — `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears KV cache contamination. Long-running 122B sessions accumulate contamination that produces hallucination failure modes. Confirmed empirically.
 - **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01); orphan-grep-zero-match-exit-1 (v2.3 27-02); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
+- **FSI fixture skeleton pattern** (Phase 28-02) — `.fs` skeletons use `module` decl + top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code. `dotnet fsi --exec` gives exit 0 when required.
 
 ### Pending Todos
 
@@ -74,7 +75,7 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 ## Session Continuity
 
 Last session: 2026-04-28
-Stopped at: Completed 28-01-PLAN.md — HARNESS-AUDIT-01 howto (5 patterns) + Pattern 5 fix (94d905c) + howto commit (280677a); bench gate 7/7 PASS
+Stopped at: Completed 28-02-PLAN.md — 6 F# idiomatic fixtures created under bench/fixtures/fs_idiomatic/ (25eb35d); FS-EVAL-01 satisfied
 Resume file: None
 Next workflow trigger: Continue Phase 28 plans (28-03 harness mode handler, 28-04 rubric review)
 
