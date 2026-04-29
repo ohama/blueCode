@@ -2,6 +2,7 @@ module BlueCode.Cli.Rendering
 
 open System
 open BlueCode.Core.Domain
+open BlueCode.Cli.Adapters.FileSessionStore
 
 /// Display mode toggle. Phase 4 ships Compact + Verbose only.
 /// Phase 5 (CLI-07, --trace) will introduce a separate stderr JSON logging path,
@@ -169,3 +170,36 @@ let renderStatus (session: Session) (forcedModel: Model option) (maxModelLen: in
     sprintf
         "session:  %s\nmodel:    %s\nsteps:    %d\nchars:    %d / ~%d (%d%%) [floor; probed on first LLM call]"
         idStr modelName steps accChars maxChars pct
+
+/// Render the `/sessions` listing. Pure: takes a SessionMeta list, returns a multi-line
+/// string. NO Spectre markup (CLAUDE.md "Stream separation"; tests capture via Console.SetOut).
+///
+/// Empty list → "no sessions found" (single line).
+/// Non-empty → header row + one row per meta, with columns:
+///   - session id (32-char hex, %-34s padding)
+///   - started timestamp (%-25s, ISO-ish "yyyy-MM-dd HH:mm:ss")
+///   - turn count (%-6d)
+///   - first thought (≤40 chars displayed in this row, with "..." suffix if SessionMeta excerpt
+///     was the full 80-char-truncated value — visual narrow column, the SessionMeta excerpt
+///     itself is already capped at 80 chars by listRecent so this is a presentation detail).
+///
+/// Column header reads "first thought" NOT "first prompt" — research § Open Question #1:
+/// the user's prompt is not stored in the jsonl, so the LLM's first reasoning step is the
+/// best available proxy. Calling it "first prompt" would be misleading.
+let renderSessions (metas: SessionMeta list) : string =
+    if metas.IsEmpty then
+        "no sessions found"
+    else
+        let header = sprintf "%-34s %-25s %-6s %s" "session id" "started" "turns" "first thought"
+        let rows =
+            metas
+            |> List.map (fun m ->
+                let (SessionId idStr) = m.Id
+                let dateStr = m.StartedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                let displayExcerpt =
+                    if m.FirstPromptExcerpt.Length > 40 then
+                        m.FirstPromptExcerpt.Substring(0, 40) + "..."
+                    else
+                        m.FirstPromptExcerpt
+                sprintf "%-34s %-25s %-6d %s" idStr dateStr m.TurnCount displayExcerpt)
+        header :: rows |> String.concat "\n"

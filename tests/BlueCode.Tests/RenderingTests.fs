@@ -4,6 +4,7 @@ open System
 open Expecto
 open BlueCode.Core.Domain
 open BlueCode.Cli.Rendering
+open BlueCode.Cli.Adapters.FileSessionStore
 
 let private toolStep: Step =
     { StepNumber = 2
@@ -153,4 +154,72 @@ let tests =
               Expect.stringContains s "steps:    3" "step count reflects List.length"
               // chars: each step contributes (sprintf "%A" Action) + (sprintf "%A" ToolResult)
               // Don't assert exact char count — just that it's > 0 (formula is testable in isolation).
-              Expect.isFalse (s.Contains("chars:    0 ")) "non-zero chars for non-empty steps" ]
+              Expect.isFalse (s.Contains("chars:    0 ")) "non-zero chars for non-empty steps"
+
+          // ── Phase 32-01: renderSessions ──────────────────────────────────────
+          testCase "renderSessions empty list returns 'no sessions found'" <| fun _ ->
+              let s = renderSessions []
+              Expect.equal s "no sessions found" "empty list yields exact phrase"
+
+          testCase "renderSessions single meta shows id, started date, turns, excerpt" <| fun _ ->
+              let meta : SessionMeta =
+                  { Id = SessionId "deadbeef0123456789abcdef01234567"
+                    StartedAt = DateTimeOffset(2026, 4, 29, 14, 30, 5, TimeSpan.Zero)
+                    TurnCount = 7
+                    FirstPromptExcerpt = "inspecting README" }
+              let s = renderSessions [ meta ]
+              Expect.stringContains s "deadbeef0123456789abcdef01234567" "id appears"
+              Expect.stringContains s "2026-04-29 14:30:05" "started timestamp formatted yyyy-MM-dd HH:mm:ss"
+              Expect.stringContains s "7" "turn count appears"
+              Expect.stringContains s "inspecting README" "excerpt appears"
+              // Header row must include the column labels.
+              Expect.stringContains s "session id" "header row column: session id"
+              Expect.stringContains s "started" "header row column: started"
+              Expect.stringContains s "turns" "header row column: turns"
+              Expect.stringContains s "first thought" "header row column label is 'first thought' (not 'first prompt')"
+
+          testCase "renderSessions truncates excerpt longer than 40 chars with '...' suffix" <| fun _ ->
+              // SessionMeta.FirstPromptExcerpt is already capped at 80 chars by listRecent;
+              // renderSessions further truncates the DISPLAY column to 40 chars + '...'.
+              let longExcerpt = String.replicate 60 "x"   // 60 chars (within SessionMeta's 80 cap)
+              let meta : SessionMeta =
+                  { Id = SessionId "abc"
+                    StartedAt = DateTimeOffset.MinValue
+                    TurnCount = 1
+                    FirstPromptExcerpt = longExcerpt }
+              let s = renderSessions [ meta ]
+              Expect.stringContains s "..." "long excerpt receives ellipsis"
+              Expect.stringContains s (String.replicate 40 "x") "first 40 chars displayed verbatim"
+              // The full 60-char excerpt should NOT appear (we truncated to 40).
+              Expect.isFalse (s.Contains(String.replicate 50 "x")) "excerpt truncated before reaching 50 'x's"
+
+          testCase "renderSessions multiple metas yields header + N rows" <| fun _ ->
+              let mk i =
+                  { Id = SessionId (sprintf "session-%d" i)
+                    StartedAt = DateTimeOffset(2026, 4, 29 - i, 12, 0, 0, TimeSpan.Zero)
+                    TurnCount = i
+                    FirstPromptExcerpt = sprintf "thought %d" i }
+              let metas = [ mk 1; mk 2; mk 3 ]
+              let s = renderSessions metas
+              let lines = s.Split([| '\n' |])
+              // 1 header + 3 data rows = 4 lines
+              Expect.equal lines.Length 4 "header + 3 rows"
+              Expect.stringContains s "session-1" "first id appears"
+              Expect.stringContains s "session-2" "second id appears"
+              Expect.stringContains s "session-3" "third id appears"
+              Expect.stringContains s "thought 1" "first excerpt appears"
+              Expect.stringContains s "thought 2" "second excerpt appears"
+              Expect.stringContains s "thought 3" "third excerpt appears"
+
+          testCase "renderSessions empty excerpt renders cleanly (no trailing junk)" <| fun _ ->
+              // Header-only sessions have FirstPromptExcerpt = "". The row should still
+              // render without crashing (no NullReferenceException, no malformed output).
+              let meta : SessionMeta =
+                  { Id = SessionId "abc"
+                    StartedAt = DateTimeOffset(2026, 4, 29, 0, 0, 0, TimeSpan.Zero)
+                    TurnCount = 0
+                    FirstPromptExcerpt = "" }
+              let s = renderSessions [ meta ]
+              Expect.stringContains s "abc" "id present"
+              Expect.stringContains s "0" "turn count 0 displayed"
+              Expect.isFalse (s.Contains("...")) "no '...' for empty excerpt" ]
