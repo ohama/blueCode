@@ -2,11 +2,11 @@
 # bench/eval-qwen35-122b.sh — Qwen 3.5 122B empirical evaluation harness (Phase 21, v2.1)
 #
 # Measures: throughput (tok/s), TTFT (ms), HumanEval+, multi-turn, refactor,
-#           lang-coverage, schema-rate, needle, cold-start. All against HTTP
+#           lang-coverage, schema-rate, needle, cold-start, fs-idiomatic. All against HTTP
 #           localhost:8001 — NEVER loads mlx_lm in-process (OOM risk, 45GB resident).
 #
 # Usage: bench/eval-qwen35-122b.sh [--setup|--throughput|--ttft|--multiturn|
-#            --refactor|--langcoverage|--schema-rate|--humaneval|--needle|
+#            --refactor|--fs-idiomatic|--langcoverage|--schema-rate|--humaneval|--needle|
 #            --coldstart|--full]
 #
 # Handlers implemented in this file (21-01):
@@ -17,6 +17,8 @@
 #   --refactor, --langcoverage
 # Handlers implemented by 21-04:
 #   --multiturn, --schema-rate, --needle, --coldstart, --full
+# Handlers implemented by 28-03:
+#   --fs-idiomatic
 
 set -euo pipefail
 cd /Users/ohama/projs/blueCode
@@ -312,6 +314,81 @@ run_refactor() {
   echo "label=refactor_multifile model=122b exit=$exit_code elapsed=${elapsed}s orphan_add_refs=$orphan_count" > "$meta"
   echo "  -> exit=$exit_code elapsed=${elapsed}s orphan_add_refs=$orphan_count" | tee -a "$LOG_DIR/timeline.txt"
 }
+# ---------------------------------------------------------------------------
+# run_fs_idiomatic — runs each F# task fixture under bench/fixtures/fs_idiomatic/
+# through agent-loop mode (no --plan); captures full transcript per fixture.
+# Manually scored against rubric in 28-04 (FS-EVAL-02 + FS-EVAL-03).
+#
+# Per-fixture flow:
+#   1. git checkout the .fs file to restore canonical state (idempotent across runs)
+#   2. Build prompt: "Read <task.md> and fill the holes in <fs file>"
+#   3. Invoke blueCode agent loop (set +e around dotnet to capture exit_code)
+#   4. Capture diff (post-fixture .fs vs pre-run state) + transcript + meta
+# ---------------------------------------------------------------------------
+run_fs_idiomatic() {
+  require_port_8001
+  mkdir -p "$LOG_DIR"
+  local fixture_dir="bench/fixtures/fs_idiomatic"
+  if [ ! -d "$fixture_dir" ]; then
+    echo "ERROR: $fixture_dir missing — run 28-02 first" >&2; exit 7
+  fi
+  # KV-cache hygiene reminder (v2.3 lesson): user is responsible for kickstart;
+  # harness reminds rather than auto-kickstarts.
+  echo "===== fs_idiomatic (model=122b) =====" | tee -a "$LOG_DIR/timeline.txt"
+  echo "  REMINDER: for cleanest measurement, run 'launchctl kickstart -k gui/$(id -u)/com.ohama.qwen122b'"
+  echo "             before this command and wait until /v1/models responds. Skipping kickstart"
+  echo "             may yield KV-cache contamination from prior sessions."
+  # Iterate over .task.md files (sorted for deterministic order)
+  local task_md
+  for task_md in $(ls "$fixture_dir"/*.task.md 2>/dev/null | sort); do
+    local base
+    base=$(basename "$task_md" .task.md)              # e.g., pipeline
+    local fs_file="$fixture_dir/$base.fs"
+    if [ ! -f "$fs_file" ]; then
+      echo "  WARN: $fs_file missing for $task_md; skipping" | tee -a "$LOG_DIR/timeline.txt"
+      continue
+    fi
+    # Restore canonical state (idempotent across runs)
+    git checkout -- "$fs_file" 2>/dev/null || true
+    local out="$LOG_DIR/fs_idiomatic_${base}.transcript.txt"
+    local diff_out="$LOG_DIR/fs_idiomatic_${base}.diff"
+    local meta="$LOG_DIR/fs_idiomatic_${base}.meta"
+    local prompt
+    prompt="Read $task_md and fill the holes in $fs_file. Implement the function as the task description specifies. Do not modify other files."
+    echo "----- fs_idiomatic: $base -----" | tee -a "$LOG_DIR/timeline.txt"
+    echo "PROMPT: $prompt" >> "$out"
+    echo "----" >> "$out"
+    local start_ts
+    start_ts=$(date +%s)
+    # Pattern 1 (set-e/dotnet-exit): blueCode may exit 1 on MaxLoopsExceeded (data, not failure)
+    set +e
+    /usr/bin/time -p dotnet run --project src/BlueCode.Cli -- --verbose --model 122b "$prompt" >> "$out" 2>&1
+    local exit_code=$?
+    set -e
+    local end_ts
+    end_ts=$(date +%s)
+    local elapsed=$((end_ts - start_ts))
+    echo "----" >> "$out"
+    # Capture post-run file state in transcript for human review
+    echo "===== POST-RUN $fs_file =====" >> "$out"
+    cat "$fs_file" >> "$out"
+    echo "" >> "$out"
+    # Capture machine-readable diff (vs canonical state)
+    git diff -- "$fs_file" > "$diff_out" 2>/dev/null || true
+    # Pattern 2/4 (grep-c/pipefail + zero-match guard): count step markers;
+    # PASS condition may be 0 markers, so guard with || true
+    local step_count
+    step_count=$(grep -cE "Session ok: [0-9]+ steps" "$out" 2>/dev/null || true)
+    step_count="${step_count:-0}"
+    # Per-fixture meta line (consumed by 28-04 scoring)
+    echo "label=fs_idiomatic_${base} model=122b exit=$exit_code elapsed=${elapsed}s steps=${step_count}" > "$meta"
+    echo "  -> $base: exit=$exit_code elapsed=${elapsed}s steps=${step_count}" | tee -a "$LOG_DIR/timeline.txt"
+  done
+  # Final cleanup: restore all fixtures so subsequent bench gate doesn't see modified files
+  git checkout -- "$fixture_dir"/*.fs 2>/dev/null || true
+  echo "fs_idiomatic: artifacts at $LOG_DIR/fs_idiomatic_*.{transcript.txt,diff,meta}"
+  echo "fs_idiomatic: fixtures restored via git checkout (verify: 'git diff $fixture_dir/' should be empty)"
+}
 run_langcoverage() {
   require_port_8001
   mkdir -p "$LOG_DIR"
@@ -537,12 +614,13 @@ run_full() {
 # ---------------------------------------------------------------------------
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [--setup|--throughput|--ttft|--multiturn|--refactor|--langcoverage|--schema-rate|--humaneval|--needle|--coldstart|--full]
+Usage: $(basename "$0") [--setup|--throughput|--ttft|--multiturn|--refactor|--fs-idiomatic|--langcoverage|--schema-rate|--humaneval|--needle|--coldstart|--full]
   --setup        One-time: create bench/.venv-eval and pip install evalplus
   --throughput   tokens/sec via /v1/chat/completions (5 prompts x 3 trials = 15 entries)
   --ttft         time-to-first-token via SSE streaming (10 trials)
   --multiturn    1/3/5/7/10-turn degradation curve (implemented in 21-04)
   --refactor     multi-file F# refactoring (implemented in 21-03)
+  --fs-idiomatic F# idiomatic-pattern fixtures (Phase 28; 3 fixtures, ~6-10 min)
   --langcoverage Python + TypeScript bug-fix fixtures (implemented in 21-03)
   --schema-rate  50-invocation InvalidJsonOutput rate (implemented in 21-04)
   --humaneval    HumanEval+ pass@1 chat + completion modes (implemented in 21-02)
@@ -560,8 +638,9 @@ case "${1:-}" in
   --throughput)   run_throughput ;;
   --ttft)         run_ttft ;;
   --multiturn)    run_multiturn ;;
-  --refactor)     run_refactor ;;
-  --langcoverage) run_langcoverage ;;
+  --refactor)       run_refactor ;;
+  --fs-idiomatic)   run_fs_idiomatic ;;
+  --langcoverage)   run_langcoverage ;;
   --schema-rate)  run_schema_rate ;;
   --humaneval)    run_humaneval ;;
   --needle)       run_needle ;;
