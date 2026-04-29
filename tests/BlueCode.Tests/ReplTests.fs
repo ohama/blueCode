@@ -445,4 +445,216 @@ let tests =
               finally
                   Console.SetOut(originalOut)
 
+          testCase "runMultiTurn: '/help' prints 9-command help without LLM call" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/help\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-help-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []   // 0 LLM calls expected — /help is in-process
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0"
+                  Expect.stringContains captured "/help" "help text mentions /help"
+                  Expect.stringContains captured "/sessions" "help lists /sessions stub"
+                  Expect.stringContains captured "[coming in v2.5]" "help marks future commands"
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: '/status' prints session id, model, steps, chars" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/status\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-stat-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = Some Qwen122B }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0"
+                  Expect.stringContains captured "session:" "status shows session label"
+                  Expect.stringContains captured "model:" "status shows model label"
+                  Expect.stringContains captured "steps:    0" "fresh session has 0 steps"
+                  Expect.stringContains captured "122b" "model name printed"
+                  Expect.stringContains captured "[floor; probed on first LLM call]" "MaxModelLen floor disclaimer"
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: '/clear' creates new session id, prints confirmation, leaves old jsonl untouched" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/clear\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-clr-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0"
+                  Expect.stringContains captured "Session cleared" "clear confirmation text"
+                  Expect.stringContains captured "New session:" "new id label"
+                  // The captured stdout contains TWO session ids: the banner's initial id, then the post-clear id.
+                  // Assert that the second occurrence differs from the first (id rotation actually happened).
+                  let lines = captured.Split([| '\n' |])
+                  let bannerSessionLines = lines |> Array.filter (fun l -> l.Contains("Session: ") && not (l.Contains("New session")))
+                  let clearSessionLines  = lines |> Array.filter (fun l -> l.Contains("New session:"))
+                  Expect.isGreaterThan bannerSessionLines.Length 0 "banner session line present"
+                  Expect.isGreaterThan clearSessionLines.Length 0 "post-clear session line present"
+                  // Pull the IDs out and compare
+                  let bannerId =
+                      bannerSessionLines.[0].Substring(bannerSessionLines.[0].IndexOf("Session:") + "Session:".Length).Trim()
+                  let clearId =
+                      clearSessionLines.[0].Substring(clearSessionLines.[0].IndexOf("New session:") + "New session:".Length).Trim()
+                  Expect.notEqual bannerId clearId "session id rotated by /clear"
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: '/quit' exits cleanly with code 0 (alias of /exit)" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/quit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-quit-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Expect.equal exitCode 0 "/quit must exit with code 0 (graceful, alias of /exit)"
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: future-stub commands (/sessions /resume /plan /edit) print 'not yet implemented' without crashing" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/sessions\n/resume xyz\n/plan\n/edit\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-stub-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []   // future stubs must not call LLM
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0 — future-stub commands do not crash REPL"
+                  // "not yet implemented" should appear at least 4 times (one per stub command)
+                  let stubLines =
+                      captured.Split([| '\n' |])
+                      |> Array.filter (fun l -> l.Contains("not yet implemented"))
+                  Expect.isGreaterThanOrEqual stubLines.Length 4
+                      (sprintf "expected ≥4 'not yet implemented' lines (one per stub); captured:\n%s" captured)
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
           ] // end testSequenced

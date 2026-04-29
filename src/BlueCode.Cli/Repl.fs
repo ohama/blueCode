@@ -9,6 +9,7 @@ open BlueCode.Core.Domain
 open BlueCode.Core.Ports
 open BlueCode.Core.AgentLoop
 open BlueCode.Cli.Rendering
+open BlueCode.Cli.SlashCommand
 open BlueCode.Cli.CompositionRoot
 
 /// Determine whether a context-window warning should fire.
@@ -182,25 +183,54 @@ let runMultiTurnWithSession
 
             match line with
             | null -> running <- false
-            | "/exit" -> running <- false
-            | s when s.Trim() = "" -> ()
-            | prompt ->
-                let! (code, newSteps) =
-                    runSingleTurn prompt currentSession.Steps components renderMode
-                // Always update Session.Steps with newSteps (even on failure — partial progress is informative).
-                let updated =
-                    { currentSession with
-                        Steps = currentSession.Steps @ newSteps
-                        LastActivityAt = DateTimeOffset.UtcNow }
-                currentSession <- updated
-                // Save AFTER each turn (whether success or error) so a crash mid-session is recoverable.
-                let! saveRes = sessionStore.Save updated CancellationToken.None
-                match saveRes with
-                | Ok () -> ()
-                | Error e ->
-                    Log.Warning("Session save failed: {Error}", sprintf "%A" e)
-                    eprintfn "WARNING: session save failed: %A" e
-                lastCode <- if code = 130 then 0 else code
+            | _ ->
+                match SlashCommand.parse line with
+                | None ->
+                    // blank / whitespace-only line — skip silently (preserves prior behavior)
+                    ()
+                | Some (Slash Exit) ->
+                    // /exit and /quit both map here. Auto-save semantic is preserved by
+                    // the existing per-turn Save in the Prompt branch — last completed turn
+                    // is already on disk. No flush needed (research § Q5).
+                    running <- false
+                | Some (Slash Help) ->
+                    printfn "%s" Rendering.renderHelp
+                | Some (Slash Status) ->
+                    printfn "%s" (Rendering.renderStatus currentSession components.Config.ForcedModel components.MaxModelLen)
+                | Some (Slash Clear) ->
+                    // /clear: new session id, empty Steps, NEW jsonl created lazily on first
+                    // future Save. Old session jsonl stays untouched (FileSessionStore.Save
+                    // creates files lazily — see research § Q4). priorSteps reset is automatic
+                    // because runSingleTurn reads currentSession.Steps every call.
+                    let newId = BlueCode.Cli.Adapters.FileSessionStore.newSessionId ()
+                    let now = DateTimeOffset.UtcNow
+                    currentSession <-
+                        { Id = newId; Steps = []; CreatedAt = now; LastActivityAt = now }
+                    let (SessionId newIdStr) = newId
+                    printfn "Session cleared. New session: %s" newIdStr
+                | Some (Slash (Sessions | Resume _ | Plan | Edit)) ->
+                    // Phase 32 (Sessions, Resume), Phase 33 (Plan), Phase 34 (Edit) stubs.
+                    // Future-proofing: parser already accepts these so user input does not
+                    // crash; dispatcher prints the future-phase notice. Each future phase
+                    // replaces its arm here with a real handler.
+                    printfn "(not yet implemented — coming in a future v2.5 phase)"
+                | Some (Prompt prompt) ->
+                    let! (code, newSteps) =
+                        runSingleTurn prompt currentSession.Steps components renderMode
+                    // Always update Session.Steps with newSteps (even on failure — partial progress is informative).
+                    let updated =
+                        { currentSession with
+                            Steps = currentSession.Steps @ newSteps
+                            LastActivityAt = DateTimeOffset.UtcNow }
+                    currentSession <- updated
+                    // Save AFTER each turn (whether success or error) so a crash mid-session is recoverable.
+                    let! saveRes = sessionStore.Save updated CancellationToken.None
+                    match saveRes with
+                    | Ok () -> ()
+                    | Error e ->
+                        Log.Warning("Session save failed: {Error}", sprintf "%A" e)
+                        eprintfn "WARNING: session save failed: %A" e
+                    lastCode <- if code = 130 then 0 else code
 
         return lastCode
     }
