@@ -5,17 +5,17 @@
 See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.3 milestone shipped)
 
 **Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.3 verdict 92/100 KEEP; v2.4 measurement-first: F# fixture scoring 13/15 → 5/5 → passed_disprove_1of5; §5 1/5→5/5; total 92→96)
-**Current focus:** v2.4 Coding Quality milestone (started 2026-04-29) — Phase 28 COMPLETE (passed_disprove_1of5; Phase 29 SKIPPED). Proceed to Phase 30 milestone close via `/gsd:plan-phase 30`.
+**Current focus:** v2.4 Coding Quality milestone close-ready (Phase 30 complete 2026-04-29) — Path A 1/5 DISPROVED (passed_disprove_1of5); Phase 29 SKIPPED. Run `/gsd:audit-milestone` then `/gsd:complete-milestone v2.4`.
 
 ## Current Position
 
-Milestone: v2.4 Coding Quality (started 2026-04-29; data-driven from v2.2/v2.3 audit's Coding-quality 1/5 hedge)
-Phase: 28 complete (passed_disprove_1of5; Phase 29 SKIP)
-Plan: 06 of 06 complete (all plans done)
-Status: Phase 28 complete; Phase 29 SKIPPED; Phase 30 defining
-Last activity: 2026-04-29 — Phase 28 verified; F# fixture rescore disproves 1/5 hedge; total 92→96; Phase 29 SKIP per disprove path (mapped_score 5/5 ≥ 3)
+Milestone: v2.4 Coding Quality (close-ready 2026-04-29; data-driven from v2.2/v2.3 audit's Coding-quality 1/5 hedge — Path A 1/5 DISPROVED)
+Phase: 30 complete (milestone-close gate; bench gate 7/7 PASS; v2.4 close-ready)
+Plan: 01 of 01 complete (all plans done)
+Status: Phase 28 complete; Phase 29 SKIPPED; Phase 30 complete; v2.4 close-ready (run /gsd:audit-milestone next)
+Last activity: 2026-04-29 — Phase 30 verified; final bench gate 7/7 PASS; out-of-scope invariants milestone-wide (zero src/ diff, baseline byte-equal, run.sh untouched); 30-VERIFICATION.md records v2.4 Path A aggregate 92→96 KEEP
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: 6/6 done ✓; Phase 29 SKIPPED; Phase 30: defining)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ close-ready (Phase 28: 6/6 ✓; Phase 29 SKIPPED; Phase 30: 1/1 ✓)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -57,6 +57,8 @@ Stable patterns established across milestones (load-bearing for next session):
 - **FSI fixture skeleton pattern** (Phase 28-02) — `.fs` skeletons use `module` decl + top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code. `dotnet fsi --exec` gives exit 0 when required.
 - **Phase 28 classification passed_disprove_1of5** (v2.4 Phase 28-04) — grand total 13/15 (band ≥12) → mapped_score 5/5 → passed_disprove_1of5. Phase 29 SKIP. F# fixture infrastructure reusable via `bench/eval-qwen35-122b.sh --fs-idiomatic`; transcripts archived under `.planning/phases/28-.../transcripts/`. Band-table (sum-then-scale) overrides arithmetic mean for robust multi-fixture scoring.
 - **Phase 29 SKIP is definitive** (v2.4 Phase 28-06) — FS-INTERVENE-01..02 marked SKIPPED in REQUIREMENTS.md. Classification `passed_disprove_1of5` (M ≥ 3) triggers ROADMAP §Phase 28 SC #6 path (b). Next: `/gsd:plan-phase 30` (Milestone Close).
+- **Phase 30 close-pattern reusable** (v2.4 Phase 30-01) — single-plan close-phase consolidates plan-meta and phase-complete commits into one (`docs(30): complete milestone-close phase`; 5 files: VERIFICATION + SUMMARY + STATE + ROADMAP + REQUIREMENTS). Mirrors Phase 26-01 pattern when plan-boundary equals phase-boundary. Saves one commit + one round of planning-meta noise.
+- **v2.4 Path A canonical** (v2.4 close, 2026-04-29) — measurement-first conditional milestone discipline validated empirically: Phase 28 measurement disproved a v2.2/v2.3 hedge (idiomatic-F# 1/5 was Python-transcript artifact, not real F# generation quality); Path A produced +4 points (92→96 KEEP) with zero source code change; Phase 29 (intervention) SKIPPED per disprove threshold. Conditional milestone structure (measurement → conditional intervention → close) is now reusable repo knowledge.
 
 ### Pending Todos
 
@@ -77,9 +79,9 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 ## Session Continuity
 
 Last session: 2026-04-29
-Stopped at: Completed 28-06-PLAN.md — Phase 28 closed (passed_disprove_1of5; Phase 29 SKIP; bench gate 7/7 PASS; 28-VERIFICATION.md written; STATE/ROADMAP/REQUIREMENTS updated)
+Stopped at: Completed 30-01-PLAN.md — Phase 30 closed (final bench gate 7/7 PASS; v2.4 milestone close-readiness gate satisfied; 30-VERIFICATION.md records Path A aggregate 92→96 KEEP; STATE/ROADMAP/REQUIREMENTS updated)
 Resume file: None
-Next workflow trigger: `/gsd:plan-phase 30` (Milestone Close)
+Next workflow trigger: `/gsd:audit-milestone` (then `/gsd:complete-milestone v2.4`)
 
 ## Empirical Baselines (post-v2.3)
 

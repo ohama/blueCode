@@ -25,7 +25,7 @@ Either path produces useful empirical data. The conditional structure reflects v
 
 - [x] **Phase 28: F# Coding Quality Measurement + Harness Audit** — 6 plans (F# fixture design + new `--fs-idiomatic` mode + run + score + eval doc update + HARNESS-AUDIT-01 codification + decision-point at end on Phase 29 trigger) ✓ 2026-04-29
 - [ ] **Phase 29 (conditional): F# Style Intervention** — SKIPPED — Phase 28 disprove path triggered (mapped_score 5/5 >= 3; passed_disprove_1of5)
-- [ ] **Phase 30: Milestone Close** — 1 plan (audit; final bench gate; phase-complete commit; verdict update if Phase 29 changed score)
+- [x] **Phase 30: Milestone Close** — 1 plan (audit prep; final bench gate; phase-complete commit; v2.4 close-ready) ✓ 2026-04-29
 
 ---
 
@@ -133,7 +133,7 @@ Plans (proposed):
 **Plans:** 1 plan expected
 
 Plans:
-- [ ] 30-01: Phase 30 close — final bench gate + STATE/ROADMAP/REQUIREMENTS update + 30-VERIFICATION.md + 30-01-SUMMARY.md + phase-complete docs commit. Triggers `/gsd:audit-milestone` then `/gsd:complete-milestone v2.4`. (REGRESSION-01)
+- [x] 30-01: Phase 30 close — final bench gate + STATE/ROADMAP/REQUIREMENTS update + 30-VERIFICATION.md + 30-01-SUMMARY.md + phase-complete docs commit. Triggers `/gsd:audit-milestone` then `/gsd:complete-milestone v2.4`. (REGRESSION-01) ✓ 2026-04-29
 
 **Architectural invariants:**
 
@@ -151,7 +151,7 @@ Plans:
 |-------|-----------|--------------|----------------|--------|-----------|
 | 28. F# Coding Quality Measurement + Harness Audit | v2.4 | FS-EVAL-01..03, HARNESS-01, REGRESSION-01 (5 reqs) | 6/6 | Complete | 2026-04-29 |
 | 29. F# Style Intervention (conditional) | v2.4 | FS-INTERVENE-01..02, REGRESSION-01 (Phase 29 portion) | 0/0 | SKIPPED (passed_disprove_1of5) | 2026-04-29 |
-| 30. Milestone Close | v2.4 | REGRESSION-01 (final) | 0/1 | Not started | - |
+| 30. Milestone Close | v2.4 | REGRESSION-01 (final) | 1/1 | Complete | 2026-04-29 |
 
 ---
 
@@ -170,4 +170,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-29*
-*Last updated: 2026-04-29 — Phase 28 complete (passed_disprove_1of5; grand total 13/15 → 5/5; total 92→96; bench gate 7/7 PASS). Phase 29 SKIPPED per disprove path (mapped_score 5/5 ≥ 3). Phase 30 Milestone Close is next — run `/gsd:plan-phase 30`.*
+*Last updated: 2026-04-29 — Phase 30 complete (milestone-close gate; final bench gate 7/7 PASS; v2.4 close-ready). All v2.4 phases shipped: 28 ✓, 29 SKIPPED (Path A disprove), 30 ✓. Aggregate verdict 92→96 KEEP. Run `/gsd:audit-milestone` then `/gsd:complete-milestone v2.4`.*

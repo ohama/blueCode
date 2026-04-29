@@ -54,7 +54,7 @@ The data-driven core of v2.4 — proper F# fixtures replace Python-transcript-ba
   - **Validation:** `documentation/howto/macos-bash-strict-mode-patterns.md` exists; each of the 4 patterns has its own section with symptom/cause/fix; commit refs to `4bcd8a4`, `9f8e06e`, etc.
   - **Threshold:** Howto written; bench gate 7/7 PASS hold; `bench/eval-qwen35-122b.sh` body either unchanged or has only minimal cleanup (any modification documented in milestone audit per v2.3 precedent).
 
-- [x] **REGRESSION-01**: Bench gate 7/7 PASS preserved through entire milestone; `bench/baseline.json` byte-equal — Phase 28 portion COMPLETE 2026-04-29 (28-06 final gate; remaining: Phase 30 final gate)
+- [x] **REGRESSION-01**: Bench gate 7/7 PASS preserved through entire milestone; `bench/baseline.json` byte-equal — COMPLETE 2026-04-29 (28-06 per-phase gate ✓; 30-01 final milestone-wide gate ✓; `git diff milestone-v2.3 HEAD -- bench/baseline.json` empty)
   - **Goal:** Standard regression-hold invariant. After each phase, `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)` and per-fixture step counts within v2.2 baseline_max.
   - **Behavior:** Bench gate runs at end of each phase. If any fixture regresses, iterate the directive (FS-INTERVENE-01) or the harness change (HARNESS-01). Do NOT modify `bench/baseline.json`.
   - **Validation:** `git diff milestone-v2.3 HEAD -- bench/baseline.json` empty post-milestone; bench gate exit 0 confirmed at end of each phase.
@@ -104,7 +104,7 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 | FS-EVAL-02 | Phase 28 | Complete (2026-04-29; 28-03 + 28-04) |
 | FS-EVAL-03 | Phase 28 | Complete (2026-04-29; 28-04 + 28-05) |
 | HARNESS-01 | Phase 28 | Complete (2026-04-29; 28-01) |
-| REGRESSION-01 | Phase 28 (Phase 30 final gate remaining) | Phase 28 portion complete; Phase 30 pending |
+| REGRESSION-01 | Phase 28 + Phase 30 | Complete (2026-04-29; 28-06 per-phase gate + 30-01 milestone-wide gate) |
 | FS-INTERVENE-01 | Phase 29 (conditional; SKIPPED) | SKIPPED — passed_disprove_1of5; no intervention needed |
 | FS-INTERVENE-02 | Phase 29 (conditional; SKIPPED) | SKIPPED — passed_disprove_1of5; no intervention needed |
 
@@ -115,4 +115,4 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 — Phase 28 complete: 5/5 unconditional requirements satisfied (FS-EVAL-01..03, HARNESS-01, REGRESSION-01 Phase 28 portion). Phase 29 conditional requirements (FS-INTERVENE-01..02) SKIPPED per passed_disprove_1of5 classification. Phase 30 Milestone Close pending.*
+*Last updated: 2026-04-29 — Phase 30 complete: 5/5 unconditional requirements satisfied (FS-EVAL-01..03, HARNESS-01, REGRESSION-01 milestone-wide). Phase 29 conditional requirements (FS-INTERVENE-01..02) SKIPPED per passed_disprove_1of5 classification. v2.4 Coding Quality milestone close-ready — run `/gsd:audit-milestone` then `/gsd:complete-milestone v2.4`.*
