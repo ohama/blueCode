@@ -10,10 +10,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: Not started (defining requirements)
+Phase: 31 (not started; ready to plan)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-29 — Milestone v2.5 started; PROJECT.md updated with Current Milestone section + 3 Key Decision entries (bundle shape, PrettyPrompt NuGet, `/status` absorbs OBS-06)
+Status: Roadmap created; ready for `/gsd:plan-phase 31`
+Last activity: 2026-04-29 — Milestone v2.5 scoped: 12 reqs across 3 categories (SLASH 7 + EDIT 1 + HIST 4); roadmap 5 phases (31-35); Cli-layer only; Phase 31 = slash core (root), Phases 32-35 stack independently above
 
 Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress)**
 
