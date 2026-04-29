@@ -1,7 +1,7 @@
 # Roadmap: blueCode v2.3 Comprehension Layer
 
 **Status:** In Progress (started 2026-04-28)
-**Phases:** 24, 25, 26 (3 phases)
+**Phases:** 24, 25, 26, 27 (4 phases — Phase 27 added 2026-04-29 to address Phase 26 BLOCKED architectural gap)
 **Milestone goal:** Resolve the persistent extraction bias on shared-prefix function names that v2.2 audit surfaced as the new bottleneck (CORR-EVAL-02 FAIL x2 with textually identical step-5 thoughts across two completely different READMEs). Multi-prong intervention (P1+P2+P3); verify by re-running CORR-EVAL-02 to PASS (orphan_count=0); flips Correctness 31/40 → 36/40 → Total 87 → 92.
 
 ## Overview
@@ -28,7 +28,8 @@ Success criterion is pre-defined by v2.2 audit: CORR-EVAL-02 PASS (orphan_count=
 
 - [x] **Phase 24: Prompt-Level Intervention (P1+P2)** — 2 plans (system prompt enumeration guidance + few-shot multi-file examples; bench gate regression hold) ✓ 2026-04-28
 - [x] **Phase 25: Plan-Mode Pre-Flight Enumeration (P3)** — 3 plans (PlanValidator.fs new pre-flight pass [Interpretation B — detail-string encoding within existing PlanInvalid case; no Domain.fs DU change; no Rendering.fs/buildCorrection cascade] + tests +3 + bench gate regression hold) ✓ 2026-04-29
-- [ ] **Phase 26: Re-Evaluation (CORR-EVAL-02 PASS + verdict flip)** — 1 plan (re-run --refactor; eval doc §2.4/§7/§8/§9 + final scorecard line 87 → 92) **Status: blocked (2026-04-29) — CORR-EVAL-02 FAIL x3; P1/P2/P3 intervention did not reach agent-loop eval path; hallucination failure mode; v2.4 investigation required**
+- [ ] **Phase 26: Re-Evaluation (CORR-EVAL-02 PASS + verdict flip)** — 1 plan (re-run --refactor; eval doc §2.4/§7/§8/§9 + final scorecard line 87 → 92) **Status: blocked (2026-04-29) — CORR-EVAL-02 FAIL x3; P1/P2/P3 intervention did not reach agent-loop eval path; hallucination failure mode resolved by kickstart but extraction bias persists; superseded by Phase 27**
+- [ ] **Phase 27: Default-Prompt P1 Migration + Re-Eval** — TBD plans (move P1 enumeration directive from `planSystemPromptSuffix` to `defaultSystemPrompt`; re-run CORR-EVAL-02 with kickstart pre-flight; on PASS, flip eval doc verdict 87→92)
 
 ---
 
@@ -160,6 +161,54 @@ Plans:
 
 ---
 
+### Phase 27: Default-Prompt P1 Migration + Re-Eval
+
+**Goal:** Close the architectural gap surfaced by Phase 26 BLOCKED. The v2.3 multi-prong intervention (P1+P2+P3) was scoped to plan-mode (`planSystemPromptSuffix` is `--plan`-only; PlanValidator runs only in `runPlanTurn`). The CORR-EVAL-02 eval harness invokes `blueCode --verbose --model 122b "<prompt>"` without `--plan`, so none of the v2.3 prongs reached the agent during the eval. Phase 27 moves the P1 enumeration directive into `defaultSystemPrompt` so it reaches agent-loop mode, then re-runs CORR-EVAL-02 (with kickstart pre-flight to clear KV cache) and on PASS flips the eval doc verdict 87 → 92.
+
+**Depends on:** Phase 24 (P1 directive text exists in `planSystemPromptSuffix`) AND Phase 25 (P3 PlanValidator landed; not directly used here but Phase 27 must not regress it). Phase 26 is the BLOCKED diagnostic that motivated this phase.
+
+**Requirements:** COMP-05, COMP-06 (originally mapped to Phase 26; reassigned to Phase 27 since Phase 26 is BLOCKED and superseded). Possibly new COMP-07 if the P1 migration deserves its own requirement record.
+
+**Success Criteria:**
+
+1. **P1 directive moved to `defaultSystemPrompt`** — The 182-char enumeration directive ("When the task requires renaming or restructuring multiple symbols, list ALL targets explicitly...") is removed from `planSystemPromptSuffix` and added to `defaultSystemPrompt`. Net effect: `planSystemPromptSuffix` 1183 → ~1001 chars; `defaultSystemPrompt` 783 → ~965 chars. P2 few-shot example stays in plan-mode (its `Targets:`/`Steps:` format is plan-mode-specific).
+2. **Bench gate regression hold** — `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)`. Per-fixture step counts stay within v2.2 baseline_max for all 7 fixtures (T6, W1, W2, T1, T5, B2, MT). The conditional phrasing of the directive ("When the task requires renaming...") is the mitigation — should be no-op on non-rename fixtures, but this is empirical, not provable a priori. If gate regresses, iterate the directive phrasing (similar to v2.2's 22-02 "usage guidance clause" pattern).
+3. **CORR-EVAL-02 PASS empirically** — `bash bench/eval-qwen35-122b.sh --refactor` produces `bench/runs/qwen35-eval-<ts>/refactor_orphan_count.txt` containing `0`. Pre-flight `launchctl kickstart -k gui/501/com.ohama.qwen122b` (clears KV cache contamination — discovered as a real failure mode in Phase 26). Up to 3 stochastic re-runs allowed.
+4. **Eval doc updated** — `documentation/qwen35-122b-coding-eval.md` 11 edit sites applied (line numbers in 26-RESEARCH.md Q1; may have drifted ±1 if other edits land); strict-format final scorecard line `**Total: 92/100, Recommendation: KEEP**` regex match required.
+5. **Mandatory final bench gate post-eval** — `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)` post-eval. EXIT trap restores fixtures cleanly.
+6. **STATE.md observation note** — Phase 27 + v2.3 milestone close-readiness recorded.
+
+**Plans:** TBD (run `/gsd:plan-phase 27` to break down)
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 27 to break down)
+
+**Plan dependencies:** TBD
+
+**Architectural invariants:**
+
+1. **Core purity preserved** — `src/BlueCode.Core/` UNCHANGED in Phase 27 (the migration is Cli-only: `CompositionRoot.fs` only)
+2. **Bench gate stability MUST hold** — 7/7 PASS preserved post-migration AND post-eval
+3. **`bench/baseline.json` byte-for-byte preserved**
+4. **`Role = User` invariant unchanged**
+5. **No `git add -A` / `git add .`** — explicit file staging only
+6. **Strict-format scorecard line** — `^\*\*Total: 92/100, Recommendation: KEEP\*\*$` regex match required (when eval doc is updated)
+7. **§3.3 cold-start preserved at 5/5; §6.3 cloud non-goal preserved**
+8. **Phase 24/25 source code untouched if Phase 27 FAILs** — same protection pattern as Phase 26 BLOCKED branch
+
+**Out-of-scope guardrails:**
+
+- DO NOT modify P2 few-shot example unless an iteration phase is explicitly added
+- DO NOT modify P3 PlanValidator (Phase 25 territory)
+- DO NOT modify `bench/baseline.json` even if a fixture step count drifts (iterate the directive instead)
+- DO NOT modify `bench/run.sh` body or `bench/eval-qwen35-122b.sh` body
+- DO NOT modify Phase 26 BLOCKED commit / VERIFICATION.md — Phase 26 stays as historical record
+- DO NOT skip the kickstart pre-flight (KV cache contamination is a real failure mode, not theoretical)
+
+**Phase 26 supersession note:** Phase 26 stays in the roadmap as historical record (BLOCKED). Phase 27 takes over delivery of COMP-05 + COMP-06. The 11-site eval doc edit list from 26-RESEARCH.md is reusable verbatim (line numbers may need re-confirmation if doc has drifted).
+
+---
+
 ## Progress
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
@@ -167,6 +216,7 @@ Plans:
 | 24. Prompt-Level Intervention (P1+P2) | v2.3 | COMP-01, COMP-02, COMP-04 (3 reqs) | 2/2 | ✓ Complete | 2026-04-28 |
 | 25. Plan-Mode Pre-Flight Enumeration (P3) | v2.3 | COMP-03, COMP-04 (2 reqs) | 3/3 | ✓ Complete | 2026-04-29 |
 | 26. Re-Evaluation | v2.3 | COMP-05, COMP-06 (2 reqs) | 0/1 | Blocked (2026-04-29) | - |
+| 27. Default-Prompt P1 Migration + Re-Eval | v2.3 | COMP-05, COMP-06 (reassigned from Phase 26) | 0/TBD | Not started | - |
 
 ---
 
@@ -185,4 +235,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-28*
-*Last updated: 2026-04-29 — Phase 26 BLOCKED. CORR-EVAL-02 FAIL x3 after all v2.3 prongs in production. New hallucination failure mode (agent adds "subtract" function; does not attempt rename). Critical structural gap: P1/P2/P3 are plan-mode-only; eval harness uses agent-loop (no --plan); prongs never reached eval path. Eval doc stays 87/100. v2.4 investigation required: move P1/P2 to defaultSystemPrompt, or redesign eval harness, or redesign fixture.*
+*Last updated: 2026-04-29 — Phase 27 added (Default-Prompt P1 Migration + Re-Eval) to close the architectural gap exposed by Phase 26 BLOCKED. Diagnostic D (kickstart) confirmed hallucination was KV cache contamination but extraction bias is real and reproducible. P1 directive moves from planSystemPromptSuffix → defaultSystemPrompt to reach agent-loop path. COMP-05 + COMP-06 reassigned from Phase 26 to Phase 27. Phase 26 stays as historical BLOCKED record. v2.3 milestone alive; closes when Phase 27 delivers CORR-EVAL-02 PASS + verdict flip 87→92.*

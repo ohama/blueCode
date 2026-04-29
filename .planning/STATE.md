@@ -59,6 +59,10 @@ Stable patterns established across milestones (load-bearing for next session):
 - **F# big-bang atomic commit (25-01)** — Tasks 1+2+3 committed as one atomic unit (PlanValidator.fs + AgentLoop.fs:484 + PlanValidatorTests.fs 6 mechanical updates). No valid intermediate build state; mirrors v1.1 LlmResponse Phase 7 pattern.
 - **Phase 26 BLOCKED — CORR-EVAL-02 FAIL x3 with hallucination failure mode (26-01, 2026-04-29)** — Re-run with all 3 v2.3 prongs in production produced FAIL on all 3 stochastic attempts. New failure mode vs v2.2: agent misread README as "subtract function task" (hallucination), never attempted rename. In v2.2, extraction bias produced partial rename (add3→sum3 only). In Phase 26, complete task hallucination (no rename whatsoever). Critical structural gap exposed: P1 and P2 are confined to `planSystemPromptSuffix` which is ONLY sent in plan-mode (`--plan` flag). P3 (PlanValidator) is also plan-mode-only. Eval harness runs `blueCode --verbose --model 122b` WITHOUT `--plan`. Neither P1 nor P2 nor P3 were in the effective system prompt during the eval. v2.4 must choose: (a) move P1/P2 enumeration guidance to `defaultSystemPrompt` (applies to agent-loop path; regression risk), OR (b) redesign eval harness to use `--plan` mode (P3 then active; different evaluation semantics), OR (c) redesign fixture to be unambiguous even without guidance. Extraction bias may also warrant `launchctl kickstart` before eval to clear KV cache contamination. Eval doc remains 87/100 KEEP. v2.4 investigation required.
 
+### Roadmap Evolution
+
+- **2026-04-29:** Phase 27 added (Default-Prompt P1 Migration + Re-Eval) inside v2.3 milestone. Closes architectural gap from Phase 26 BLOCKED. COMP-05/06 reassigned from Phase 26 to Phase 27. Phase 26 retained as historical BLOCKED record.
+
 ### Pending Todos (v2.1 candidates)
 
 For awareness only — DO NOT auto-pull. v2.1 scope comes from observation window `/gsd:add-todo` entries, not this list:
@@ -104,10 +108,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking, archived):
 
 ## Session Continuity
 
-Last session: 2026-04-29 (Phase 26 BLOCKED; 3 FAIL attempts)
-Stopped at: Phase 26 Task 1 FAIL after 3 CORR-EVAL-02 attempts. Partial 26-VERIFICATION.md written (status: blocked). docs(26) block commit landed.
+Last session: 2026-04-29 (Phase 26 BLOCKED → Phase 27 added)
+Stopped at: Phase 27 added to ROADMAP (Default-Prompt P1 Migration + Re-Eval) to close architectural gap exposed by Phase 26. Diagnostic D (kickstart) confirmed hallucination was KV cache contamination but extraction bias persists when prongs don't reach agent-loop. Phase 26 stays as historical BLOCKED record. COMP-05/06 reassigned to Phase 27. Phase directory created at `.planning/phases/27-default-prompt-p1-migration-re-eval/`.
 Resume file: None
-Next workflow trigger: `/gsd:new-milestone` (v2.4 scoping) OR user-directed v2.4 phase planning. Key decision: move P1/P2 to defaultSystemPrompt vs eval harness redesign vs fixture redesign. See Decisions bullet "Phase 26 BLOCKED" and Blockers/Concerns for option analysis.
+Next workflow trigger: `/gsd:plan-phase 27` to break down Phase 27 (move P1 → defaultSystemPrompt + re-eval + verdict flip). Inside v2.3 (not v2.4) — milestone alive until Phase 27 delivers CORR-EVAL-02 PASS.
 
 ## Empirical Baselines (post-v2.1, load-bearing for v2.2 scoping)
 
