@@ -5,17 +5,17 @@
 See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.3 milestone shipped)
 
 **Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.3 verdict 92/100 KEEP; v2.4 measurement-first: F# fixture scoring 13/15 → 5/5 → passed_disprove_1of5; §5 1/5→5/5; total 92→96)
-**Current focus:** v2.4 Coding Quality milestone (started 2026-04-29) — 28-05 COMPLETE: eval doc updated (92/100 → 96/100; §5.1 1/5 → 5/5; §7 Coding-quality 6/10 → 10/10). Proceed to 28-06 (close decision + Phase 29 SKIP rationale).
+**Current focus:** v2.4 Coding Quality milestone (started 2026-04-29) — Phase 28 COMPLETE (passed_disprove_1of5; Phase 29 SKIPPED). Proceed to Phase 30 milestone close via `/gsd:plan-phase 30`.
 
 ## Current Position
 
 Milestone: v2.4 Coding Quality (started 2026-04-29; data-driven from v2.2/v2.3 audit's Coding-quality 1/5 hedge)
-Phase: 28 (F# Coding Quality Measurement) — in progress
-Plan: 05 of N complete (wave 4)
-Status: In progress
-Last activity: 2026-04-29 — Completed 28-05-PLAN.md (eval doc update; §5.1 1/5→5/5; §7 6/10→10/10; total 92→96; commit a36cc35; bench gate 7/7 PASS)
+Phase: 28 complete (passed_disprove_1of5; Phase 29 SKIP)
+Plan: 06 of 06 complete (all plans done)
+Status: Phase 28 complete; Phase 29 SKIPPED; Phase 30 defining
+Last activity: 2026-04-29 — Phase 28 verified; F# fixture rescore disproves 1/5 hedge; total 92→96; Phase 29 SKIP per disprove path (mapped_score 5/5 ≥ 3)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: 28-01 + 28-02 + 28-03 + 28-04 + 28-05 done)
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ◆ (Phase 28: 6/6 done ✓; Phase 29 SKIPPED; Phase 30: defining)
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -55,6 +55,8 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Mandatory `launchctl kickstart` pre-flight for evaluations** (v2.3 Phase 26 Diagnostic D) — `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears KV cache contamination. Long-running 122B sessions accumulate contamination that produces hallucination failure modes. Confirmed empirically.
 - **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01); orphan-grep-zero-match-exit-1 (v2.3 27-02); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
 - **FSI fixture skeleton pattern** (Phase 28-02) — `.fs` skeletons use `module` decl + top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code. `dotnet fsi --exec` gives exit 0 when required.
+- **Phase 28 classification passed_disprove_1of5** (v2.4 Phase 28-04) — grand total 13/15 (band ≥12) → mapped_score 5/5 → passed_disprove_1of5. Phase 29 SKIP. F# fixture infrastructure reusable via `bench/eval-qwen35-122b.sh --fs-idiomatic`; transcripts archived under `.planning/phases/28-.../transcripts/`. Band-table (sum-then-scale) overrides arithmetic mean for robust multi-fixture scoring.
+- **Phase 29 SKIP is definitive** (v2.4 Phase 28-06) — FS-INTERVENE-01..02 marked SKIPPED in REQUIREMENTS.md. Classification `passed_disprove_1of5` (M ≥ 3) triggers ROADMAP §Phase 28 SC #6 path (b). Next: `/gsd:plan-phase 30` (Milestone Close).
 
 ### Pending Todos
 
@@ -75,9 +77,9 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 ## Session Continuity
 
 Last session: 2026-04-29
-Stopped at: Completed 28-05-PLAN.md — eval doc updated (§5.1 1/5→5/5; §7 Coding-quality 6/10→10/10; total 92→96; FS-EVAL-03 satisfied; commit a36cc35)
+Stopped at: Completed 28-06-PLAN.md — Phase 28 closed (passed_disprove_1of5; Phase 29 SKIP; bench gate 7/7 PASS; 28-VERIFICATION.md written; STATE/ROADMAP/REQUIREMENTS updated)
 Resume file: None
-Next workflow trigger: Continue Phase 28 — 28-06 decision-point classification (passed_disprove_1of5; Phase 29 SKIP rationale; milestone close prep)
+Next workflow trigger: `/gsd:plan-phase 30` (Milestone Close)
 
 ## Empirical Baselines (post-v2.3)
 

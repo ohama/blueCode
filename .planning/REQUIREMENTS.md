@@ -12,19 +12,19 @@ The single data-driven candidate (IDIOMATIC-FS-01 carried-forward from v2.2 audi
 
 The data-driven core of v2.4 — proper F# fixtures replace Python-transcript-based scoring.
 
-- [ ] **FS-EVAL-01**: 3-5 F# task fixtures created under `bench/fixtures/fs_idiomatic/`, each requiring at least one idiomatic F# pattern
+- [x] **FS-EVAL-01**: 3-5 F# task fixtures created under `bench/fixtures/fs_idiomatic/`, each requiring at least one idiomatic F# pattern — COMPLETE 2026-04-29 (28-02 commit `25eb35d`)
   - **Goal:** Replace HumanEval+ Python-answer transcripts as the basis for §5 Coding-quality scoring. Fixtures must intentionally require patterns where idiomatic F# matters: pipeline `|>`, DU pattern matching, `Result.bind` / `Option.map` chains, record `with`-update, currying for partial application.
   - **Behavior:** Each fixture is a `<name>.task.md` (task description, ≤500 chars) + `<name>.fs` (skeleton with type signatures + holes the agent must fill) under `bench/fixtures/fs_idiomatic/`. Pre-flight `git checkout -- bench/fixtures/fs_idiomatic/` restores canonical state (mirrors `refactor_multifile/` pattern from v2.2).
   - **Validation:** `ls bench/fixtures/fs_idiomatic/` shows ≥3 task fixtures; each fixture's `.task.md` mentions at least one idiomatic pattern explicitly; `.fs` skeleton compiles standalone before agent fills holes.
   - **Threshold:** All-or-nothing fixture set delivery. Below 3 fixtures = insufficient signal; above 5 = scope creep.
 
-- [ ] **FS-EVAL-02**: New `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` runs fixtures through agent-loop mode + captures transcripts
+- [x] **FS-EVAL-02**: New `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` runs fixtures through agent-loop mode + captures transcripts — COMPLETE 2026-04-29 (28-03 commit `b7611a8`; 28-04 commit `1413111`)
   - **Goal:** Reproducible measurement infrastructure for §5 Coding-quality. HTTP-only (no `mlx_lm.load` — preserves v2.1 invariant). Mandatory `launchctl kickstart` pre-flight (v2.3 KV-cache lesson). Per-fixture wall-clock + step count + transcript captured.
   - **Behavior:** `bash bench/eval-qwen35-122b.sh --fs-idiomatic` runs each fixture in agent-loop mode (no `--plan` — measures the daily-driver path); each fixture produces `bench/runs/qwen35-eval-<ts>/fs_idiomatic_<fixture>.diff` (post-fixture file state) + `fs_idiomatic_<fixture>.transcript.txt` (full agent loop output). Restore fixtures via `git checkout` between fixtures.
   - **Validation:** `bash bench/eval-qwen35-122b.sh --fs-idiomatic` exits 0; produces ≥3 transcript files; fixtures restored to canonical state post-run (`git diff bench/fixtures/fs_idiomatic/` empty).
   - **Threshold:** All fixtures run to completion (MaxLoopsExceeded permitted; not all need to compile-PASS — measurement is observational, not pass/fail).
 
-- [ ] **FS-EVAL-03**: Eval doc §5 + §7 re-scored with new F#-fixture evidence; verdict updated if score changes
+- [x] **FS-EVAL-03**: Eval doc §5 + §7 re-scored with new F#-fixture evidence; verdict updated if score changes — COMPLETE 2026-04-29 (28-04 commit `1413111`; 28-05 commit `a36cc35`)
   - **Goal:** §5 Coding-quality (Idiomatic F# 1/5) re-scored against rubric using F# fixture transcripts. §7 scorecard re-aggregated. Final scorecard line updated if total changes.
   - **Behavior:** Read all fixture transcripts; score each on rubric (pipeline used vs imperative loops; DU pattern matching vs nested if-else; Result/Option chains vs throw-style error handling; idiomatic naming + organization). Average per-fixture scores. Update eval doc §5 with new score + evidence references; §7 Coding-quality subtotal re-aggregated; if `Total` changes, update final scorecard line + §8 Caveat 6 (or Caveat 7 if 6 was reframed in v2.3).
   - **Validation:** `grep -E "^\*\*Total: \d+/100, Recommendation: KEEP\*\*$" documentation/qwen35-122b-coding-eval.md` matches; score change documented in §5 with fixture transcript references; if no change, §5 explicitly notes the artifact-vs-real disambiguation result.
@@ -34,13 +34,13 @@ The data-driven core of v2.4 — proper F# fixtures replace Python-transcript-ba
 
 **Conditional category — only triggered if FS-EVAL-03 confirms 1/5.** Phase 29 is added via `/gsd:add-phase` post-Phase-28. Mirrors v2.3 P1 directive pattern in `defaultSystemPrompt`. If Phase 28 disproves 1/5, this entire category is skipped (closed-by-disprove, not deferred).
 
-- [ ] **FS-INTERVENE-01** (conditional): F# style hint added to `defaultSystemPrompt` with conditional clause
+- [ ] **FS-INTERVENE-01** (conditional): F# style hint added to `defaultSystemPrompt` with conditional clause — **SKIPPED** (Phase 28 passed_disprove_1of5; conditional path not triggered)
   - **Goal:** Direct the agent to prefer idiomatic F# patterns when generating F# code. Conditional clause ("When generating F# code, prefer pipelines `|>`, DU pattern matching, `Result.bind`/`Option` chains over imperative if-else") makes the directive dormant for non-F# tasks.
   - **Behavior:** New paragraph appended to `defaultSystemPrompt` in `src/BlueCode.Cli/CompositionRoot.fs`. Char budget: directive + separator ≤ 200 chars (current `defaultSystemPrompt` 967 → ≤1167 chars). Cli-only edit (Core purity preserved); bench gate 7/7 PASS hold required (conditional clause is dormant for non-F# fixtures; W1/W2 are F# bug-fix tasks, not F# generation, so should not be affected — but bench gate is the empirical truth).
   - **Validation:** `grep -F "When generating F# code" src/BlueCode.Cli/CompositionRoot.fs` matches; `defaultSystemPrompt` length ≤1167 chars; bench gate 7/7 PASS preserved.
   - **Threshold:** Bench gate ALL fixtures within v2.2 baseline_max. If gate regresses on any fixture: iterate phrasing (≤2 iterations); on 3rd phrasing failure, escalate (revert + pause; same protection pattern as v2.3 Phase 26 BLOCKED branch).
 
-- [ ] **FS-INTERVENE-02** (conditional): F# fixtures re-run post-intervention; score change recorded
+- [ ] **FS-INTERVENE-02** (conditional): F# fixtures re-run post-intervention; score change recorded — **SKIPPED** (Phase 28 passed_disprove_1of5; conditional path not triggered)
   - **Goal:** Measure FS-INTERVENE-01's effect on idiomatic-F# generation. Compare pre/post transcripts.
   - **Behavior:** Re-run `bash bench/eval-qwen35-122b.sh --fs-idiomatic` post-intervention with kickstart pre-flight (mandatory; v2.3 KV-cache lesson). Score against same rubric. Eval doc §5 + §7 + final scorecard updated.
   - **Validation:** Score change documented with pre/post fixture transcripts; if score increased, final scorecard line reflects new total; if score unchanged, §5 documents that the directive was insufficient (informational; no further intervention attempted in v2.4).
@@ -48,13 +48,13 @@ The data-driven core of v2.4 — proper F# fixtures replace Python-transcript-ba
 
 ### Harness Audit + Regression Hold (2 reqs)
 
-- [ ] **HARNESS-01**: `bench/eval-qwen35-122b.sh` audited; macOS bash-strict-mode patterns codified into `documentation/howto/`
+- [x] **HARNESS-01**: `bench/eval-qwen35-122b.sh` audited; macOS bash-strict-mode patterns codified into `documentation/howto/` — COMPLETE 2026-04-29 (28-01 commits `94d905c` + `280677a`)
   - **Goal:** Codify the 4 macOS-bash-strict-mode patches accumulated across v2.1-v2.3 into a discoverable howto, so future bash handler authors don't re-discover. The patches: (1) v2.1 21-04 set-e/dotnet-exit (`set +e` around `dotnet run`); (2) v2.1 21-04 grep-c/pipefail double-output (`|| true` not `|| echo 0`); (3) v2.2 23-01 mkdir-before-tee (any I/O command must verify target dir first); (4) v2.3 27-02 grep-cE-zero-match-exit-1 (`|| true` guard on PASS path).
   - **Behavior:** New `documentation/howto/macos-bash-strict-mode-patterns.md` (~150-300 lines): each pattern with symptom, root cause, and the canonical fix. Cross-reference back to commits + plan summaries. Light audit pass on `bench/eval-qwen35-122b.sh` for any 5th unhandled case (e.g., `seq M N` countdown bug noted in v2.1 21-04); fix if found.
   - **Validation:** `documentation/howto/macos-bash-strict-mode-patterns.md` exists; each of the 4 patterns has its own section with symptom/cause/fix; commit refs to `4bcd8a4`, `9f8e06e`, etc.
   - **Threshold:** Howto written; bench gate 7/7 PASS hold; `bench/eval-qwen35-122b.sh` body either unchanged or has only minimal cleanup (any modification documented in milestone audit per v2.3 precedent).
 
-- [ ] **REGRESSION-01**: Bench gate 7/7 PASS preserved through entire milestone; `bench/baseline.json` byte-equal
+- [x] **REGRESSION-01**: Bench gate 7/7 PASS preserved through entire milestone; `bench/baseline.json` byte-equal — Phase 28 portion COMPLETE 2026-04-29 (28-06 final gate; remaining: Phase 30 final gate)
   - **Goal:** Standard regression-hold invariant. After each phase, `bash bench/run.sh --gate` exits 0 with `GATE PASS (7/7)` and per-fixture step counts within v2.2 baseline_max.
   - **Behavior:** Bench gate runs at end of each phase. If any fixture regresses, iterate the directive (FS-INTERVENE-01) or the harness change (HARNESS-01). Do NOT modify `bench/baseline.json`.
   - **Validation:** `git diff milestone-v2.3 HEAD -- bench/baseline.json` empty post-milestone; bench gate exit 0 confirmed at end of each phase.
@@ -100,13 +100,13 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FS-EVAL-01 | Phase 28 | Pending |
-| FS-EVAL-02 | Phase 28 | Pending |
-| FS-EVAL-03 | Phase 28 | Pending |
-| HARNESS-01 | Phase 28 | Pending |
-| REGRESSION-01 | Phase 28 (+ Phase 29 if conditional triggers) | Pending |
-| FS-INTERVENE-01 | Phase 29 (conditional; created via `/gsd:add-phase` only if FS-EVAL-03 confirms 1/5) | Pending (conditional) |
-| FS-INTERVENE-02 | Phase 29 (conditional) | Pending (conditional) |
+| FS-EVAL-01 | Phase 28 | Complete (2026-04-29; 28-02) |
+| FS-EVAL-02 | Phase 28 | Complete (2026-04-29; 28-03 + 28-04) |
+| FS-EVAL-03 | Phase 28 | Complete (2026-04-29; 28-04 + 28-05) |
+| HARNESS-01 | Phase 28 | Complete (2026-04-29; 28-01) |
+| REGRESSION-01 | Phase 28 (Phase 30 final gate remaining) | Phase 28 portion complete; Phase 30 pending |
+| FS-INTERVENE-01 | Phase 29 (conditional; SKIPPED) | SKIPPED — passed_disprove_1of5; no intervention needed |
+| FS-INTERVENE-02 | Phase 29 (conditional; SKIPPED) | SKIPPED — passed_disprove_1of5; no intervention needed |
 
 **Coverage:**
 - v2.4 unconditional requirements: 5 (FS-EVAL-01..03 + HARNESS-01 + REGRESSION-01)
@@ -115,4 +115,4 @@ Filled by roadmap. Each requirement maps to exactly one phase.
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 — initial draft from v2.4 scope agreement (Coding Quality — measurement-first on Idiomatic F# 1/5; conditional intervention; bundle harness audit). Mirrors v2.2/v2.3 data-driven discipline.*
+*Last updated: 2026-04-29 — Phase 28 complete: 5/5 unconditional requirements satisfied (FS-EVAL-01..03, HARNESS-01, REGRESSION-01 Phase 28 portion). Phase 29 conditional requirements (FS-INTERVENE-01..02) SKIPPED per passed_disprove_1of5 classification. Phase 30 Milestone Close pending.*

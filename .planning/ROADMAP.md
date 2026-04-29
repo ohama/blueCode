@@ -23,8 +23,8 @@ Either path produces useful empirical data. The conditional structure reflects v
 
 ## Phases
 
-- [ ] **Phase 28: F# Coding Quality Measurement + Harness Audit** — 5-6 plans (F# fixture design + new `--fs-idiomatic` mode + run + score + eval doc update + HARNESS-AUDIT-01 codification + decision-point at end on Phase 29 trigger)
-- [ ] **Phase 29 (conditional): F# Style Intervention** — 2-3 plans, added via `/gsd:add-phase` ONLY if Phase 28 confirms 1/5 (F# style hint to `defaultSystemPrompt` + re-run fixtures + re-score)
+- [x] **Phase 28: F# Coding Quality Measurement + Harness Audit** — 6 plans (F# fixture design + new `--fs-idiomatic` mode + run + score + eval doc update + HARNESS-AUDIT-01 codification + decision-point at end on Phase 29 trigger) ✓ 2026-04-29
+- [ ] **Phase 29 (conditional): F# Style Intervention** — SKIPPED — Phase 28 disprove path triggered (mapped_score 5/5 >= 3; passed_disprove_1of5)
 - [ ] **Phase 30: Milestone Close** — 1 plan (audit; final bench gate; phase-complete commit; verdict update if Phase 29 changed score)
 
 ---
@@ -51,12 +51,12 @@ Either path produces useful empirical data. The conditional structure reflects v
 **Plans:** 6 plans
 
 Plans:
-- [ ] 28-01: HARNESS-AUDIT-01 — write `documentation/howto/macos-bash-strict-mode-patterns.md` capturing 4 patterns with commit refs; light audit pass on `bench/eval-qwen35-122b.sh` for any 5th pattern; bench gate 7/7 PASS hold. (HARNESS-01)
-- [ ] 28-02: F# fixture design — create `bench/fixtures/fs_idiomatic/` with 3 fixtures: `pipeline.fs` + `pipeline.task.md` for `|>` use; `dupatternmatch.fs` for DU exhaustive match; `optionhandling.fs` for `Option.map`/`Option.defaultValue`. Each `.fs` compiles standalone; each `.task.md` ≤500 chars. (FS-EVAL-01)
-- [ ] 28-03: `--fs-idiomatic` mode added to `bench/eval-qwen35-122b.sh` — kickstart pre-flight + per-fixture `git checkout` + agent-loop run + transcript capture; idempotent across runs. (FS-EVAL-02)
-- [ ] 28-04: Run fixtures + score against rubric — `bash bench/eval-qwen35-122b.sh --fs-idiomatic` produces transcripts; manual review per rubric (pipeline / DU pattern matching / Result/Option / idiomatic naming); per-fixture score documented in plan SUMMARY. (FS-EVAL-02)
-- [ ] 28-05: Eval doc §5 + §7 update — apply new score; §5 expanded with F# fixture evidence section; §7 Coding-quality subtotal re-aggregated; Total updated; final scorecard line strict-format match. Atomic commit `docs(28-05): update eval doc with F# fixture evidence`. (FS-EVAL-03)
-- [ ] 28-06: Bench gate 7/7 hold + decision point — `bash bench/run.sh --gate` exit 0; record §5 outcome in 28-VERIFICATION.md + Phase 28 SUMMARY.md; explicit Phase 29 trigger decision (confirmed 1/5 → trigger; disproved → skip). (REGRESSION-01)
+- [x] 28-01: HARNESS-AUDIT-01 — write `documentation/howto/macos-bash-strict-mode-patterns.md` capturing 4 patterns with commit refs; light audit pass on `bench/eval-qwen35-122b.sh` for any 5th pattern; bench gate 7/7 PASS hold. (HARNESS-01) ✓ 2026-04-29
+- [x] 28-02: F# fixture design — create `bench/fixtures/fs_idiomatic/` with 3 fixtures: `pipeline.fs` + `pipeline.task.md` for `|>` use; `dupatternmatch.fs` for DU exhaustive match; `optionhandling.fs` for `Option.map`/`Option.defaultValue`. Each `.fs` compiles standalone; each `.task.md` ≤500 chars. (FS-EVAL-01) ✓ 2026-04-29
+- [x] 28-03: `--fs-idiomatic` mode added to `bench/eval-qwen35-122b.sh` — kickstart pre-flight + per-fixture `git checkout` + agent-loop run + transcript capture; idempotent across runs. (FS-EVAL-02) ✓ 2026-04-29
+- [x] 28-04: Run fixtures + score against rubric — `bash bench/eval-qwen35-122b.sh --fs-idiomatic` produces transcripts; manual review per rubric (pipeline / DU pattern matching / Result/Option / idiomatic naming); per-fixture score documented in plan SUMMARY. (FS-EVAL-02) ✓ 2026-04-29
+- [x] 28-05: Eval doc §5 + §7 update — apply new score; §5 expanded with F# fixture evidence section; §7 Coding-quality subtotal re-aggregated; Total updated; final scorecard line strict-format match. Atomic commit `docs(28-05): update eval doc with F# fixture evidence`. (FS-EVAL-03) ✓ 2026-04-29
+- [x] 28-06: Bench gate 7/7 hold + decision point — `bash bench/run.sh --gate` exit 0; record §5 outcome in 28-VERIFICATION.md + Phase 28 SUMMARY.md; explicit Phase 29 trigger decision (confirmed 1/5 → trigger; disproved → skip). (REGRESSION-01) ✓ 2026-04-29
 
 **Plan dependencies:** 28-01 ↔ 28-02 (independent; can parallelize) → 28-03 → 28-04 → 28-05 → 28-06 (sequential post-fixtures)
 
@@ -83,7 +83,7 @@ Plans:
 
 ### Phase 29 (CONDITIONAL): F# Style Intervention
 
-**Status:** **NOT YET CREATED.** Added via `/gsd:add-phase` ONLY if Phase 28's decision point confirms Idiomatic F# 1/5 is real (not a Python-transcript artifact).
+**Status:** **SKIPPED — Phase 28 disprove path triggered.** mapped_score 5/5 (≥ 3) → passed_disprove_1of5 → Phase 29 not needed. FS-INTERVENE-01..02 marked SKIPPED in REQUIREMENTS.md traceability.
 
 **Goal (proposed):** Add F# style directive to `defaultSystemPrompt` with conditional clause. Re-run F# fixtures from Phase 28; re-score. Mirror v2.3 P1 pattern (Phase 27-01) — directive in `defaultSystemPrompt` (reaches agent-loop), conditional clause keeps it dormant for non-F# tasks.
 
@@ -149,8 +149,8 @@ Plans:
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
-| 28. F# Coding Quality Measurement + Harness Audit | v2.4 | FS-EVAL-01..03, HARNESS-01, REGRESSION-01 (5 reqs) | 0/5-6 | Not started | - |
-| 29. F# Style Intervention (conditional) | v2.4 | FS-INTERVENE-01..02, REGRESSION-01 (Phase 29 portion) | 0/0 (not yet created) | Pending Phase 28 decision | - |
+| 28. F# Coding Quality Measurement + Harness Audit | v2.4 | FS-EVAL-01..03, HARNESS-01, REGRESSION-01 (5 reqs) | 6/6 | Complete | 2026-04-29 |
+| 29. F# Style Intervention (conditional) | v2.4 | FS-INTERVENE-01..02, REGRESSION-01 (Phase 29 portion) | 0/0 | SKIPPED (passed_disprove_1of5) | 2026-04-29 |
 | 30. Milestone Close | v2.4 | REGRESSION-01 (final) | 0/1 | Not started | - |
 
 ---
@@ -170,4 +170,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-29*
-*Last updated: 2026-04-29 — initial roadmap from v2.4 scope agreement (Coding Quality — measurement-first on Idiomatic F# 1/5; conditional intervention; HARNESS-AUDIT bundled into Phase 28). 3 phases planned (28, 29 conditional, 30); Phase 29 added via `/gsd:add-phase` only if Phase 28 data justifies. Mirrors v2.2/v2.3 data-driven discipline + v2.3 Phase 27 supersession-pattern reuse.*
+*Last updated: 2026-04-29 — Phase 28 complete (passed_disprove_1of5; grand total 13/15 → 5/5; total 92→96; bench gate 7/7 PASS). Phase 29 SKIPPED per disprove path (mapped_score 5/5 ≥ 3). Phase 30 Milestone Close is next — run `/gsd:plan-phase 30`.*
