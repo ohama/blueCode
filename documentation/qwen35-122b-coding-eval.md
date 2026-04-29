@@ -683,7 +683,23 @@ Score: **1/5**.
 The choice of parse_csv (Python) for the multi-turn fixture is the source of the low score, not a
 model deficiency in F# idiom knowledge. The refactor transcript demonstrates the model knows F# style.)
 
-§5.1 verdict: 1 of 3 transcripts contains idiomatic F# (correct for task; Python transcripts lack F# idioms by construction). Score: **1/5**.
+§5.1 verdict: 1 of 3 transcripts contains idiomatic F# (correct for task; Python transcripts lack F# idioms by construction). Score: **1/5** (v2.3 assessment; revised to **5/5** in v2.4 — see "F# fixture evidence (v2.4 Phase 28)" below).
+
+**F# fixture evidence (v2.4 Phase 28):**
+
+v2.4 Phase 28 ran formal F# fixtures through the daily-driver agent-loop path (no `--plan`) against Qwen 3.5 122B with kickstart pre-flight (commit `b7611a8`). The `--fs-idiomatic` harness mode (Phase 28-03) loaded 3 F# task fixtures under `bench/fixtures/fs_idiomatic/` (pipeline `|>`, DU pattern matching, `Option.map`/`Option.defaultValue`) and invoked `blueCode` exactly as in daily use.
+
+Per-fixture rubric (5 binary criteria each — research Q4 verbatim: C1 idiomatic pattern present, C2 anti-pattern absent, C3 type signatures preserved, C4 code compiles, C5 task goal met):
+
+- `pipeline.fs`: **5/5** — `|>` pipeline with `List.filter`/`List.map`/`List.sum`/`(*) 2`; all criteria pass; `dotnet fsi --exec` exits 0; output 112 correct.
+- `dupatternmatch.fs`: **5/5** — exhaustive `match s with` over 3 DU cases; `_` wildcard for unused hypotenuse field; compiles and produces correct π/6.0/10.0 values.
+- `optionhandling.fs`: **3/5** — `Option.map` + `Option.defaultValue` idiom present (C1 PASS), no anti-patterns (C2 PASS), signature preserved (C3 PASS); however `Option.ofObj` was used on `System.Int32.TryParse` which returns a `bool * int` value tuple (not a reference type) — compile error FS0001 (C4 FAIL, C5 FAIL).
+
+Aggregate: grand total 13/15 → band ≥12 in the sum-then-scale table → mapped to **5/5** on this scorecard.
+
+Transcripts archived at `.planning/phases/28-f-coding-quality-measurement-harness-audit/transcripts/` (3 `.transcript.txt` files + 3 `.diff` files + `meta.txt`). Full scoring detail: `.planning/phases/28-f-coding-quality-measurement-harness-audit/28-04-SUMMARY.md`.
+
+Classification: `passed_disprove_1of5` — the v2.3 score of 1/5 was a category artifact from reviewing Python-task transcripts under a rubric written for F# idioms. On actual F# generation in agent-loop mode, the model achieves the top band.
 
 ---
 
@@ -763,7 +779,7 @@ Score: **2/2**.
 
 ---
 
-**§5 total: 1 + 3 + 2 = 6/10**
+**§5 total: 5 + 3 + 2 = 10/10** (revised from 1 + 3 + 2 = 6/10 in v2.3; §5.1 updated to 5/5 via v2.4 Phase 28 F# fixture evidence)
 
 ---
 
@@ -858,10 +874,10 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 | Reliability | Multi-turn stable through N=7 | 10 | 10 |
 | Reliability | Needle 4/4 retrieved at 32k | 5 | 5 |
 | **Reliability subtotal** | | **25** | **25** |
-| Coding quality | Idiomatic F# (1 of 3 transcripts) | 1 | 5 |
+| Coding quality | Idiomatic F# (v2.4 Phase 28 F# fixtures) | 5 | 5 |
 | Coding quality | Tests compile + pass | 3 | 3 |
 | Coding quality | Bug identification (4/4 known issues) | 2 | 2 |
-| **Coding quality subtotal** | | **6** | **10** |
+| **Coding quality subtotal** | | **10** | **10** |
 
 **Dimension coverage check (each must be ≥60% of its max for KEEP):**
 
@@ -870,7 +886,7 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 | Correctness | 36/40 | 90.0% | YES |
 | Performance | 25/25 | 100.0% | YES |
 | Reliability | 25/25 | 100.0% | YES |
-| Coding quality | 6/10 | 60.0% | YES (exactly at threshold) |
+| Coding quality | 10/10 | 100.0% | YES |
 
 **Aggregate verdict rules (per source-of-truth plan):**
 - ≥80/100: KEEP — empirically useful for daily F# coding via blueCode
@@ -878,8 +894,8 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
 - <60 OR multi-turn degrades before turn 5 OR HumanEval+ <30%: ESCALATE
 
 **Applying rules:**
-- Grand total: 36 + 25 + 25 + 6 = **92/100** → ≥80 band
-- No dimension is <60% of its max (coding quality is exactly 60%)
+- Grand total: 36 + 25 + 25 + 10 = **96/100** → ≥80 band
+- No dimension is <60% of its max (all dimensions ≥80%; coding quality 100% after v2.4 Phase 28 F# fixture rescore)
 - Multi-turn degradation: first at N=10 (not before turn 5)
 - HumanEval+ chat: 93.9% (far above 30% ESCALATE trigger)
 - Cold-start measured in v2.2 Phase 23: 37s (top band ≤180s); flipped Performance from 20/25 to 25/25
@@ -931,10 +947,7 @@ decide whether to pay API bills or run local), that is a separate evaluation, no
    in Phase 26 Diagnostic D). Result: orphan_count=0 PASS confirmed. The historical multi-stage
    finding is preserved here as context for the empirical close.
 
-7. **Coding quality F# score (1/5) reflects transcript selection.** The 2 multi-turn transcripts
-   reviewed are Python-task sessions. If F# tasks were used for multi-turn evaluation, the idiomatic
-   F# score would likely be higher. The refactor transcript (the one F# transcript reviewed) showed
-   correct F# idiom usage.
+7. **Coding quality F# score (1/5 in v2.3) was a transcript-selection artifact — resolved in v2.4.** The 2 multi-turn transcripts reviewed in v2.3 were Python-task sessions; F# idioms were absent by construction, not model deficiency. v2.4 Phase 28 ran formal F# fixtures through the agent-loop path and confirmed the score is 5/5 (grand total 13/15 → band ≥12 → mapped 5/5). See §5.1 "F# fixture evidence (v2.4 Phase 28)" for full detail. The §5.1 score is updated from 1/5 → 5/5; §7 Coding-quality subtotal updated 6/10 → 10/10; total updated 92/100 → 96/100.
 
 8. **HumanEval+ completion mode (0.226) is informational.** blueCode never uses `/v1/completions`.
    This number is documented to confirm that the model requires chat-template framing to achieve its
@@ -1048,4 +1061,4 @@ fixtures after gate runs.
 
 ---
 
-**Total: 92/100, Recommendation: KEEP**
+**Total: 96/100, Recommendation: KEEP**
