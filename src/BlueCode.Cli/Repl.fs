@@ -174,6 +174,7 @@ let runMultiTurnWithSession
         // Print session id to stderr so it's grep-able from shell scripts after process exit.
         eprintfn "Session: %s" idStr
         let mutable currentSession : Session = initialSession
+        let mutable planModeActive = false   // Phase 33: /plan toggle state; flips to true on /plan, false after Accept/Quit/exhausted-rejects
         let mutable lastCode = 0
         let mutable running = true
 
@@ -196,7 +197,7 @@ let runMultiTurnWithSession
                 | Some (Slash Help) ->
                     printfn "%s" Rendering.renderHelp
                 | Some (Slash Status) ->
-                    printfn "%s" (Rendering.renderStatus currentSession components.Config.ForcedModel components.MaxModelLen)
+                    printfn "%s" (Rendering.renderStatus currentSession components.Config.ForcedModel components.MaxModelLen planModeActive)
                 | Some (Slash Clear) ->
                     // /clear: new session id, empty Steps, NEW jsonl created lazily on first
                     // future Save. Old session jsonl stays untouched (FileSessionStore.Save
@@ -246,10 +247,100 @@ let runMultiTurnWithSession
                         // FileSessionStore impl (lines 142-145 catch all to SessionCorrupt),
                         // but ISessionStore is an interface and a future store could.
                         printfn "Resume failed: %A" other
-                | Some (Slash (Plan | Edit)) ->
-                    // Phase 33 (Plan) and Phase 34 (Edit) future-stubs.
-                    // Sessions and Resume have moved to real handlers above.
+                | Some (Slash Plan) ->
+                    // Phase 33 (SLASH-07): toggle plan-mode for the NEXT prompt turn.
+                    // Idempotent flip — typing /plan twice toggles on then off.
+                    // Notification is printfn only (SC-6: NOT injected into LLM messages —
+                    // mid-conversation Role=System triggers HTTP 404 on Qwen 3.5 122B per
+                    // Phase 20-03 probe; the notification is purely user-facing console).
+                    planModeActive <- not planModeActive
+                    if planModeActive then
+                        printfn "[plan mode on] — next prompt will enter plan-gate before execution"
+                    else
+                        printfn "[plan mode off] — returning to direct agent-loop"
+                | Some (Slash Edit) ->
+                    // Phase 34 future-stub. Phase 33 promoted /plan to a real handler;
+                    // /edit remains the sole "not yet implemented" command in v2.5.
                     printfn "(not yet implemented — coming in a future v2.5 phase)"
+                | Some (Prompt prompt) when planModeActive ->
+                    // Phase 33 (SLASH-07): plan-gated turn. Mirrors Program.fs lines 172-256
+                    // (single-turn --plan mode) adapted for in-REPL context.
+                    //
+                    // Differences from Program.fs:
+                    //   - Quit returns to REPL prompt (NOT process exit).
+                    //   - planModeActive auto-disables on Accept (after execute), on Quit,
+                    //     and on rejectCount-exhaustion. Open Question #1+#2 resolution:
+                    //     one-shot semantics; user re-types /plan for next plan-gated turn.
+                    //   - lastCode behaves identically to the standard Prompt arm
+                    //     (130 → 0 mapping for graceful Ctrl+C; otherwise pass through).
+                    let model =
+                        components.Config.ForcedModel
+                        |> Option.defaultValue Qwen122B   // 122B canonical default; matches Program.fs:180
+                    let maxUserRejects = 3                // matches Program.fs:187 (research § Pitfall 7 — local constant OK)
+                    let mutable rejectCount = 0
+                    let mutable currentPrompt = prompt
+                    let mutable turnDone = false
+
+                    while not turnDone && rejectCount < maxUserRejects do
+                        let! planResult =
+                            BlueCode.Core.AgentLoop.runPlanTurn
+                                components.Config
+                                components.LlmClient
+                                model
+                                currentSession.Steps
+                                currentPrompt
+                                CompositionRoot.planSystemPromptSuffix
+                                CancellationToken.None
+
+                        match planResult with
+                        | Error e ->
+                            // runPlanTurn already retried internally (2 attempts).
+                            // Surface the error and abandon this turn; keep REPL alive.
+                            // planModeActive auto-disables — user can re-/plan to retry.
+                            printfn "%s" (renderError e)
+                            planModeActive <- false
+                            turnDone <- true
+                        | Ok plan ->
+                            BlueCode.Cli.PlanGate.render plan
+                            match BlueCode.Cli.PlanGate.promptUser BlueCode.Cli.PlanGate.realKeyReader with
+                            | BlueCode.Cli.PlanGate.Accept ->
+                                // Disable plan-mode BEFORE execute — one-shot semantics
+                                // (Open Question #1 resolution). User re-types /plan for
+                                // the next plan-gated turn.
+                                planModeActive <- false
+                                let! (code, newSteps) =
+                                    runSingleTurn prompt currentSession.Steps components renderMode
+                                let updated =
+                                    { currentSession with
+                                        Steps = currentSession.Steps @ newSteps
+                                        LastActivityAt = DateTimeOffset.UtcNow }
+                                currentSession <- updated
+                                let! saveRes = sessionStore.Save updated CancellationToken.None
+                                match saveRes with
+                                | Ok () -> ()
+                                | Error e ->
+                                    Log.Warning("Session save failed: {Error}", sprintf "%A" e)
+                                    eprintfn "WARNING: session save failed: %A" e
+                                lastCode <- if code = 130 then 0 else code
+                                turnDone <- true
+                            | BlueCode.Cli.PlanGate.Reject ->
+                                rejectCount <- rejectCount + 1
+                                currentPrompt <-
+                                    sprintf "[PLAN REJECTED] The previous plan was rejected by the user. Propose a different plan.\n\n%s" prompt
+                            | BlueCode.Cli.PlanGate.Edit comment ->
+                                rejectCount <- rejectCount + 1
+                                currentPrompt <-
+                                    sprintf "[PLAN EDIT NOTE: %s] Revise the previous plan accordingly.\n\n%s" comment prompt
+                            | BlueCode.Cli.PlanGate.Quit ->
+                                // User abandoned; return to REPL prompt (NOT process exit).
+                                // planModeActive auto-disables (Open Question #2 resolution).
+                                planModeActive <- false
+                                turnDone <- true
+
+                    if not turnDone then
+                        // Loop exited via rejectCount >= maxUserRejects without acceptance.
+                        printfn "Plan-mode: %d rejections without acceptance — abandoning." rejectCount
+                        planModeActive <- false
                 | Some (Prompt prompt) ->
                     let! (code, newSteps) =
                         runSingleTurn prompt currentSession.Steps components renderMode

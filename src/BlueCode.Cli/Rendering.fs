@@ -135,7 +135,7 @@ let renderHelp : string =
   /quit              alias for /exit
   /sessions          list 10 most-recent sessions
   /resume <id>       switch to a saved session in-place
-  /plan              toggle plan-mode for next turn [coming in v2.5]
+  /plan              toggle plan-mode on/off; next prompt uses plan-gate when on
   /edit              open $EDITOR for multi-line input [coming in v2.5]"""
 
 /// Render the `/status` output. Pure: takes the current Session, ForcedModel option, and MaxModelLen,
@@ -153,7 +153,7 @@ let renderHelp : string =
 /// QwenHttpClient lazy probe and is not surfaced to AppComponents. Awaiting that probe
 /// here would block /status for up to 300s on cold-start. Label the output to make this
 /// explicit (research § Q3, Pitfall 2 of research § Anti-Patterns).
-let renderStatus (session: Session) (forcedModel: Model option) (maxModelLen: int) : string =
+let renderStatus (session: Session) (forcedModel: Model option) (maxModelLen: int) (planModeActive: bool) : string =
     let (SessionId idStr) = session.Id
     let modelName =
         match forcedModel with
@@ -167,9 +167,12 @@ let renderStatus (session: Session) (forcedModel: Model option) (maxModelLen: in
             (sprintf "%A" s.Action).Length + (sprintf "%A" s.ToolResult).Length)
     let maxChars = maxModelLen * 4   // tokens * ~4 chars/token
     let pct = if maxChars > 0 then accChars * 100 / maxChars else 0
+    let planLine =
+        if planModeActive then "\nplan-mode: on (next prompt uses plan-gate)"
+        else ""
     sprintf
-        "session:  %s\nmodel:    %s\nsteps:    %d\nchars:    %d / ~%d (%d%%) [floor; probed on first LLM call]"
-        idStr modelName steps accChars maxChars pct
+        "session:  %s\nmodel:    %s\nsteps:    %d\nchars:    %d / ~%d (%d%%) [floor; probed on first LLM call]%s"
+        idStr modelName steps accChars maxChars pct planLine
 
 /// Render the `/sessions` listing. Pure: takes a SessionMeta list, returns a multi-line
 /// string. NO Spectre markup (CLAUDE.md "Stream separation"; tests capture via Console.SetOut).
