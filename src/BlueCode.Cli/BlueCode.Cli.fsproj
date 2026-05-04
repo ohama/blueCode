@@ -18,6 +18,7 @@
     <Compile Include="SlashCommand.fs" />
     <Compile Include="CompositionRoot.fs" />
     <Compile Include="PlanGate.fs" />
+    <Compile Include="EditCommand.fs" />          <!-- NEW: must precede Repl.fs -->
     <Compile Include="Repl.fs" />
     <Compile Include="CliArgs.fs" />
     <Compile Include="Program.fs" />
