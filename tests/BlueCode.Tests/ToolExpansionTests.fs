@@ -199,6 +199,64 @@ let globSearchTests =
                       Expect.stringContains body ".hidden.txt" ".hidden.txt must appear (AttributesToSkip=System only, not Hidden)"
                   | other -> failtestf "expected Success with hidden files, got %A" other
               finally
+                  cleanup root
+
+          testCase "Phase 36-01: bare pattern auto-expands to **/ recursive (T-14 fix)"
+          <| fun () ->
+              let root = newFixture ()
+              try
+                  // Top-level + 1 nested + 2 nested file with .fsproj extension
+                  File.WriteAllText(Path.Combine(root, "top.fsproj"), "")
+                  Directory.CreateDirectory(Path.Combine(root, "src", "Inner")) |> ignore
+                  File.WriteAllText(Path.Combine(root, "src", "mid.fsproj"), "")
+                  File.WriteAllText(Path.Combine(root, "src", "Inner", "deep.fsproj"), "")
+                  // Distractor: same name in non-matching extension
+                  File.WriteAllText(Path.Combine(root, "src", "Inner", "deep.fs"), "")
+                  let exe = create root
+                  let result = exec exe (GlobSearch("*.fsproj", None))
+                  match result with
+                  | Ok(Success body) ->
+                      Expect.stringContains body "top.fsproj" "top-level .fsproj must match"
+                      Expect.stringContains body "src/mid.fsproj" "1-level-deep .fsproj must match"
+                      Expect.stringContains body "src/Inner/deep.fsproj" "2-level-deep .fsproj must match"
+                      Expect.isFalse (body.Contains("deep.fs\n") || body.EndsWith("deep.fs")) ".fs must NOT match .fsproj pattern"
+                  | other -> failtestf "expected Success with 3 matches, got %A" other
+              finally
+                  cleanup root
+
+          testCase "Phase 36-01: '**/*.ext' pattern is NOT double-expanded"
+          <| fun () ->
+              let root = newFixture ()
+              try
+                  File.WriteAllText(Path.Combine(root, "a.txt"), "")
+                  Directory.CreateDirectory(Path.Combine(root, "sub")) |> ignore
+                  File.WriteAllText(Path.Combine(root, "sub", "b.txt"), "")
+                  let exe = create root
+                  let result = exec exe (GlobSearch("**/*.txt", None))
+                  match result with
+                  | Ok(Success body) ->
+                      Expect.stringContains body "a.txt" "top-level .txt matches"
+                      Expect.stringContains body "sub/b.txt" "nested .txt matches"
+                  | other -> failtestf "expected Success, got %A" other
+              finally
+                  cleanup root
+
+          testCase "Phase 36-01: pattern containing '/' is NOT auto-expanded"
+          <| fun () ->
+              let root = newFixture ()
+              try
+                  // Files at top-level should NOT match "src/*.fs"
+                  File.WriteAllText(Path.Combine(root, "topLevel.fs"), "")
+                  Directory.CreateDirectory(Path.Combine(root, "src")) |> ignore
+                  File.WriteAllText(Path.Combine(root, "src", "inSrc.fs"), "")
+                  let exe = create root
+                  let result = exec exe (GlobSearch("src/*.fs", None))
+                  match result with
+                  | Ok(Success body) ->
+                      Expect.stringContains body "src/inSrc.fs" "src/inSrc.fs matches src/*.fs"
+                      Expect.isFalse (body.Contains("topLevel.fs")) "top-level topLevel.fs must NOT match src/*.fs"
+                  | other -> failtestf "expected Success, got %A" other
+              finally
                   cleanup root ]
 
 // ── grep_search tests (TLX-03) ────────────────────────────────────────────────
