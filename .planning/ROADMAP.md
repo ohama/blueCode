@@ -81,7 +81,7 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 5. Editor 호출 중 Ctrl+C 처리 — child process 종료 후 REPL 으로 복귀 (current turn 영향 없음)
 6. Bench gate 7/7 PASS preserved
 
-### Phase 36: Manual test fixes
+### Phase 36: Manual test fixes ✓ (completed 2026-05-04)
 
 **Goal:** Address concrete bugs surfaced by 2026-05-04 manual test round (`documentation/manual-test-guide.md`, 65/82 tests executed; 4 FAIL + 5 MIXED). Cli-layer + doc only. Core untouched. Bench gate 7/7 PASS preserved.
 
@@ -118,9 +118,9 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 
 **Plans:** 3 plans (created 2026-05-04 via /gsd:plan-phase 36)
 
-- [ ] 36-01-glob-recursive-PLAN.md — bare-pattern auto-expansion in globSearchImpl + 3 tests (Wave 1; T-14)
-- [ ] 36-02-allow-paths-PLAN.md — --allow-paths CLI flag + FsToolExecutor extra-roots threading + 8 tests (Wave 2; T-16..T-19/T-100/T-101)
-- [ ] 36-03-prompt-suffix-and-doc-PLAN.md — planSystemPromptSuffix tightening + manual-test-guide updates + bench gate (Wave 3; T-75/T-76 + T-100 re-interp)
+- [x] 36-01-glob-recursive-PLAN.md — bare-pattern auto-expansion in globSearchImpl + 3 tests (Wave 1; T-14)
+- [x] 36-02-allow-paths-PLAN.md — --allow-paths CLI flag + FsToolExecutor extra-roots threading + 8 tests (Wave 2; T-16..T-19/T-100/T-101)
+- [x] 36-03-prompt-suffix-and-doc-PLAN.md — planSystemPromptSuffix tightening + manual-test-guide updates + bench gate (Wave 3; T-75/T-76 + T-100 re-interp)
 
 ### Phase 35: PrettyPrompt readline + history
 
