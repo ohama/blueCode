@@ -49,7 +49,7 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 - [x] 32-01-data-and-rendering-PLAN.md — SessionMeta + listRecent in FileSessionStore + renderSessions in Rendering + 12 unit tests (Wave 1)
 - [x] 32-02-repl-dispatch-PLAN.md — /sessions and /resume dispatcher arms in Repl + 5 integration tests + bench gate (Wave 2)
 
-### Phase 33: SLASH plan toggle
+### Phase 33: SLASH plan toggle ✓ (completed 2026-05-05)
 
 **Goal:** `/plan` mid-REPL on/off — 다음 turn 부터 plan-mode 적용. `--plan` flag 와 동등한 path 를 REPL 안에서 toggle 가능하게.
 
@@ -65,10 +65,10 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 5. Bench gate 7/7 PASS preserved (bench 는 single-turn `--plan` 만 사용; toggle 영향 없음)
 6. v2.0 의 mid-conversation Role=System 금지 invariant 준수 — `[PLAN MODE]` toggle 알림은 다음 turn 시작 시 user-facing console only (LLM 으로 보내지 않음)
 
-**Plans:** 2 plans (created 2026-05-05 via /gsd:plan-phase 33)
+**Plans:** 2 plans (created + executed 2026-05-05 via /gsd:plan-phase 33 → /gsd:execute-phase 33)
 
-- [ ] 33-01-toggle-and-wiring-PLAN.md — planModeActive cell + /plan toggle + plan-gate REPL Prompt arm + renderStatus 4-arg + renderHelp delta + adapt 5 existing tests + 1 new RenderingTests testCase (Wave 1)
-- [ ] 33-02-behavior-tests-and-bench-PLAN.md — 6 new ReplTests integration tests (toggle on/off, /status display, plan-gate Accept/Quit/Error paths, auto-disable) + smoke + bench gate (Wave 2)
+- [x] 33-01-toggle-and-wiring-PLAN.md — planModeActive cell + /plan toggle + plan-gate REPL Prompt arm + renderStatus 4-arg + renderHelp delta + adapt 5 existing tests + 1 new RenderingTests testCase (Wave 1)
+- [x] 33-02-behavior-tests-and-bench-PLAN.md — 6 new ReplTests integration tests (toggle on/off, /status display, plan-gate Accept/Quit/Error paths, auto-disable) + smoke + bench gate (Wave 2)
 
 ### Phase 34: `/edit` multi-line input
 

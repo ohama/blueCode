@@ -14,7 +14,7 @@
 - [x] **SLASH-04**: User can type `/exit` or `/quit` to gracefully exit the REPL with final session state saved
 - [x] **SLASH-05**: User can type `/sessions` to see a list of recent N persisted sessions (id, started_at, turn count, first prompt excerpt)
 - [x] **SLASH-06**: User can type `/resume <id>` to switch to another persisted session in-place, threading its priorSteps into the current REPL
-- [ ] **SLASH-07**: User can type `/plan` to toggle plan-mode for subsequent turns (`/plan` on; `/plan` again off); takes effect from the next prompt
+- [x] **SLASH-07**: User can type `/plan` to toggle plan-mode for subsequent turns (`/plan` on; `/plan` again off); takes effect from the next prompt
 
 ### Multi-line input (1 req)
 
@@ -65,7 +65,7 @@ Tracked for awareness; not pulled into v2.5. Observation-driven scoping after v2
 | SLASH-04 | Phase 31 | Complete |
 | SLASH-05 | Phase 32 | Complete |
 | SLASH-06 | Phase 32 | Complete |
-| SLASH-07 | Phase 33 | Pending |
+| SLASH-07 | Phase 33 | Complete |
 | EDIT-01 | Phase 34 | Pending |
 | HIST-01 | Phase 35 | Pending |
 | HIST-02 | Phase 35 | Pending |
@@ -76,4 +76,4 @@ Tracked for awareness; not pulled into v2.5. Observation-driven scoping after v2
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-05-04 after Phase 32 completion (SLASH-05, SLASH-06 → Complete)*
+*Last updated: 2026-05-05 after Phase 33 completion (SLASH-07 → Complete; 7/12 requirements done; Phases 34-35 remain)*

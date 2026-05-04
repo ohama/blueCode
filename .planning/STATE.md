@@ -12,10 +12,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
 Phase: 33 (slash-plan-toggle) — COMPLETE (2/2 plans complete)
 Plan: 2 of 2 complete (33-02 behavior-tests-and-bench)
-Status: Phase 33 complete. /plan toggle live + plan-gate inline loop + renderStatus 4-arg + 6 behavior integration tests; 352 tests passing; bench gate 7/7 PASS; Core untouched.
-Last activity: 2026-05-05 — Completed 33-02-behavior-tests-and-bench-PLAN.md (+6 ReplTests; bench gate 7/7 PASS; smoke verified).
+Status: Phase 33 VERIFIED + user-approved (2026-05-05). Verifier 7/7 must-haves; 2 human-verification items (plan-gate Accept/Quit in real TTY) approved by user. 352 tests passing; bench gate 7/7 PASS; Core untouched.
+Last activity: 2026-05-05 — Phase 33 complete (slash plan toggle); 4/6 v2.5 phases done (31, 32, 33, 36); 2 phases remain (34 /edit, 35 PrettyPrompt readline).
 
-Next: `/gsd:verify-work 33` UAT gate. Then Phase 34 (/edit multi-line input) or Phase 35 (PrettyPrompt readline).
+Next: Phase 34 (/edit multi-line input) — `/gsd:plan-phase 34`. Or Phase 35 (PrettyPrompt readline) if scope priorities shift.
 
 Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 36 COMPLETE; Phases 34-35 pending)**
 
@@ -66,6 +66,10 @@ Stable patterns established across milestones (load-bearing for next session):
 - **currentSession mutable rebind is the sole in-place switch** (Phase 32-02) — `currentSession <- loaded` is all that's needed; next iteration reads `currentSession.Steps` directly as priorSteps argument. No separate priorSteps variable exists.
 - **Empty-arg guard (Resume "") matched before general (Resume id)** (Phase 32-02) — Prevents empty SessionId from reaching `sessionStore.Load`; produces "usage: /resume <session-id>" hint instead.
 - **Slash dispatcher extension pattern** (Phase 32-02) — Add new arms ABOVE Prompt arm; slim future-stub by removing handled commands; use `printfn` not `AnsiConsole.MarkupLine`; use `let!` inside `task {}` CE for async calls. Phases 33+34 follow this same pattern.
+- **Plan-mode auto-disable on Accept/Quit** (Phase 33-01) — `planModeActive` is a one-shot toggle: after PlanGate Accept executes the plan, OR after Quit abandons it, the cell is set back to `false`. User re-types `/plan` for next plan-gated turn. Avoids "stuck in plan-review loop" surprise. Researcher-recommended; planner-adopted.
+- **REPL plan-gate inline loop mirrors Program.fs single-turn** (Phase 33-01) — `runMultiTurnWithSession` Prompt-when-planModeActive arm reuses `AgentLoop.runPlanTurn` + `CompositionRoot.planSystemPromptSuffix` + `PlanGate.render` + `PlanGate.promptUser PlanGate.realKeyReader`. Quit branch sets `planModeActive <- false` but NEVER `running <- false` (would exit REPL). `[plan mode on/off]` notification is `printfn` only — Role=System invariant preserved.
+- **renderStatus 4-arg signature** (Phase 33-01) — `renderStatus` now takes `(Session, Model option, int, bool)` where the bool is `planModeActive`. When true, appends `\nplan-mode: on (next prompt uses plan-gate)` to output. All call sites and tests updated in same plan to keep build green.
+- **Spectre.Console singleton reset for ReplTests** (Phase 33-02 auto-fix) — `Spectre.Console.AnsiConsole` lazily caches `Console.Out` on first `AnsiConsole.Write`. Tests redirecting `Console.SetOut` to a `StringWriter` then disposing it cause `ObjectDisposedException` in subsequent tests. Fix: reset `AnsiConsole.Console <- AnsiConsole.Create(AnsiConsoleSettings())` after each `Console.SetOut` redirect; restore in `finally`. Required only for tests that exercise PlanGate (which uses AnsiConsole directly).
 - **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01, commit `a6159c4`); orphan-grep-zero-match-exit-1 (v2.3 27-02, commit `9f8e06e`); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
 - **One-shot plan-mode semantics (Phase 33-01)** — `planModeActive` auto-disables after Accept+Execute, Quit, AND rejectCount exhaustion. User must re-type `/plan` for next plan-gated turn. Avoids "stuck in plan-review loop" surprise.
 - **Plan-gate Quit NEVER sets running <- false (Phase 33-01)** — Quit in the plan-gate inline loop sets `planModeActive <- false` + `turnDone <- true` only; returns to REPL prompt. Only `Slash Exit` and `null` (Ctrl+D) set `running <- false`.
@@ -84,9 +88,11 @@ Stable patterns established across milestones (load-bearing for next session):
 
 ### Pending Todos
 
-- **T-75 / T-76 human verification** (Phase 36 verifier output, 2026-05-04T18:25Z) — `planSystemPromptSuffix` MAXIMUM-10 + no-placeholder constraints are in place structurally; live model compliance under those constraints requires manual REPL invocation per `36-VERIFICATION.md` Human Verification section. Run when convenient.
+None pending.
 
-v2.5 scoping for remaining phases (33, 34, 35) is locked to existing ROADMAP.md (slash plan toggle / `/edit` / PrettyPrompt readline).
+- ✅ **T-75 / T-76 human verification** — RESOLVED 2026-05-05 via round 2 live re-run against 122B (`documentation/manual-test-guide.md`). T-75: Phase 36-03 prompt prevention working (model self-restrains to ≤10 steps). T-76: friendly validator message confirmed (`Plan invalid: rename targets not enumerated: foo`).
+
+v2.5 scoping for remaining phases (34, 35) is locked to existing ROADMAP.md (`/edit` $EDITOR / PrettyPrompt readline + history).
 
 ### Blockers/Concerns
 
@@ -103,10 +109,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-05T23:09:31Z
-Stopped at: Phase 33 complete — 33-02 behavior tests + bench gate; 352 tests passing; bench gate 7/7 PASS.
+Last session: 2026-05-05 (Phase 33 + verifier + user approval same-day)
+Stopped at: Phase 33 verified PASSED (verifier 7/7) + user approved 2 human-verification items (plan-gate Accept/Quit in real TTY). 4/6 v2.5 phases complete.
 Resume file: None
-Next workflow trigger: `/gsd:verify-work 33` (Phase 33 UAT gate).
+Next workflow trigger: `/gsd:plan-phase 34` (Phase 34 /edit multi-line input — next per ROADMAP).
 
 ## Empirical Baselines (post-v2.4)
 
