@@ -36,6 +36,9 @@
 
 ---
 
+> **Phase 36 — `--allow-paths` 사용법:**
+> 모든 `/tmp/*` 경로를 사용하는 테스트(T-16, T-17, T-18, T-19, T-100, T-101)는 `--allow-paths` 플래그를 prompt 앞에 추가해야 한다. 예: `bc --allow-paths /tmp/bc-test --verbose "..."`. 플래그 없이는 `FsToolExecutor` 가 project-root 외 경로를 차단한다 (security invariant). 본 가이드의 명령 예시는 모두 Phase 36 적용본이다 (2026-05-04 manual round 1 fix; 시행: Phase 36-02).
+
 > 모든 명령은 repo root (`/Users/ohama/projs/blueCode`) 에서 실행한다.
 > 모든 명령에 `dotnet run --project src/BlueCode.Cli --` 를 prefix 로 사용한다 — 매번 길어서 가이드에서는 약어 `bc` 로 표기한다.
 >
@@ -217,7 +220,7 @@ bc --verbose "Run 'echo hello' and tell me what it prints."
 
 ```bash
 mkdir -p /tmp/bc-test
-bc --verbose "Create a file at /tmp/bc-test/hello.txt with the content 'manual test passed'. Then confirm."
+bc --allow-paths /tmp/bc-test --verbose "Create a file at /tmp/bc-test/hello.txt with the content 'manual test passed'. Then confirm."
 cat /tmp/bc-test/hello.txt
 ```
 
@@ -226,11 +229,13 @@ cat /tmp/bc-test/hello.txt
 
 **실행 결과 (2026-05-04, 21s):** ✅ PASS via fallback — 8 steps. `read_file` 도 `PathEscapeBlocked: /tmp/bc-test/hello.txt` (project-root 잠금 확인). model 이 `run_shell` 의 `cat` 으로 우회 검증, 최종적으로 파일이 디스크에 생성됨 (`cat /tmp/bc-test/hello.txt` → `manual test passed`). **finding: file tool 모두 project-root 잠금 — write_file 도 /tmp 차단되었지만 어떤 단계에서 우회 (run_shell python/echo) 로 파일 생성됨.**
 
+**Phase 36 update:** With `--allow-paths /tmp/bc-test`, model can use `write_file` directly — no `run_shell` fallback expected.
+
 ### T-17 — edit_file (in-place 치환)
 
 ```bash
 echo "let answer = 42" > /tmp/bc-test/edit-target.fs
-bc --verbose "In /tmp/bc-test/edit-target.fs replace '42' with '43'. Use the edit_file tool."
+bc --allow-paths /tmp/bc-test --verbose "In /tmp/bc-test/edit-target.fs replace '42' with '43'. Use the edit_file tool."
 cat /tmp/bc-test/edit-target.fs
 ```
 
@@ -238,11 +243,13 @@ cat /tmp/bc-test/edit-target.fs
 
 **실행 결과 (2026-05-04, 13s):** ❌ FAIL — 2 steps. edit_file 이 `[PATH BLOCKED]` 로 거부됨. model: "Failed to replace '42' with '43' ... PATH BLOCKED error." 파일 그대로 `let answer = 42` (변경 안 됨). **finding: edit_file 은 run_shell 우회도 하지 않음 — /tmp 사용은 비현실적, project-root 안 scratch 디렉토리 사용 권장.**
 
+**Phase 36 update:** edit_file should now succeed via the allow-paths flag.
+
 ### T-18 — 다단계 (read → edit → verify)
 
 ```bash
 echo "let mistakes = 5" > /tmp/bc-test/multi.fs
-bc --verbose "In /tmp/bc-test/multi.fs change the literal 5 to 0. Read the file first to confirm what's there, then edit."
+bc --allow-paths /tmp/bc-test --verbose "In /tmp/bc-test/multi.fs change the literal 5 to 0. Read the file first to confirm what's there, then edit."
 cat /tmp/bc-test/multi.fs
 ```
 
@@ -250,13 +257,15 @@ cat /tmp/bc-test/multi.fs
 
 **실행 결과 (2026-05-04, ~10s):** ❌ FAIL — 4 steps. `read_file` → `PathEscapeBlocked`, `list_dir` → `PathEscapeBlocked`, `glob_search` → 0 chars (T-14 와 같은 패턴 매치 실패). model: "file does not exist or is not accessible". 파일 그대로 `let mistakes = 5`. **T-17 와 동일 원인 — /tmp 사용 부적합.**
 
+**Phase 36 update:** read_file/edit_file work with --allow-paths.
+
 ### T-19 — 멀티 파일 리네임 (P1 directive 검증)
 
 ```bash
 mkdir -p /tmp/bc-test/multi
 echo "let foo_bar = 1" > /tmp/bc-test/multi/a.fs
 echo "let foo_bar = 2" > /tmp/bc-test/multi/b.fs
-bc --verbose "Rename foo_bar to bar_baz in BOTH /tmp/bc-test/multi/a.fs and /tmp/bc-test/multi/b.fs."
+bc --allow-paths /tmp/bc-test --verbose "Rename foo_bar to bar_baz in BOTH /tmp/bc-test/multi/a.fs and /tmp/bc-test/multi/b.fs."
 grep -c "bar_baz" /tmp/bc-test/multi/*.fs
 ```
 
@@ -264,7 +273,9 @@ grep -c "bar_baz" /tmp/bc-test/multi/*.fs
 
 **실행 결과 (2026-05-04, 6 steps):** ❌ FAIL — read_file 이 /tmp 차단. model 이 결국 "files do not exist or are not accessible" 선언. 두 파일 모두 `let foo_bar = N` 그대로. P1 directive enumeration 검증은 다음 라운드에서 project-root scratch 경로로 재시도 필요.
 
-> **T-16 ~ T-19 공통 finding (action item):** FsToolExecutor 의 path 잠금이 `/tmp/*` 절대경로를 모두 차단. 매뉴얼 테스트 prompt 는 project-root 안 (예: `./scratch/` 또는 `documentation/test-scratch/`) 의 경로로 작성해야 함. 추가로 glob_search 의 패턴 처리 (T-14) 도 검증 부족 — 현재 patterns 로는 `*.fsproj` 가 매치 안 됨.
+> **T-16 ~ T-19 historical note:** 2026-05-04 round 1 에서는 path 잠금으로 모두 FAIL.
+> Phase 36-02 에서 `--allow-paths` 플래그 추가 후 prompt 명령에 flag 포함하도록 가이드 업데이트.
+> 다음 round 에서 PASS 예상. T-14 의 glob 패턴 문제는 Phase 36-01 에서 별도 수정 (bare pattern 자동 recursive 확장).
 
 ---
 
@@ -1317,14 +1328,14 @@ EXPECTO! 333 tests run in 00:00:30.9681152 for all – 333 passed, 1 ignored, 0 
 ### T-100 — 신규 세션 → 작업 → 종료 → resume → 후속 작업
 
 ```bash
-# 단계 1: 새 세션에서 파일 생성
+# 단계 1: 새 세션에서 파일 생성 (Phase 36: --allow-paths 필수)
 mkdir -p /tmp/bc-e2e
-SID=$(bc --newsession "Create /tmp/bc-e2e/notes.md with the line 'project alpha kicked off'." 2>&1 | grep "^Session: " | awk '{print $2}' | head -1)
+SID=$(bc --newsession --allow-paths /tmp/bc-e2e "Create /tmp/bc-e2e/notes.md with the line 'project alpha kicked off'." 2>&1 | grep "^Session: " | awk '{print $2}' | head -1)
 echo "captured SID=$SID"
 cat /tmp/bc-e2e/notes.md
 
-# 단계 2: 같은 세션 resume 으로 ammendment
-bc --resume "$SID" "Append a second line 'milestone 1 complete' to that same notes.md."
+# 단계 2: 같은 세션 resume 으로 amendment (Phase 36: --allow-paths 필수)
+bc --resume "$SID" --allow-paths /tmp/bc-e2e "Append a second line 'milestone 1 complete' to that same notes.md."
 cat /tmp/bc-e2e/notes.md
 
 # 단계 3: 두 줄 모두 있는지 확인
@@ -1333,19 +1344,37 @@ grep -c "alpha\|milestone" /tmp/bc-e2e/notes.md
 
 **기대:** 3번째 명령 출력 `2` (두 줄 매치). 단계 2 의 model 이 단계 1 작업을 priorSteps 로 인지.
 
-**실행 결과 (2026-05-04):** ❌ FAIL — file `/tmp/bc-e2e/notes.md` 미생성 (path 차단). step 2 의 model 은 `[ok]` step 표시하면서 "Successfully appended..." 로 답했으나 디스크에는 파일 없음 (**hallucinated success**). T-16/17/18/19 와 같은 /tmp 차단 근본 문제 + 추가 finding: tool 실패 후 model 이 false success 보고할 수 있음.
+**실행 결과 (2026-05-04, round 1):** ❌ FAIL — file `/tmp/bc-e2e/notes.md` 미생성 (path 차단).
+step 2 의 model 은 `[ok]` step 표시하면서 "Successfully appended..." 로 답했으나 디스크에는 파일 없음
+(처음에는 hallucinated success 로 보고됨).
 
-**doc 수정 권장:** prompt 의 `/tmp/bc-e2e/` 경로를 project-root 안 (예: `documentation/test-scratch/`) 로 변경 후 재실행.
+**Phase 36 research 결과 (2026-05-04, round 1.5):** **코드 버그 아님.**
+- step 1 (write_file) 은 `PathEscapeBlocked` → `StepFailed "path escape blocked"` → `[fail]` 로 정상 표시.
+- step 2 의 `[ok]` 은 **FinalAnswer step** 에서 나온 것 — `AgentLoop.fs` line 323 `Status = StepSuccess`
+  로 FinalAnswer 는 항상 구조적으로 success. 도구 실패와 무관.
+- "Successfully appended" 텍스트는 model 의 hallucination — 도구 실패 후 model 이 자유 텍스트로
+  거짓 보고할 수 있음 (LLM 한계, blueCode layer 에서 fix 불가).
+
+**Phase 36 fix (이 가이드 업데이트):**
+- `--allow-paths /tmp/bc-e2e` 플래그 사용 → write_file 이 정상 작동 → `[fail]` step 자체가 안 나옴 →
+  hallucination 트리거 사라짐.
+- 추가 보강: `defaultSystemPrompt` 에 path-block-경고 라인 추가는 별도 phase (v2.6+) 후보 — 본 phase 는
+  scope outside.
+
+**round 2 기대:** PASS — 파일 두 줄 모두 생성.
 
 ### T-101 — REPL 안에서 코드 수정 → 빌드 검증 → /clear → 재작업
 
 ```bash
-# 임시 F# 파일
+# 임시 F# 파일 (Phase 36: REPL 호출 시 --allow-paths 사용)
+mkdir -p /tmp/bc-e2e
 cat > /tmp/bc-e2e/sample.fsx << 'EOF'
 let add a b = a + b
 printfn "%d" (add 2 3)
 EOF
 ```
+
+Note: REPL 진입 명령에 `bc --allow-paths /tmp/bc-e2e` 사용 (--allow-paths 는 REPL session 전체에 적용).
 
 REPL 진입 후:
 
