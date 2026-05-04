@@ -90,10 +90,8 @@ let tests =
               Expect.stringContains h "/plan" "must list /plan"
               Expect.stringContains h "/edit" "must list /edit"
 
-          testCase "renderHelp marks future commands as [coming in v2.5] (Phase 33: 1 stub remaining — /edit only)" <| fun _ ->
+          testCase "renderHelp has 0 [coming in v2.5] markers (Phase 34 promoted /edit; all v2.5 commands live)" <| fun _ ->
               let h = renderHelp
-              // After Phase 33, /plan is live (toggle). Only /edit retains the
-              // [coming in v2.5] marker. Phase 34 will reduce this to 0.
               let occurrences =
                   let mutable count = 0
                   let mutable i = 0
@@ -103,19 +101,11 @@ let tests =
                           count <- count + 1
                           i <- i + "[coming in v2.5]".Length
                   count
-              Expect.equal occurrences 1 "exactly 1 [coming in v2.5] marker (/edit only)"
-              // Confirm the live commands no longer carry the marker — find the line for each.
+              Expect.equal occurrences 0 "0 [coming in v2.5] markers (all v2.5 commands live as of Phase 34)"
               let lines = h.Split([| '\n' |])
-              let sessionsLine = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/sessions"))
-              let resumeLine   = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/resume"))
-              let planLine     = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/plan"))
-              let editLine     = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/edit"))
-              Expect.isFalse (sessionsLine.Contains("[coming in v2.5]")) "/sessions has no [coming in v2.5]"
-              Expect.isFalse (resumeLine.Contains("[coming in v2.5]"))   "/resume has no [coming in v2.5]"
-              Expect.isFalse (planLine.Contains("[coming in v2.5]"))     "/plan no longer has [coming in v2.5] (Phase 33 promoted to live)"
-              Expect.isTrue  (editLine.Contains("[coming in v2.5]"))     "/edit still has [coming in v2.5]"
-              // Live /plan line carries the new toggle description (regression fence).
-              Expect.isTrue  (planLine.Contains("toggle plan-mode on/off")) "/plan line has live toggle description"
+              let editLine = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/edit"))
+              Expect.isFalse (editLine.Contains("[coming in v2.5]")) "/edit no longer carries [coming in v2.5] (Phase 34 live)"
+              Expect.isTrue (editLine.Contains("open $EDITOR")) "/edit line retains the descriptive text"
 
           testCase "renderHelp does NOT call LLM (it's a constant string)" <| fun _ ->
               // This test exists primarily to document the contract:

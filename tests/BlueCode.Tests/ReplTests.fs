@@ -479,8 +479,9 @@ let tests =
                   let captured = stdoutWriter.ToString()
                   Expect.equal exitCode 0 "exit code 0"
                   Expect.stringContains captured "/help" "help text mentions /help"
-                  Expect.stringContains captured "/sessions" "help lists /sessions stub"
-                  Expect.stringContains captured "[coming in v2.5]" "help marks future commands"
+                  Expect.stringContains captured "/sessions" "help lists /sessions"
+                  Expect.stringContains captured "/edit" "help lists /edit (Phase 34: live, no [coming in v2.5] marker)"
+                  Expect.isFalse (captured.Contains("[coming in v2.5]")) "Phase 34: no [coming in v2.5] markers in help (all v2.5 commands live)"
               finally
                   Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
@@ -614,12 +615,16 @@ let tests =
                   Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
 
-          testCase "runMultiTurn: remaining future-stub command (/edit only) prints 'not yet implemented' without crashing" <| fun () ->
-              // Phase 33 update: /plan is now live (toggle handler — tested separately in Plan 33-02).
-              // Only /edit (Phase 34) remains stubbed.
+          testCase "runMultiTurn: 0 future-stub commands remaining (Phase 34 promoted /edit; nothing prints 'not yet implemented')" <| fun () ->
+              // Phase 34 update: /edit is now live (real handler — tested with mock launcher in Plan 34-02).
+              // This test asserts the post-Phase-34 invariant: NO slash command in the 9-command set
+              // prints "not yet implemented" any more. Stays as a regression fence so any
+              // re-introduction of a stub command is caught immediately.
               let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/edit\n/exit\n")
+              // Drive every slash command (skip /edit because real /edit would block on $EDITOR; in this
+              // test we only validate the absence of the stub-marker for the in-process commands).
+              use stdinReader = new StringReader("/help\n/status\n/sessions\n/exit\n")
               use stdoutWriter = new StringWriter()
               Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
@@ -632,7 +637,7 @@ let tests =
               use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
 
               let components: AppComponents =
-                  { LlmClient = stubLlm []   // future stub must not call LLM
+                  { LlmClient = stubLlm []   // in-process slash commands; LLM must not be called
                     ToolExecutor = stubToolsOk
                     SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
                     JsonlSink = sink
@@ -648,13 +653,12 @@ let tests =
                       |> fun t -> t.GetAwaiter().GetResult()
                   Console.Out.Flush()
                   let captured = stdoutWriter.ToString()
-                  Expect.equal exitCode 0 "exit code 0 — remaining future-stub does not crash REPL"
-                  // Exactly 1 'not yet implemented' line expected (only /edit).
+                  Expect.equal exitCode 0 "exit code 0 — no slash command crashes the REPL"
                   let stubLines =
                       captured.Split([| '\n' |])
                       |> Array.filter (fun l -> l.Contains("not yet implemented"))
-                  Expect.equal stubLines.Length 1
-                      (sprintf "expected exactly 1 'not yet implemented' line (/edit only); captured:\n%s" captured)
+                  Expect.equal stubLines.Length 0
+                      (sprintf "expected 0 'not yet implemented' lines (Phase 34 promoted /edit); captured:\n%s" captured)
               finally
                   Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
