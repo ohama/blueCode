@@ -80,7 +80,9 @@ Stable patterns established across milestones (load-bearing for next session):
 
 ### Pending Todos
 
-None pending. v2.5 scoping comes from observation window via `/gsd:new-milestone`.
+- **T-75 / T-76 human verification** (Phase 36 verifier output, 2026-05-04T18:25Z) — `planSystemPromptSuffix` MAXIMUM-10 + no-placeholder constraints are in place structurally; live model compliance under those constraints requires manual REPL invocation per `36-VERIFICATION.md` Human Verification section. Run when convenient before planning Phase 33.
+
+v2.5 scoping for remaining phases (33, 34, 35) is locked to existing ROADMAP.md (slash plan toggle / `/edit` / PrettyPrompt readline).
 
 ### Blockers/Concerns
 
@@ -97,10 +99,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-04T18:09:30Z
-Stopped at: Completed 36-02-allow-paths-PLAN.md (Plan 36-02 complete; --allow-paths flag; 344 tests)
+Last session: 2026-05-04T18:25:00Z
+Stopped at: Phase 36 verifier PASSED 9/9 must-haves; T-75/T-76 surfaced for human verification (see Pending Todos).
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 36` (Plan 36-03 remaining)
+Next workflow trigger: `/gsd:plan-phase 33` (Phase 33 slash plan toggle — next per ROADMAP). Optionally run T-75/T-76 manual verification first.
 
 ## Empirical Baselines (post-v2.4)
 
