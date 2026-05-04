@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 32 (slash-session-commands) — in progress
+Phase: 32 (slash-session-commands) — COMPLETE ✓ (verified 2026-05-04, 16/16 must-haves)
 Plan: 2 of 2 complete
-Status: In progress — Plans 32-01 + 32-02 done; bench gate 7/7 PASS; ready for /gsd:verify-work 32
-Last activity: 2026-05-04 — Completed 32-02-repl-dispatch-PLAN.md (/sessions + /resume live dispatcher arms; 328→333 tests; bench gate 7/7 PASS)
+Status: Phase 32 verified passed; ready for Phase 33 (slash-plan-toggle)
+Last activity: 2026-05-04 — Completed Phase 32 (/sessions + /resume live; 316→333 tests +17 cumulative; bench gate 7/7 PASS; verifier 16/16)
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phase 31 COMPLETE; Phase 32 1/2 plans done)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32 COMPLETE; Phase 33 next)**
 
 ## Performance Metrics (cumulative, frozen)
 

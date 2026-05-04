@@ -29,7 +29,7 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 - [x] 31-01-parser-PLAN.md — Pure SlashCommand parser DU + 17 unit tests (Wave 1)
 - [x] 31-02-rendering-and-dispatch-PLAN.md — renderHelp/renderStatus + Repl integration + 12 tests + bench gate (Wave 2)
 
-### Phase 32: SLASH session commands
+### Phase 32: SLASH session commands ✓ (completed 2026-05-04)
 
 **Goal:** Session 메타-management 명령 — `/sessions` (목록) + `/resume <id>` (in-place switch).
 
@@ -46,8 +46,8 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 
 **Plans:** 2 plans
 
-- [ ] 32-01-data-and-rendering-PLAN.md — SessionMeta + listRecent in FileSessionStore + renderSessions in Rendering + 12 unit tests (Wave 1)
-- [ ] 32-02-repl-dispatch-PLAN.md — /sessions and /resume dispatcher arms in Repl + 5 integration tests + bench gate (Wave 2)
+- [x] 32-01-data-and-rendering-PLAN.md — SessionMeta + listRecent in FileSessionStore + renderSessions in Rendering + 12 unit tests (Wave 1)
+- [x] 32-02-repl-dispatch-PLAN.md — /sessions and /resume dispatcher arms in Repl + 5 integration tests + bench gate (Wave 2)
 
 ### Phase 33: SLASH plan toggle
 
