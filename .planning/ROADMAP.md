@@ -65,6 +65,11 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 5. Bench gate 7/7 PASS preserved (bench 는 single-turn `--plan` 만 사용; toggle 영향 없음)
 6. v2.0 의 mid-conversation Role=System 금지 invariant 준수 — `[PLAN MODE]` toggle 알림은 다음 turn 시작 시 user-facing console only (LLM 으로 보내지 않음)
 
+**Plans:** 2 plans (created 2026-05-05 via /gsd:plan-phase 33)
+
+- [ ] 33-01-toggle-and-wiring-PLAN.md — planModeActive cell + /plan toggle + plan-gate REPL Prompt arm + renderStatus 4-arg + renderHelp delta + adapt 5 existing tests + 1 new RenderingTests testCase (Wave 1)
+- [ ] 33-02-behavior-tests-and-bench-PLAN.md — 6 new ReplTests integration tests (toggle on/off, /status display, plan-gate Accept/Quit/Error paths, auto-disable) + smoke + bench gate (Wave 2)
+
 ### Phase 34: `/edit` multi-line input
 
 **Goal:** `$EDITOR` 호출하여 multi-line prompt 입력. Long refactor / 다단계 명령 / structured prompt 작성 ergonomic.
@@ -195,3 +200,4 @@ Continues at 31. Project phase history:
 ---
 *Roadmap created: 2026-04-29*
 *Phase 36 added: 2026-05-04 (manual test round 1 fixes)*
+*Phase 33 plans created: 2026-05-05 (/gsd:plan-phase 33)*
