@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# scripts/bc — thin wrapper around `dotnet run --project src/BlueCode.Cli --`
+# with an automatic preflight gate.
+#
+# Always runs T-00 (122B health) — fast, dynamic, can change between calls.
+# T-01..T-04 (build / tests-skip / Core purity via scripts/preflight.sh --quick)
+# are cached for $BC_PREFLIGHT_TTL seconds after a successful run, so a tight
+# manual-testing loop doesn't pay 10s per call.
+#
+# Equivalent to the alias suggested in documentation/manual-test-guide.md:
+#   alias bc='dotnet run --project src/BlueCode.Cli --'
+# but with preflight gating.
+#
+# Environment:
+#   BC_PREFLIGHT=skip       bypass all preflight (hot loops, scripted tests)
+#   BC_PREFLIGHT=force      ignore cache, rerun full preflight
+#   BC_PREFLIGHT=default    (the default) T-00 always + T-01..T-04 cached
+#   BC_PREFLIGHT_TTL=N      cache TTL in seconds (default: 600 = 10 min)
+#
+# Usage:
+#   scripts/bc "What is 1+1?"
+#   scripts/bc                            # REPL
+#   BC_PREFLIGHT=skip scripts/bc ...      # bypass for tight loops
+#   BC_PREFLIGHT=force scripts/bc ...     # force re-verify everything
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT="$REPO_ROOT/src/BlueCode.Cli/BlueCode.Cli.fsproj"
+
+if [[ ! -f "$PROJECT" ]]; then
+  echo "scripts/bc: cannot find $PROJECT" >&2
+  exit 2
+fi
+
+PREFLIGHT_MODE="${BC_PREFLIGHT:-default}"
+TTL="${BC_PREFLIGHT_TTL:-600}"
+STAMP="/tmp/bluecode-preflight-${USER:-anon}.stamp"
+
+# ─── T-00: 122B service health (always run; ~1-5s) ─────────────────────────
+check_service() {
+  curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8001/v1/models 2>/dev/null
+}
+
+# ─── T-01..T-04: build + Core purity (cacheable) ──────────────────────────
+cache_fresh() {
+  [[ -f "$STAMP" ]] || return 1
+  local stamped now age
+  stamped=$(cat "$STAMP" 2>/dev/null || echo 0)
+  now=$(date +%s)
+  age=$((now - stamped))
+  [[ "$age" -lt "$TTL" ]]
+}
+
+run_full_preflight() {
+  echo "[bc] running preflight (--quick)..." >&2
+  if "$SCRIPT_DIR/preflight.sh" --quick >&2; then
+    date +%s > "$STAMP"
+    return 0
+  fi
+  return 1
+}
+
+# ─── Gate ──────────────────────────────────────────────────────────────────
+case "$PREFLIGHT_MODE" in
+  skip)
+    : # bypass entirely
+    ;;
+  force)
+    run_full_preflight || exit 1
+    ;;
+  default)
+    if ! check_service; then
+      echo "[bc] T-00 FAIL: 122B service not responding on :8001" >&2
+      echo "[bc]   try: launchctl kickstart -k gui/501/com.ohama.qwen122b" >&2
+      echo "[bc]   or:  BC_PREFLIGHT=skip scripts/bc ... (to bypass)" >&2
+      exit 1
+    fi
+    if ! cache_fresh; then
+      run_full_preflight || exit 1
+    fi
+    ;;
+  *)
+    echo "scripts/bc: unknown BC_PREFLIGHT mode: $PREFLIGHT_MODE (use skip|force|default)" >&2
+    exit 2
+    ;;
+esac
+
+exec dotnet run --project "$PROJECT" -- "$@"
