@@ -10,12 +10,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 32 (slash-session-commands) — COMPLETE ✓ (verified 2026-05-04, 16/16 must-haves)
-Plan: 2 of 2 complete
-Status: Phase 32 verified passed; ready for Phase 33 (slash-plan-toggle)
-Last activity: 2026-05-04 — Completed Phase 32 (/sessions + /resume live; 316→333 tests +17 cumulative; bench gate 7/7 PASS; verifier 16/16)
+Phase: 36 (manual-test-fixes) — IN PROGRESS (2/3 plans complete)
+Plan: 2 of 3 complete (36-02 allow-paths)
+Status: Phase 36 Plan 02 complete; --allow-paths CLI flag shipped; 344 tests passing.
+Last activity: 2026-05-04 — Completed 36-02-allow-paths-PLAN.md (+8 tests, T-16..T-19/T-100/T-101 fix).
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32 COMPLETE; Phase 33 next)**
+Next: Plan 36-03 (PlanValidator UX + bench gate).
+
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32 COMPLETE; Phase 36 1/3 complete; Phases 33-36 pending)**
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -72,6 +74,10 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Zero-source-diff milestone pattern (v2.1 + v2.4)** — Eval/measurement work can ship meaningful capability without `src/` changes. `git diff milestone-v<prev> HEAD -- src/` empty assertion is an established invariant for these milestones.
 - **Measurement-first scoping (v2.4)** — Inverted v2.2/v2.3's intervention-first pattern. When prior measurement evidence is category-mismatched (HumanEval+ Python answers vs Idiomatic F# scoring), proper category-matched fixtures may yield free score improvement. *"Is the score real, or is the measurement instrument wrong?"*
 
+### Roadmap Evolution
+
+- **Phase 36 added (2026-05-04):** "Manual test fixes" — independent, post-shipment hardening from manual test round 1. Scope: (1) glob_search recursive default, (2) PlanValidator UX rebuild (retry feedback + placeholder enum guard + PlanRejected friendly error), (3) **`--allow-paths` CLI flag for explicit scratch dir opt-in** (replaces manual-test-guide path-rewrite approach; user opt-in preserves security invariant), (4) hallucinated-success investigation. Out of scope (deferred): auto/default `/tmp/*` allowlist (only explicit `--allow-paths`), priorSteps message-ordering quirk, glob/wildcard patterns in --allow-paths. No new requirements; bench 7/7 PASS preserved invariant. Cli + doc only, Core untouched.
+
 ### Pending Todos
 
 None pending. v2.5 scoping comes from observation window via `/gsd:new-milestone`.
@@ -91,10 +97,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-04T15:20:30Z
-Stopped at: Completed 32-02-repl-dispatch-PLAN.md (Plan 32-02 complete; /sessions + /resume live; bench gate 7/7 PASS; 333 tests)
+Last session: 2026-05-04T18:09:30Z
+Stopped at: Completed 36-02-allow-paths-PLAN.md (Plan 36-02 complete; --allow-paths flag; 344 tests)
 Resume file: None
-Next workflow trigger: `/gsd:verify-work 32` UAT gate
+Next workflow trigger: `/gsd:execute-phase 36` (Plan 36-03 remaining)
 
 ## Empirical Baselines (post-v2.4)
 
