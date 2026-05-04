@@ -505,7 +505,17 @@ let private globSearchImpl
         | Error tr -> return Ok tr
         | Ok root ->
             try
-                let rx = globToRegex pattern
+                // Phase 36-01 (T-14 fix): bare patterns without '/' and not already
+                // starting with '**' are auto-expanded to '**/'+pattern. Without this,
+                // globToRegex "*.fsproj" produces "^[^/]*\\.fsproj$" which cannot match
+                // relative paths like "src/X/Y.fsproj" because [^/]* does not cross '/'.
+                // Patterns with explicit path structure ("src/**/*.fs", "**/*.fs",
+                // "Cargo.toml") are left untouched.
+                let effectivePattern =
+                    if not (pattern.Contains('/')) && not (pattern.StartsWith("**"))
+                    then "**/" + pattern
+                    else pattern
+                let rx = globToRegex effectivePattern
                 let opts = EnumerationOptions()
                 opts.RecurseSubdirectories <- true
                 opts.AttributesToSkip <- FileAttributes.System
