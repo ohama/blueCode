@@ -90,10 +90,10 @@ let tests =
               Expect.stringContains h "/plan" "must list /plan"
               Expect.stringContains h "/edit" "must list /edit"
 
-          testCase "renderHelp marks future commands as [coming in v2.5] (Phase 32-02: 2 stubs remaining — /plan + /edit)" <| fun _ ->
+          testCase "renderHelp marks future commands as [coming in v2.5] (Phase 33: 1 stub remaining — /edit only)" <| fun _ ->
               let h = renderHelp
-              // After Phase 32-02, /sessions and /resume are live. Only /plan and /edit
-              // retain the [coming in v2.5] marker. Phase 33 will reduce this to 1; Phase 34 to 0.
+              // After Phase 33, /plan is live (toggle). Only /edit retains the
+              // [coming in v2.5] marker. Phase 34 will reduce this to 0.
               let occurrences =
                   let mutable count = 0
                   let mutable i = 0
@@ -103,7 +103,7 @@ let tests =
                           count <- count + 1
                           i <- i + "[coming in v2.5]".Length
                   count
-              Expect.equal occurrences 2 "exactly 2 [coming in v2.5] markers (/plan + /edit)"
+              Expect.equal occurrences 1 "exactly 1 [coming in v2.5] marker (/edit only)"
               // Confirm the live commands no longer carry the marker — find the line for each.
               let lines = h.Split([| '\n' |])
               let sessionsLine = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/sessions"))
@@ -112,8 +112,10 @@ let tests =
               let editLine     = lines |> Array.find (fun l -> l.TrimStart().StartsWith("/edit"))
               Expect.isFalse (sessionsLine.Contains("[coming in v2.5]")) "/sessions has no [coming in v2.5]"
               Expect.isFalse (resumeLine.Contains("[coming in v2.5]"))   "/resume has no [coming in v2.5]"
-              Expect.isTrue  (planLine.Contains("[coming in v2.5]"))     "/plan still has [coming in v2.5]"
+              Expect.isFalse (planLine.Contains("[coming in v2.5]"))     "/plan no longer has [coming in v2.5] (Phase 33 promoted to live)"
               Expect.isTrue  (editLine.Contains("[coming in v2.5]"))     "/edit still has [coming in v2.5]"
+              // Live /plan line carries the new toggle description (regression fence).
+              Expect.isTrue  (planLine.Contains("toggle plan-mode on/off")) "/plan line has live toggle description"
 
           testCase "renderHelp does NOT call LLM (it's a constant string)" <| fun _ ->
               // This test exists primarily to document the contract:
@@ -129,12 +131,13 @@ let tests =
                     Steps = []
                     CreatedAt = DateTimeOffset.MinValue
                     LastActivityAt = DateTimeOffset.MinValue }
-              let s = renderStatus session (Some Qwen122B) 8192
+              let s = renderStatus session (Some Qwen122B) 8192 false   // Phase 33: planModeActive=false (default)
               Expect.stringContains s "deadbeef0123456789abcdef01234567" "session id present"
               Expect.stringContains s "122b" "model name 122b present"
               Expect.stringContains s "steps:    0" "step count zero"
               Expect.stringContains s "0%" "context % is 0 with empty session"
               Expect.stringContains s "[floor; probed on first LLM call]" "floor disclaimer present"
+              Expect.isFalse (s.Contains("plan-mode")) "no plan-mode line when planModeActive=false"
 
           testCase "renderStatus model name: None -> '122b (default)'" <| fun _ ->
               let session : Session =
@@ -142,7 +145,7 @@ let tests =
                     Steps = []
                     CreatedAt = DateTimeOffset.MinValue
                     LastActivityAt = DateTimeOffset.MinValue }
-              let s = renderStatus session None 8192
+              let s = renderStatus session None 8192 false
               Expect.stringContains s "122b (default)" "None ForcedModel renders default label"
 
           testCase "renderStatus model name: Some Qwen35B -> '35b'" <| fun _ ->
@@ -151,7 +154,7 @@ let tests =
                     Steps = []
                     CreatedAt = DateTimeOffset.MinValue
                     LastActivityAt = DateTimeOffset.MinValue }
-              let s = renderStatus session (Some Qwen35B) 8192
+              let s = renderStatus session (Some Qwen35B) 8192 false
               Expect.stringContains s "35b" "Qwen35B renders as 35b"
               Expect.isFalse (s.Contains("122b")) "no spurious 122b token in 35b status"
 
@@ -171,11 +174,26 @@ let tests =
                     Steps = [ step; step; step ]
                     CreatedAt = DateTimeOffset.MinValue
                     LastActivityAt = DateTimeOffset.MinValue }
-              let s = renderStatus session (Some Qwen122B) 8192
+              let s = renderStatus session (Some Qwen122B) 8192 false
               Expect.stringContains s "steps:    3" "step count reflects List.length"
               // chars: each step contributes (sprintf "%A" Action) + (sprintf "%A" ToolResult)
               // Don't assert exact char count — just that it's > 0 (formula is testable in isolation).
               Expect.isFalse (s.Contains("chars:    0 ")) "non-zero chars for non-empty steps"
+
+          testCase "renderStatus shows 'plan-mode: on' line when planModeActive=true (Phase 33)" <| fun _ ->
+              let session : Session =
+                  { Id = SessionId "abc"
+                    Steps = []
+                    CreatedAt = DateTimeOffset.MinValue
+                    LastActivityAt = DateTimeOffset.MinValue }
+              let sOff = renderStatus session (Some Qwen122B) 8192 false
+              let sOn  = renderStatus session (Some Qwen122B) 8192 true
+              Expect.isFalse (sOff.Contains("plan-mode")) "planModeActive=false hides plan-mode line"
+              Expect.stringContains sOn "plan-mode: on (next prompt uses plan-gate)"
+                  "planModeActive=true appends plan-mode line with descriptive suffix"
+              // Other fields unchanged regardless of toggle state.
+              Expect.stringContains sOn "session:" "session label still present"
+              Expect.stringContains sOn "steps:" "steps label still present"
 
           // ── Phase 32-01: renderSessions ──────────────────────────────────────
           testCase "renderSessions empty list returns 'no sessions found'" <| fun _ ->

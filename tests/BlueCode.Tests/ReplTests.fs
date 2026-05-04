@@ -614,12 +614,12 @@ let tests =
                   Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
 
-          testCase "runMultiTurn: remaining future-stub commands (/plan /edit) print 'not yet implemented' without crashing" <| fun () ->
-              // Phase 32-02 update: /sessions and /resume are now live (handled by dedicated tests below).
-              // Only /plan (Phase 33) and /edit (Phase 34) remain stubbed.
+          testCase "runMultiTurn: remaining future-stub command (/edit only) prints 'not yet implemented' without crashing" <| fun () ->
+              // Phase 33 update: /plan is now live (toggle handler — tested separately in Plan 33-02).
+              // Only /edit (Phase 34) remains stubbed.
               let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/plan\n/edit\n/exit\n")
+              use stdinReader = new StringReader("/edit\n/exit\n")
               use stdoutWriter = new StringWriter()
               Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
@@ -632,7 +632,7 @@ let tests =
               use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
 
               let components: AppComponents =
-                  { LlmClient = stubLlm []   // future stubs must not call LLM
+                  { LlmClient = stubLlm []   // future stub must not call LLM
                     ToolExecutor = stubToolsOk
                     SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
                     JsonlSink = sink
@@ -648,13 +648,13 @@ let tests =
                       |> fun t -> t.GetAwaiter().GetResult()
                   Console.Out.Flush()
                   let captured = stdoutWriter.ToString()
-                  Expect.equal exitCode 0 "exit code 0 — remaining future-stub commands do not crash REPL"
-                  // Exactly 2 'not yet implemented' lines expected (one per stub: /plan + /edit).
+                  Expect.equal exitCode 0 "exit code 0 — remaining future-stub does not crash REPL"
+                  // Exactly 1 'not yet implemented' line expected (only /edit).
                   let stubLines =
                       captured.Split([| '\n' |])
                       |> Array.filter (fun l -> l.Contains("not yet implemented"))
-                  Expect.equal stubLines.Length 2
-                      (sprintf "expected exactly 2 'not yet implemented' lines (/plan + /edit); captured:\n%s" captured)
+                  Expect.equal stubLines.Length 1
+                      (sprintf "expected exactly 1 'not yet implemented' line (/edit only); captured:\n%s" captured)
               finally
                   Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
