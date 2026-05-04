@@ -24,6 +24,27 @@
 4. **priorSteps 메시지 순서 quirk (T-59, T-61)** — priorSteps 가 LLM 에 threading 되긴 하나 model 이 메시지 순서를 가끔 헷갈림. 이건 LLM 한계로 prompt 또는 메시지 라벨링 보강 가능.
 5. **Hallucinated success (T-100)** — file tool 실패 후 model 이 "Successfully appended" 답할 수 있음. step renderer 에 `[ok]/[fail]` 분리 검증 필요할 수 있음.
 
+## 실행 요약 (2026-05-05, round 2 post-Phase-36)
+
+Phase 36 (manual-test-fixes) shipped 2026-05-04 18:26 (3 plans: 36-01 glob auto-expand + 36-02 `--allow-paths` + 36-03 prompt suffix tightening). Round 2 re-run of 9 round-1 FAIL/MIXED tests against live 122B:
+
+| Test | Round 1 | Round 2 | Phase 36 fix |
+|------|---------|---------|---------------|
+| T-14 (glob_search bare pattern) | ❌ FAIL | ✅ PASS | 36-01 — `effectivePattern` auto-expansion at FsToolExecutor.fs:519-522 |
+| T-16 (write_file /tmp) | ✅ via fallback | ✅ direct (2 steps) | 36-02 — `--allow-paths` |
+| T-17 (edit_file /tmp) | ❌ FAIL | ✅ PASS | 36-02 — `--allow-paths` |
+| T-18 (read+edit /tmp) | ❌ FAIL | ✅ PASS (3 steps, exact pattern) | 36-02 — `--allow-paths` |
+| T-19 (multi-file rename) | ❌ FAIL | ✅ PASS + **P1 enumeration 직접 관찰** | 36-02 — `--allow-paths` |
+| T-100 (e2e: create→resume→amend) | ❌ FAIL | ✅ PASS (`grep -c = 2`) | 36-02 — `--allow-paths` + cross-turn memory |
+| T-101 (REPL multi-step + /clear) | ⚠️ MIXED | ✅ PASS (fsi 결과 `6`) | 36-02 — `--allow-paths` 가 REPL session 전체 적용 |
+| T-75 (PlanValidator 11-step ceiling) | ⚠️ PARTIAL | ⚠️ DIFFERENT (model 자체 1-step 으로 self-restrain) | 36-03 — `MAXIMUM 10` prompt suffix 가 prevention-side 작동 |
+| T-76 (rename target enumeration) | ⚠️ MIXED | ✅ PASS — `Plan invalid: rename targets not enumerated: foo` | 36-03 — no-placeholder suffix + validator 정상 작동 |
+
+**Round 2 verdict:** 7 of 9 → PASS; T-75 → behavior-changed (prompt-prevention 우선); T-76 → PASS.
+
+**여전히 LLM-behavior dependent (Phase 36 fix 미해당):**
+- T-54, T-59, T-61: priorSteps message ordering quirk — Qwen 3.5 122B 한계, prompt or labeling 보강 필요 시 v2.6+ 후보.
+
 ### 핵심 PASS
 
 - **Bench gate 7/7 PASS** (T-81): T6/W1/W2/T1/T5/B2/MT 모두 통과. Phase 32 후에도 v2.4 회귀 없음.
@@ -206,6 +227,8 @@ bc --verbose "List all *.fsproj files in this repository."
 
 **실제 디스크에는 3개 fsproj 존재.** glob 패턴 `*.fsproj` 가 top-level 만 매치하고 `**/*.fsproj` 형태가 필요한 것으로 보임. 또는 glob_search 의 path 기본값이 잘못됨. **→ 도구 동작 또는 시스템 프롬프트 보강 필요한 finding.**
 
+**실행 결과 (2026-05-05, round 2 post-Phase-36-01):** ✅ PASS — 2 steps. `glob_search {"pattern": "*.fsproj"}` 가 이번엔 3개 결과 반환 (Phase 36-01 의 bare-pattern auto-expansion: `FsToolExecutor.fs:519-522` 가 `*.fsproj` → `**/*.fsproj` 로 변환). 답: `tests/BlueCode.Tests/BlueCode.Tests.fsproj`, `src/BlueCode.Core/BlueCode.Core.fsproj`, `src/BlueCode.Cli/BlueCode.Cli.fsproj` — 정확.
+
 ### T-15 — run_shell (안전 명령)
 
 ```bash
@@ -229,7 +252,7 @@ cat /tmp/bc-test/hello.txt
 
 **실행 결과 (2026-05-04, 21s):** ✅ PASS via fallback — 8 steps. `read_file` 도 `PathEscapeBlocked: /tmp/bc-test/hello.txt` (project-root 잠금 확인). model 이 `run_shell` 의 `cat` 으로 우회 검증, 최종적으로 파일이 디스크에 생성됨 (`cat /tmp/bc-test/hello.txt` → `manual test passed`). **finding: file tool 모두 project-root 잠금 — write_file 도 /tmp 차단되었지만 어떤 단계에서 우회 (run_shell python/echo) 로 파일 생성됨.**
 
-**Phase 36 update:** With `--allow-paths /tmp/bc-test`, model can use `write_file` directly — no `run_shell` fallback expected.
+**실행 결과 (2026-05-05, round 2 post-Phase-36-02):** ✅ PASS direct — 2 steps. model 이 `write_file` 를 직접 호출, `run_shell` 우회 불필요. 디스크 결과 `manual test passed`. `--allow-paths /tmp/bc-test` 로 path 잠금 통과 확인.
 
 ### T-17 — edit_file (in-place 치환)
 
@@ -243,7 +266,7 @@ cat /tmp/bc-test/edit-target.fs
 
 **실행 결과 (2026-05-04, 13s):** ❌ FAIL — 2 steps. edit_file 이 `[PATH BLOCKED]` 로 거부됨. model: "Failed to replace '42' with '43' ... PATH BLOCKED error." 파일 그대로 `let answer = 42` (변경 안 됨). **finding: edit_file 은 run_shell 우회도 하지 않음 — /tmp 사용은 비현실적, project-root 안 scratch 디렉토리 사용 권장.**
 
-**Phase 36 update:** edit_file should now succeed via the allow-paths flag.
+**실행 결과 (2026-05-05, round 2 post-Phase-36-02):** ✅ PASS — 2 steps. `edit_file {"path": "/tmp/bc-test/edit-target.fs", "old_string": "42", "new_string": "43"}` → Success. 파일 `let answer = 43`. `--allow-paths` 로 path 잠금 통과 확인.
 
 ### T-18 — 다단계 (read → edit → verify)
 
@@ -257,7 +280,7 @@ cat /tmp/bc-test/multi.fs
 
 **실행 결과 (2026-05-04, ~10s):** ❌ FAIL — 4 steps. `read_file` → `PathEscapeBlocked`, `list_dir` → `PathEscapeBlocked`, `glob_search` → 0 chars (T-14 와 같은 패턴 매치 실패). model: "file does not exist or is not accessible". 파일 그대로 `let mistakes = 5`. **T-17 와 동일 원인 — /tmp 사용 부적합.**
 
-**Phase 36 update:** read_file/edit_file work with --allow-paths.
+**실행 결과 (2026-05-05, round 2 post-Phase-36-02):** ✅ PASS — 3 steps (read_file → edit_file → final), 정확히 기대한 패턴. 파일 `let mistakes = 0`. `--allow-paths` 로 read_file + edit_file 둘 다 정상 작동.
 
 ### T-19 — 멀티 파일 리네임 (P1 directive 검증)
 
@@ -273,9 +296,11 @@ grep -c "bar_baz" /tmp/bc-test/multi/*.fs
 
 **실행 결과 (2026-05-04, 6 steps):** ❌ FAIL — read_file 이 /tmp 차단. model 이 결국 "files do not exist or are not accessible" 선언. 두 파일 모두 `let foo_bar = N` 그대로. P1 directive enumeration 검증은 다음 라운드에서 project-root scratch 경로로 재시도 필요.
 
+**실행 결과 (2026-05-05, round 2 post-Phase-36-02):** ✅ PASS + **P1 enumeration 직접 확인**. 5 steps (read a → read b → edit a → edit b → final). 두 파일 모두 `let bar_baz = N`. **Step 1 thought 직접 인용:** "renaming 'foo_bar' to 'bar_baz' in two specific files: /tmp/bc-test/multi/a.fs and /tmp/bc-test/multi/b.fs" — P1 directive enumeration (CLAUDE.md "P1 enumeration directive in `defaultSystemPrompt`") 가 첫 step thought 에 enforced 됨을 직접 관찰.
+
 > **T-16 ~ T-19 historical note:** 2026-05-04 round 1 에서는 path 잠금으로 모두 FAIL.
 > Phase 36-02 에서 `--allow-paths` 플래그 추가 후 prompt 명령에 flag 포함하도록 가이드 업데이트.
-> 다음 round 에서 PASS 예상. T-14 의 glob 패턴 문제는 Phase 36-01 에서 별도 수정 (bare pattern 자동 recursive 확장).
+> 2026-05-05 round 2: 4/4 PASS (T-16 direct, T-17/T-18/T-19 모두 의도 정확). T-14 (glob) 도 Phase 36-01 의 bare-pattern auto-expansion 으로 PASS.
 
 ---
 
@@ -1076,6 +1101,8 @@ bc --plan "Refactor src/BlueCode.Cli/ as 12 separate edit steps, one step per .f
 
 **실행 결과 (2026-05-04):** ⚠️ PARTIAL PASS — model 이 11+ step plan 을 시도했으나 PlanValidator 가 reject 후 retry 무한 loop, 결국 `LLM returned invalid JSON twice. Raw: {...}` 로 종료. ceiling 자체는 enforced 되지만 **에러 UX 가 부정확** — "plan exceeds 10 steps" 친화적 메시지 대신 generic "invalid JSON" 표시.
 
+**실행 결과 (2026-05-05, round 2 post-Phase-36-03):** ⚠️ DIFFERENT — Phase 36-03 의 `MAXIMUM 10 (HARD LIMIT)` planSystemPromptSuffix 절이 model 행동을 prevention-side 로 바꿈. 이번 invocation 에서는 model 이 12-step plan 을 시도하지 않고 단일 discovery step (`list_dir src/BlueCode.Cli/`) 만 emit — 즉 ceiling 위반을 시도조차 안 함. plan-gate 정상 표시 (`[a]ccept / [r]eject / [e]dit / [q]uit`). round 1 의 "invalid JSON twice" 실패 모드는 사라짐. **trade-off:** validator-side 11+ rejection 의 친화적 UX 는 model 이 11+ 를 emit 안 하므로 직접 검증 불가; prompt-side prevention 이 우선 작동. (검증 메모: validator UX 자체는 unit test `PlanValidatorTests.fs` 에서 cover.)
+
 ### T-76 — `--plan` rename targets 미열거 (PlanValidator)
 
 ```bash
@@ -1085,6 +1112,8 @@ bc --plan "Rename foo to bar in all the files. Just describe it as 'rename in mu
 **기대:** `checkRenameTargetsEnumerated` 검증 발동 — plan rejected. detail string 에 "must enumerate" 류 메시지.
 
 **실행 결과 (2026-05-04):** ⚠️ MIXED — 첫 plan 은 placeholder `<discovered_file_X>` 사용, 두 번째 (reject 후 retry) plan 은 path `"placeholder"` 사용. PlanValidator 의 enumeration 가드가 placeholder 식별 실패. **정확한 파일 경로가 plan 안에 enumerate 되지 않아도 plan-gate 가 표시됨** — 검증 룰 강화 여지.
+
+**실행 결과 (2026-05-05, round 2 post-Phase-36-03):** ✅ PASS — 친화적 reject 메시지 직접 출력: `Plan invalid: rename targets not enumerated: foo`. PlanValidator 의 `checkRenameTargetsEnumerated` (PlanValidator.fs:108) 가 정확히 작동, `foo` 가 user prompt 의 rename target 임을 인식하고 plan 안에 enumerate 안 된 것을 잡아냄. plan-gate 표시 안 됨 (validator 가 표시 전 reject). round 1 의 placeholder-leak 문제는 사라짐 — Phase 36-03 의 no-placeholder constraint 가 model 의 placeholder 사용을 억제했고, validator 의 enumeration 검사가 vague rename 을 정확히 잡음.
 
 ### T-77 — Spectre markup escape (이전 버그 회귀 방지)
 
@@ -1363,6 +1392,8 @@ step 2 의 model 은 `[ok]` step 표시하면서 "Successfully appended..." 로 
 
 **round 2 기대:** PASS — 파일 두 줄 모두 생성.
 
+**실행 결과 (2026-05-05, round 2 post-Phase-36-02):** ✅ PASS — 단계 1: write_file 직접 작동, `project alpha kicked off` 생성. 단계 2: `--resume <SID>` 후 model 이 read_file → edit_file → final (3 steps), priorSteps 에서 단계 1 의 작업 인지. 최종 파일 두 줄 (`project alpha kicked off\nmilestone 1 complete`). `grep -c "alpha\|milestone"` → `2`. resume + cross-turn memory + path-allowlist + edit_file 모두 정상.
+
 ### T-101 — REPL 안에서 코드 수정 → 빌드 검증 → /clear → 재작업
 
 ```bash
@@ -1405,6 +1436,14 @@ dotnet fsi /tmp/bc-e2e/sample.fsx </dev/null
 - REPL 모든 단계 정상 진행 ✓
 
 **doc 수정 권장:** T-100 와 동일 — project-root 안 경로 사용.
+
+**실행 결과 (2026-05-05, round 2 post-Phase-36-02):** ✅ PASS — 모든 단계 의도대로:
+- 첫 답: "computes... add(2, 3) and prints the result, which is 5" (addition 정확) ✓
+- edit_file 직접 작동 → 파일 `let add a b = a * b` ✓
+- `/status` steps=4, chars=682 ✓
+- `/clear` 후 새 session id (`c723b7c9...`); model 답: "I have no record of previous computations. The conversation history was cleared..." (priorSteps reset 정확) ✓
+- `/exit` 정상 종료 ✓
+- **fsi 실행 결과 `6`** (= 2 * 3 — 의도 검증 완료) ✓
 
 ### T-102 — 동시 두 세션 → 각자 다른 작업 → /sessions 에서 둘 다 보이는지
 
