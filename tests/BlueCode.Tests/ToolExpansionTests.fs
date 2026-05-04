@@ -36,7 +36,7 @@ let editFileTests =
               let root = newFixture ()
               try
                   File.WriteAllText(Path.Combine(root, "edit1.txt"), "alpha\nbeta\ngamma\n")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (EditFile(FilePath "edit1.txt", "beta", "BETA"))
                   match result with
                   | Ok(Success _) ->
@@ -51,7 +51,7 @@ let editFileTests =
               let root = newFixture ()
               try
                   File.WriteAllText(Path.Combine(root, "edit2.txt"), "alpha\nbeta\ngamma\n")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (EditFile(FilePath "edit2.txt", "notpresent", "X"))
                   match result with
                   | Ok(Failure(1, msg)) ->
@@ -66,7 +66,7 @@ let editFileTests =
               try
                   let original = "dup dup dup"
                   File.WriteAllText(Path.Combine(root, "edit3.txt"), original)
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (EditFile(FilePath "edit3.txt", "dup", "X"))
                   match result with
                   | Ok(Failure(1, msg)) ->
@@ -82,7 +82,7 @@ let editFileTests =
           <| fun () ->
               let root = newFixture ()
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (EditFile(FilePath "../escape.txt", "x", "y"))
                   match result with
                   | Ok(PathEscapeBlocked _) -> ()
@@ -94,7 +94,7 @@ let editFileTests =
           <| fun () ->
               let root = newFixture ()
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (EditFile(FilePath "does-not-exist.txt", "x", "y"))
                   match result with
                   | Ok(Failure(1, _)) -> ()
@@ -108,7 +108,7 @@ let editFileTests =
               try
                   let crlf_content = "a\r\nb\r\nc\r\n"
                   File.WriteAllText(Path.Combine(root, "crlf.txt"), crlf_content)
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (EditFile(FilePath "crlf.txt", "b", "B"))
                   match result with
                   | Ok(Success _) ->
@@ -133,7 +133,7 @@ let globSearchTests =
                   File.WriteAllText(Path.Combine(root, "src", "a.fs"), "")
                   File.WriteAllText(Path.Combine(root, "src", "nested", "b.fs"), "")
                   File.WriteAllText(Path.Combine(root, "doc.md"), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GlobSearch("src/**/*.fs", None))
                   match result with
                   | Ok(Success body) ->
@@ -148,7 +148,7 @@ let globSearchTests =
           <| fun () ->
               let root = newFixture ()
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GlobSearch("**/*.nonexistent", None))
                   match result with
                   | Ok(Success body) ->
@@ -161,7 +161,7 @@ let globSearchTests =
           <| fun () ->
               let root = newFixture ()
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GlobSearch("**/*", Some(FilePath "../..")))
                   match result with
                   | Ok(PathEscapeBlocked _) -> ()
@@ -176,7 +176,7 @@ let globSearchTests =
                   // Create 150 files
                   for i in 1..150 do
                       File.WriteAllText(Path.Combine(root, sprintf "file%03d.txt" i), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GlobSearch("**/*", None))
                   match result with
                   | Ok(Success body) ->
@@ -192,7 +192,7 @@ let globSearchTests =
                   File.WriteAllText(Path.Combine(root, ".hidden.txt"), "")
                   Directory.CreateDirectory(Path.Combine(root, ".subdir")) |> ignore
                   File.WriteAllText(Path.Combine(root, ".subdir", "x.txt"), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GlobSearch("**/*", None))
                   match result with
                   | Ok(Success body) ->
@@ -212,7 +212,7 @@ let globSearchTests =
                   File.WriteAllText(Path.Combine(root, "src", "Inner", "deep.fsproj"), "")
                   // Distractor: same name in non-matching extension
                   File.WriteAllText(Path.Combine(root, "src", "Inner", "deep.fs"), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GlobSearch("*.fsproj", None))
                   match result with
                   | Ok(Success body) ->
@@ -231,7 +231,7 @@ let globSearchTests =
                   File.WriteAllText(Path.Combine(root, "a.txt"), "")
                   Directory.CreateDirectory(Path.Combine(root, "sub")) |> ignore
                   File.WriteAllText(Path.Combine(root, "sub", "b.txt"), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GlobSearch("**/*.txt", None))
                   match result with
                   | Ok(Success body) ->
@@ -249,7 +249,7 @@ let globSearchTests =
                   File.WriteAllText(Path.Combine(root, "topLevel.fs"), "")
                   Directory.CreateDirectory(Path.Combine(root, "src")) |> ignore
                   File.WriteAllText(Path.Combine(root, "src", "inSrc.fs"), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GlobSearch("src/*.fs", None))
                   match result with
                   | Ok(Success body) ->
@@ -271,7 +271,7 @@ let grepSearchTests =
               let root = newFixture ()
               try
                   File.WriteAllText(Path.Combine(root, "x.fs"), "line1\nTODO: fix\nline3")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GrepSearch("TODO", None, None))
                   match result with
                   | Ok(Success body) ->
@@ -285,7 +285,7 @@ let grepSearchTests =
               let root = newFixture ()
               try
                   File.WriteAllText(Path.Combine(root, "y.txt"), "nothing here")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GrepSearch("zzzzz", None, None))
                   match result with
                   | Ok(Success body) ->
@@ -298,7 +298,7 @@ let grepSearchTests =
           <| fun () ->
               let root = newFixture ()
               try
-                  let exe = create root
+                  let exe = create root []
                   // Unclosed character class is an invalid regex
                   let result = exec exe (GrepSearch("[", None, None))
                   match result with
@@ -312,7 +312,7 @@ let grepSearchTests =
           <| fun () ->
               let root = newFixture ()
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GrepSearch("foo", None, Some "src/*.fs"))
                   match result with
                   | Ok(Failure(1, msg)) ->
@@ -327,7 +327,7 @@ let grepSearchTests =
               try
                   File.WriteAllText(Path.Combine(root, "x.fs"), "TODO in fsharp")
                   File.WriteAllText(Path.Combine(root, "y.md"), "TODO in markdown")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GrepSearch("TODO", None, Some "*.fs"))
                   match result with
                   | Ok(Success body) ->
@@ -345,7 +345,7 @@ let grepSearchTests =
                   let long_line = "MATCH" + String.replicate 295 "x"
                   Expect.equal long_line.Length 300 "long line must be 300 chars for test setup"
                   File.WriteAllText(Path.Combine(root, "long.txt"), long_line)
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (GrepSearch("MATCH", None, None))
                   match result with
                   | Ok(Success body) ->
@@ -366,7 +366,7 @@ let grepSearchTests =
                   // Classic ReDoS pattern: (a+)+b on a string of a's
                   let redos_line = String.replicate 100 "a"
                   File.WriteAllText(Path.Combine(root, "redos.txt"), redos_line)
-                  let exe = create root
+                  let exe = create root []
                   // Use a 3s wall-clock CancellationTokenSource as a safety net
                   use cts = new CancellationTokenSource(TimeSpan.FromSeconds(3.0))
                   let task = exe.ExecuteAsync (GrepSearch("(a+)+b", None, None)) cts.Token

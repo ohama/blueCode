@@ -43,7 +43,7 @@ let readFileTests =
 
               try
                   File.WriteAllText(Path.Combine(root, "hello.txt"), "alpha\nbeta\ngamma\n")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "hello.txt", None))
 
                   match result with
@@ -60,7 +60,7 @@ let readFileTests =
 
               try
                   File.WriteAllText(Path.Combine(root, "lines.txt"), "one\ntwo\nthree\nfour\nfive\n")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "lines.txt", Some(1, 2)))
 
                   match result with
@@ -78,7 +78,7 @@ let readFileTests =
 
               try
                   File.WriteAllText(Path.Combine(root, "lines.txt"), "a\nb\nc\nd\ne\n")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "lines.txt", Some(2, 3)))
 
                   match result with
@@ -99,7 +99,7 @@ let readFileTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "does-not-exist.txt", None))
 
                   match result with
@@ -113,7 +113,7 @@ let readFileTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "../escape.txt", None))
 
                   match result with
@@ -129,7 +129,7 @@ let readFileTests =
               try
                   let bigContent = String.replicate 3000 "x"
                   File.WriteAllText(Path.Combine(root, "big.txt"), bigContent)
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "big.txt", None))
 
                   match result with
@@ -145,7 +145,7 @@ let readFileTests =
               let root = newFixture ()
               try
                   File.WriteAllText(Path.Combine(root, "hdr.txt"), "one\ntwo\nthree\n")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "hdr.txt", None))
                   match result with
                   | Ok(Success content) ->
@@ -164,7 +164,7 @@ let readFileTests =
               let root = newFixture ()
               try
                   File.WriteAllText(Path.Combine(root, "range.txt"), "a\nb\nc\nd\ne\n")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "range.txt", Some(2, 4)))
                   match result with
                   | Ok(Success content) ->
@@ -192,7 +192,7 @@ let readFileTests =
                   let bigLine = String.replicate 100 "x"
                   let lines = Array.create 30 bigLine
                   File.WriteAllText(Path.Combine(root, "big.txt"), String.Join("\n", lines))
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "big.txt", None))
                   match result with
                   | Ok(Success content) ->
@@ -216,7 +216,7 @@ let readFileTests =
                       Path.Combine(root, "small.txt"),
                       "only\nthree\nlines\n"
                   )
-                  let exe = create root
+                  let exe = create root []
                   // Request start_line=100 on a 3-line file — out-of-range.
                   let result = exec exe (ReadFile(FilePath "small.txt", Some(100, 200)))
                   match result with
@@ -242,7 +242,7 @@ let readFileTests =
                   // After Fix 1 (AgentLoop.fs:69-72), dispatcher constructs Some(2001, 2100).
                   // This test exercises that exact post-dispatcher tuple.
                   File.WriteAllText(Path.Combine(root, "small.fs"), "a\nb\nc\n")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ReadFile(FilePath "small.fs", Some(2001, 2100)))
                   match result with
                   | Ok(Success content) ->
@@ -268,7 +268,7 @@ let writeFileTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (WriteFile(FilePath "new.txt", "written-content"))
 
                   match result with
@@ -284,7 +284,7 @@ let writeFileTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (WriteFile(FilePath "../../evil.txt", "should-not-land"))
 
                   match result with
@@ -302,7 +302,7 @@ let writeFileTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
 
                   let result =
                       exec exe (WriteFile(FilePath "/tmp/bluecode-should-not-write.txt", "x"))
@@ -318,7 +318,7 @@ let writeFileTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (WriteFile(FilePath "~/tilde.txt", "x"))
 
                   match result with
@@ -340,7 +340,7 @@ let listDirTests =
                   File.WriteAllText(Path.Combine(root, "a.txt"), "")
                   Directory.CreateDirectory(Path.Combine(root, "sub")) |> ignore
                   File.WriteAllText(Path.Combine(root, "sub", "nested.txt"), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ListDir(FilePath ".", None))
 
                   match result with
@@ -359,7 +359,7 @@ let listDirTests =
               try
                   Directory.CreateDirectory(Path.Combine(root, "sub")) |> ignore
                   File.WriteAllText(Path.Combine(root, "sub", "nested.txt"), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ListDir(FilePath ".", Some 2))
 
                   match result with
@@ -377,7 +377,7 @@ let listDirTests =
               try
                   File.WriteAllText(Path.Combine(root, ".hidden"), "")
                   File.WriteAllText(Path.Combine(root, "visible.txt"), "")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ListDir(FilePath ".", None))
 
                   match result with
@@ -393,7 +393,7 @@ let listDirTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (ListDir(FilePath "../..", None))
 
                   match result with
@@ -402,6 +402,121 @@ let listDirTests =
               finally
                   cleanup root ]
 
+// ── Phase 36-02: --allow-paths boundary tests ────────────────────────────────
+
+let allowPathsTests =
+    testList
+        "FsToolExecutor.AllowPaths (Phase 36-02)"
+        [
+
+          testCase "empty extraAllowedPaths preserves projectRoot-only behaviour"
+          <| fun () ->
+              let root = newFixture ()
+              let other = newFixture ()
+              try
+                  File.WriteAllText(Path.Combine(other, "outside.txt"), "secret")
+                  let exe = create root []   // empty allow list
+                  let result = exec exe (ReadFile(FilePath (Path.Combine(other, "outside.txt")), None))
+                  match result with
+                  | Ok(PathEscapeBlocked _) -> ()
+                  | other -> failtestf "expected PathEscapeBlocked with empty allow list, got %A" other
+              finally
+                  cleanup root
+                  cleanup other
+
+          testCase "extraAllowedPath permits read of file inside that path"
+          <| fun () ->
+              let root = newFixture ()
+              let extra = newFixture ()
+              try
+                  let target = Path.Combine(extra, "allowed.txt")
+                  File.WriteAllText(target, "manual test passed")
+                  let exe = create root [ extra ]
+                  let result = exec exe (ReadFile(FilePath target, None))
+                  match result with
+                  | Ok(Success body) ->
+                      Expect.stringContains body "manual test passed" "content should be readable through extra-allowed root"
+                  | other -> failtestf "expected Success, got %A" other
+              finally
+                  cleanup root
+                  cleanup extra
+
+          testCase "extraAllowedPath permits write_file inside that path"
+          <| fun () ->
+              let root = newFixture ()
+              let extra = newFixture ()
+              try
+                  let target = Path.Combine(extra, "wrote.txt")
+                  let exe = create root [ extra ]
+                  let result = exec exe (WriteFile(FilePath target, "hello"))
+                  match result with
+                  | Ok(Success _) ->
+                      Expect.equal (File.ReadAllText target) "hello" "file written via allow-listed path"
+                  | other -> failtestf "expected Success, got %A" other
+              finally
+                  cleanup root
+                  cleanup extra
+
+          testCase "trailing-separator guard: '/tmp/bc-test' does NOT permit '/tmp/bc-testing'"
+          <| fun () ->
+              // Use real /tmp under unique GUID prefixes to avoid collision
+              let g = Guid.NewGuid().ToString("N")
+              let allowed = Path.Combine(Path.GetTempPath(), "bc-" + g)
+              let sibling = Path.Combine(Path.GetTempPath(), "bc-" + g + "-sibling")
+              Directory.CreateDirectory(allowed) |> ignore
+              Directory.CreateDirectory(sibling) |> ignore
+              try
+                  let target = Path.Combine(sibling, "evil.txt")
+                  File.WriteAllText(target, "should-not-read")
+                  let root = newFixture ()
+                  let exe = create root [ allowed ]
+                  let result = exec exe (ReadFile(FilePath target, None))
+                  match result with
+                  | Ok(PathEscapeBlocked _) -> ()
+                  | other -> failtestf "expected PathEscapeBlocked (sibling-prefix attack), got %A" other
+              finally
+                  try Directory.Delete(allowed, true) with _ -> ()
+                  try Directory.Delete(sibling, true) with _ -> ()
+
+          testCase ".. traversal blocked even with broad allow list"
+          <| fun () ->
+              let root = newFixture ()
+              let extra = newFixture ()
+              try
+                  // Use a path that is guaranteed-absent regardless of OS so file
+                  // existence cannot mask a security bug. PathEscapeBlocked must
+                  // fire BEFORE any file open is attempted; absence is irrelevant
+                  // to the security decision but the explicit single-arm match
+                  // ensures Ok(Failure _) (a legitimate file-op failure) never
+                  // masquerades as a security block.
+                  let traversal = Path.Combine(extra, "..", "etc", "definitely-not-real-file-12345")
+                  let exe = create root [ extra ]
+                  let result = exec exe (ReadFile(FilePath traversal, None))
+                  match result with
+                  | Ok(PathEscapeBlocked _) -> ()
+                  | other -> failtestf "expected PathEscapeBlocked for .. traversal, got %A" other
+              finally
+                  cleanup root
+                  cleanup extra
+
+          testCase "non-allow-listed absolute path is blocked"
+          <| fun () ->
+              let root = newFixture ()
+              let extra = newFixture ()
+              let elsewhere = newFixture ()
+              try
+                  File.WriteAllText(Path.Combine(elsewhere, "x.txt"), "")
+                  let exe = create root [ extra ]   // 'elsewhere' NOT in list
+                  let result = exec exe (ReadFile(FilePath (Path.Combine(elsewhere, "x.txt")), None))
+                  match result with
+                  | Ok(PathEscapeBlocked _) -> ()
+                  | other -> failtestf "expected PathEscapeBlocked, got %A" other
+              finally
+                  cleanup root
+                  cleanup extra
+                  cleanup elsewhere
+        ]
+
 [<Tests>]
 let fileToolsTests =
     testList
@@ -409,5 +524,6 @@ let fileToolsTests =
         [ readFileTests
           writeFileTests
           listDirTests
+          allowPathsTests
           // runShellStubTest removed — superseded by RunShellTests in Plan 03-02
           ]

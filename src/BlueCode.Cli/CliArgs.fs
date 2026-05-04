@@ -21,6 +21,7 @@ type CliArgs =
     | [<AltCommandLine("--new-session")>] NewSession  // --newsession / --new-session; forces a fresh session id
     | [<AltCommandLine("--with-35b")>] WithDual       // --withdual / --with-35b; enables --model 35b
     | Plan                                             // NEW (Phase 16-02): --plan flag; plan-then-execute mode
+    | [<AltCommandLine("--allow-paths")>] AllowPaths of paths: string   // NEW (Phase 36-02): comma-separated extra-allowed path prefixes
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -32,4 +33,5 @@ type CliArgs =
             | Resume _ -> "Resume session by ID. Reads ~/.bluecode/sessions/<ID>.jsonl and continues with prior context."
             | NewSession -> "Force a fresh session id. Mutually exclusive with --resume."
             | WithDual -> "Enable dual-mode (--model 35b allowed; requires launchctl load -w ~/Library/LaunchAgents/com.ohama.qwen35b.plist)"
+            | AllowPaths _ -> "Comma-separated extra paths the agent may read/write (canonicalized; trailing-separator prefix-attack guarded). Default: empty (project root only)."
             | Plan -> "Plan-then-execute mode: LLM emits a plan; user approves a/r/e/q before any tool runs. Single-turn only (REPL plan-mode is v2.1+)."

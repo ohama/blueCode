@@ -29,7 +29,8 @@ type CliOptions =
       ResumeSessionId: BlueCode.Core.Domain.SessionId option  // NEW (15-02): Some when --resume <ID> set
       NewSession: bool                                         // NEW (15-02): true when --new-session set
       WithDual35b: bool                                        // NEW (19-02): true when --with-35b set
-      PlanMode: bool }                                         // NEW (16-02): true when --plan set
+      PlanMode: bool                                           // NEW (16-02): true when --plan set
+      AllowPaths: string list }                                // NEW (36-02): extra allowed path prefixes
 
 /// Default options — equivalent to old single-turn invocation with no flags.
 let defaultCliOptions: CliOptions =
@@ -39,7 +40,8 @@ let defaultCliOptions: CliOptions =
       ResumeSessionId = None
       NewSession = false
       WithDual35b = false
-      PlanMode = false }
+      PlanMode = false
+      AllowPaths = [] }                                        // NEW (36-02)
 
 /// Convert the CLI string to a Model. Retirement guard: 32b/72b raise with a Phase 19
 /// message that Program.fs catches to exit 2. None defaults to Some Qwen122B (explicit
@@ -111,7 +113,7 @@ let bootstrap (projectRoot: string) (opts: CliOptions) : AppComponents =
     let logPath = buildSessionLogPath ()
 
     { LlmClient = Adapters.QwenHttpClient.create ()
-      ToolExecutor = Adapters.FsToolExecutor.create projectRoot
+      ToolExecutor = Adapters.FsToolExecutor.create projectRoot opts.AllowPaths
       SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
       JsonlSink = new JsonlSink(logPath)
       Config =

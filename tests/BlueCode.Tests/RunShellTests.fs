@@ -45,7 +45,7 @@ let happyPathTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (shellTool "echo hello")
 
                   match result with
@@ -59,7 +59,7 @@ let happyPathTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (shellTool "pwd")
 
                   match result with
@@ -89,7 +89,7 @@ let securityTests =
                   // Marker file that `rm -rf /` would destroy if it somehow ran.
                   let sentinel = Path.Combine(root, "sentinel.txt")
                   File.WriteAllText(sentinel, "SHOULD-REMAIN")
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (shellTool "rm -rf /")
 
                   match result with
@@ -105,7 +105,7 @@ let securityTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (shellTool "echo $(whoami)")
 
                   match result with
@@ -126,7 +126,7 @@ let timeoutTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let sw = Stopwatch.StartNew()
                   let result = exec exe (shellTool "sleep 35")
                   sw.Stop()
@@ -152,7 +152,7 @@ let truncationTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   // Each line of `yes` output is "y\n" (2 chars). 3000 lines = 6000 chars.
                   // After 100KB raw cap (no-op here, 6000 < 102400) and 2000-char TOOL-06,
                   // the result should be truncated at 2000 chars with marker.
@@ -178,7 +178,7 @@ let nonZeroExitTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (shellTool "false")
 
                   match result with
@@ -192,7 +192,7 @@ let nonZeroExitTests =
               let root = newFixture ()
 
               try
-                  let exe = create root
+                  let exe = create root []
                   let result = exec exe (shellTool "exit 7")
 
                   match result with

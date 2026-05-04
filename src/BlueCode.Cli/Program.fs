@@ -40,6 +40,15 @@ let main (argv: string array) : int =
         let withDual = results.Contains CliArgs.WithDual
         // NEW (16-02): --plan flag
         let isPlanMode = results.Contains CliArgs.Plan
+        // NEW (36-02): --allow-paths comma-separated path list. Empty list when absent.
+        let allowPaths : string list =
+            results.TryGetResult CliArgs.AllowPaths
+            |> Option.map (fun s ->
+                s.Split(',')
+                |> Array.map (fun p -> p.Trim())
+                |> Array.filter (fun p -> p.Length > 0)
+                |> Array.toList)
+            |> Option.defaultValue []
 
         // NEW (15-02): mutually-exclusive validation. Reject BOTH-set; either-or-neither is fine.
         // Done POST-parse BEFORE bootstrap so we don't waste bootstrap cycles.
@@ -111,7 +120,8 @@ let main (argv: string array) : int =
               ResumeSessionId = resumeId |> Option.map SessionId
               NewSession = isNewSession
               WithDual35b = withDual
-              PlanMode = isPlanMode }
+              PlanMode = isPlanMode
+              AllowPaths = allowPaths }                        // NEW (36-02)
 
         let projectRoot = Directory.GetCurrentDirectory()
 

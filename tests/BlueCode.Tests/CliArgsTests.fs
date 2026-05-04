@@ -145,4 +145,17 @@ let tests =
                   (fun () -> parse [| "--help" |] |> ignore)
                   "--help should raise ArguParseException (caught in Program.fs → exit 2)"
 
+          // 12. (Phase 36-02) --allow-paths single path
+          testCase "--allow-paths /tmp/x with prompt: TryGetResult AllowPaths = Some \"/tmp/x\""
+          <| fun () ->
+              let results = parse [| "--allow-paths"; "/tmp/x"; "hi" |]
+              Expect.equal (results.TryGetResult AllowPaths) (Some "/tmp/x") "single path captured as raw string"
+              Expect.equal (results.TryGetResult Prompt) (Some [ "hi" ]) "prompt still captured"
+
+          // 13. (Phase 36-02) --allow-paths comma-separated multi
+          testCase "--allow-paths /tmp/x,/tmp/y: TryGetResult AllowPaths = Some \"/tmp/x,/tmp/y\""
+          <| fun () ->
+              let results = parse [| "--allow-paths"; "/tmp/x,/tmp/y"; "hi" |]
+              Expect.equal (results.TryGetResult AllowPaths) (Some "/tmp/x,/tmp/y") "comma-separated raw string captured"
+
           ]

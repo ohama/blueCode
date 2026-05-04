@@ -61,16 +61,23 @@ let private truncateOutput (raw: string) : string =
 
 // ── Path validation (TOOL-02) ─────────────────────────────────────────────────
 
-/// Resolve inputPath relative to projectRoot, then require the resolved
-/// path to stay inside projectRoot (with trailing-separator fix — see
-/// 03-RESEARCH.md Pattern 2 and PITFALLS.md D-3). Returns Ok resolved
-/// for in-scope paths, Error (PathEscapeBlocked inputPath) otherwise.
+/// Resolve inputPath relative to projectRoot, then require the resolved path to stay
+/// inside EITHER projectRoot OR one of the canonicalized extraRoots. Trailing-separator
+/// prefix-attack guard applies to both projectRoot and each extraRoot (CLAUDE.md
+/// 03-RESEARCH.md Pattern 2 / PITFALLS D-3 / Phase 36-02 Pitfall 6).
+///
+/// Phase 36-02 (T-16/17/18/19/100/101): extraRoots is the canonicalized form of
+/// CliOptions.AllowPaths. With --allow-paths empty, behaviour is byte-identical to the
+/// pre-Phase-36 single-root validation. `..` traversal is defeated by Path.GetFullPath
+/// canonicalization at check-time AND at startup; cross-root sibling attacks are defeated
+/// by the trailing-separator guard.
 ///
 /// Paths starting with "~" are rejected — we do not expand home directories.
-/// Absolute paths outside projectRoot fail the StartsWith check correctly
-/// because Path.Combine(root, absPath) returns absPath unchanged on .NET
-/// and Path.GetFullPath normalizes ".." traversal.
-let private validatePath (projectRoot: string) (inputPath: string) : Result<string, ToolResult> =
+let private validatePathWithExtras
+    (projectRoot: string)
+    (extraRoots: string list)
+    (inputPath: string)
+    : Result<string, ToolResult> =
     if String.IsNullOrWhiteSpace(inputPath) then
         Error(PathEscapeBlocked(inputPath |> Option.ofObj |> Option.defaultValue ""))
     elif inputPath.StartsWith("~") then
@@ -79,19 +86,12 @@ let private validatePath (projectRoot: string) (inputPath: string) : Result<stri
         try
             let combined = Path.Combine(projectRoot, inputPath)
             let resolved = Path.GetFullPath(combined)
-            // Trailing-separator fix: without it, `/a/project-evil` would
-            // start-with `/a/project`. This is the prefix-attack defence
-            // documented in 03-RESEARCH.md Pattern 2.
-            let rootWithSep =
-                if projectRoot.EndsWith(string Path.DirectorySeparatorChar) then
-                    projectRoot
-                else
-                    projectRoot + string Path.DirectorySeparatorChar
-
-            if
-                resolved = projectRoot
-                || resolved.StartsWith(rootWithSep, StringComparison.Ordinal)
-            then
+            let withSep (r: string) =
+                if r.EndsWith(string Path.DirectorySeparatorChar) then r
+                else r + string Path.DirectorySeparatorChar
+            let inRoot (r: string) =
+                resolved = r || resolved.StartsWith(withSep r, StringComparison.Ordinal)
+            if inRoot projectRoot || List.exists inRoot extraRoots then
                 Ok resolved
             else
                 Error(PathEscapeBlocked inputPath)
@@ -115,6 +115,7 @@ let private validatePath (projectRoot: string) (inputPath: string) : Result<stri
 /// host paths through the LLM message history (CLAUDE.md invariant).
 let private readFileImpl
     (projectRoot: string)
+    (extraAllowedPaths: string list)
     (path: string)
     (lineRange: (int * int) option)
     (ct: CancellationToken)
@@ -122,7 +123,7 @@ let private readFileImpl
     task {
         ct.ThrowIfCancellationRequested()
 
-        match validatePath projectRoot path with
+        match validatePathWithExtras projectRoot extraAllowedPaths path with
         | Error tr -> return Ok tr
         | Ok resolved ->
             try
@@ -190,6 +191,7 @@ let private readFileImpl
 /// any filesystem IO happens.
 let private writeFileImpl
     (projectRoot: string)
+    (extraAllowedPaths: string list)
     (path: string)
     (content: string)
     (ct: CancellationToken)
@@ -197,7 +199,7 @@ let private writeFileImpl
     task {
         ct.ThrowIfCancellationRequested()
 
-        match validatePath projectRoot path with
+        match validatePathWithExtras projectRoot extraAllowedPaths path with
         | Error tr -> return Ok tr
         | Ok resolved ->
             try
@@ -248,6 +250,7 @@ let rec private enumDir (basePath: string) (current: string) (depth: int) (maxDe
 
 let private listDirImpl
     (projectRoot: string)
+    (extraAllowedPaths: string list)
     (path: string)
     (depth: int option)
     (ct: CancellationToken)
@@ -255,7 +258,7 @@ let private listDirImpl
     task {
         ct.ThrowIfCancellationRequested()
 
-        match validatePath projectRoot path with
+        match validatePathWithExtras projectRoot extraAllowedPaths path with
         | Error tr -> return Ok tr
         | Ok resolved ->
             try
@@ -441,6 +444,7 @@ let private globToRegex (pattern: string) : System.Text.RegularExpressions.Regex
 
 let private editFileImpl
     (projectRoot: string)
+    (extraAllowedPaths: string list)
     (path: string)
     (oldString: string)
     (newString: string)
@@ -448,7 +452,7 @@ let private editFileImpl
     : Task<Result<ToolResult, AgentError>> =
     task {
         ct.ThrowIfCancellationRequested()
-        match validatePath projectRoot path with
+        match validatePathWithExtras projectRoot extraAllowedPaths path with
         | Error tr -> return Ok tr
         | Ok _ when oldString.Length = 0 ->
             return Ok(Failure(1, "oldString must be non-empty"))
@@ -491,6 +495,7 @@ let private editFileImpl
 
 let private globSearchImpl
     (projectRoot: string)
+    (extraAllowedPaths: string list)
     (pattern: string)
     (searchPath: string option)
     (ct: CancellationToken)
@@ -500,7 +505,7 @@ let private globSearchImpl
         let searchRoot =
             match searchPath with
             | None -> Ok projectRoot
-            | Some p -> validatePath projectRoot p
+            | Some p -> validatePathWithExtras projectRoot extraAllowedPaths p
         match searchRoot with
         | Error tr -> return Ok tr
         | Ok root ->
@@ -550,6 +555,7 @@ let private globSearchImpl
 
 let private grepSearchImpl
     (projectRoot: string)
+    (extraAllowedPaths: string list)
     (pattern: string)
     (searchPath: string option)
     (fileGlob: string option)
@@ -565,7 +571,7 @@ let private grepSearchImpl
             let searchRoot =
                 match searchPath with
                 | None -> Ok projectRoot
-                | Some p -> validatePath projectRoot p
+                | Some p -> validatePathWithExtras projectRoot extraAllowedPaths p
             match searchRoot with
             | Error tr -> return Ok tr
             | Ok root ->
@@ -628,24 +634,26 @@ let private grepSearchImpl
 
 // ── Public factory ────────────────────────────────────────────────────────────
 
-/// Create an IToolExecutor bound to projectRoot. All path validation runs
-/// against this root. Typical callers: `FsToolExecutor.create (Directory.GetCurrentDirectory())`
-/// at process start (Phase 4 CompositionRoot.fs).
+/// Create an IToolExecutor bound to projectRoot plus a list of extra allowed-path
+/// prefixes. All path validation runs against the union {projectRoot} ∪ extraAllowedPaths
+/// after Path.GetFullPath canonicalization. Empty extraAllowedPaths preserves pre-Phase-36
+/// behaviour exactly.
 ///
-/// Exhaustive match over Tool DU — adding a case to Tool in Domain.fs
-/// is a compile error here (Success Criterion 6 proof).
-let create (projectRoot: string) : IToolExecutor =
+/// Exhaustive match over Tool DU — adding a case to Tool in Domain.fs is a compile error
+/// here (Success Criterion 6 proof).
+let create (projectRoot: string) (extraAllowedPaths: string list) : IToolExecutor =
     let rootNormalized = Path.GetFullPath(projectRoot)
+    let allowedNormalized = extraAllowedPaths |> List.map Path.GetFullPath
 
     { new IToolExecutor with
         member _.ExecuteAsync (tool: Tool) (ct: CancellationToken) : Task<Result<ToolResult, AgentError>> =
             match tool with
-            | ReadFile(FilePath path, lineRange) -> readFileImpl rootNormalized path lineRange ct
-            | WriteFile(FilePath path, content) -> writeFileImpl rootNormalized path content ct
-            | ListDir(FilePath path, depth) -> listDirImpl rootNormalized path depth ct
+            | ReadFile(FilePath path, lineRange) -> readFileImpl rootNormalized allowedNormalized path lineRange ct
+            | WriteFile(FilePath path, content) -> writeFileImpl rootNormalized allowedNormalized path content ct
+            | ListDir(FilePath path, depth) -> listDirImpl rootNormalized allowedNormalized path depth ct
             | RunShell(Command cmd, BlueCode.Core.Domain.Timeout _timeoutMs) -> runShellImpl rootNormalized cmd ct
-            | EditFile(FilePath path, oldStr, newStr) -> editFileImpl rootNormalized path oldStr newStr ct
+            | EditFile(FilePath path, oldStr, newStr) -> editFileImpl rootNormalized allowedNormalized path oldStr newStr ct
             | GlobSearch(pattern, searchPath) ->
-                globSearchImpl rootNormalized pattern (searchPath |> Option.map (fun (FilePath p) -> p)) ct
+                globSearchImpl rootNormalized allowedNormalized pattern (searchPath |> Option.map (fun (FilePath p) -> p)) ct
             | GrepSearch(pattern, searchPath, fileGlob) ->
-                grepSearchImpl rootNormalized pattern (searchPath |> Option.map (fun (FilePath p) -> p)) fileGlob ct }
+                grepSearchImpl rootNormalized allowedNormalized pattern (searchPath |> Option.map (fun (FilePath p) -> p)) fileGlob ct }
