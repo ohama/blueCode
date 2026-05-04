@@ -122,6 +122,8 @@ Rendering.renderStep Verbose
 
 `CompositionRoot.bootstrap` is synchronous and touches no network. It returns `AppComponents` with pre-allocated `Lazy<Task<ModelInfo>>` cells. The `/v1/models` probe fires on the first call to `CompleteAsync` per port. If the user targets only 72B, port 8000 is never contacted.
 
+**planSystemPromptSuffix prompt-length invariant:** `defaultSystemPrompt(967)` + `"\n\n"` + `planSystemPromptSuffix(1577)` = 2546 chars. Both strings live in `CompositionRoot.fs`. Phase 36-03: planSystemPromptSuffix expanded with explicit max-10-steps and no-placeholder constraints (T-75/T-76 mitigation); previous values were planSystemPromptSuffix(999) = 1968 total.
+
 ## Runtime Environment
 
 **Single-model canonical mode (Phase 19, 2026-04-27):** Qwen 3.5 122B is the sole

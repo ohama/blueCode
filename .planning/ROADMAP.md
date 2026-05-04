@@ -189,7 +189,7 @@ Continues at 31. Project phase history:
 - 6 phases, ~14-15 plans (2-3 per phase), ~35-50 tests added (parser + dispatcher + integration + 36 fixes)
 - LOC estimate: ~310-400 (Cli only)
 - Bench gate 7/7 PASS preserved throughout
-- Zero changes to: Core/, bench/baseline.json, schema validation, defaultSystemPrompt, planSystemPromptSuffix
+- Zero changes to: Core/, bench/baseline.json, schema validation, defaultSystemPrompt, planSystemPromptSuffix (modified by Phase 36 for T-75/T-76 mitigation)
 - New NuGet: 1 (PrettyPrompt — Key Decision recorded)
 
 ---

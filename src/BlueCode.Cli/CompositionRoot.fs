@@ -99,7 +99,9 @@ let planSystemPromptSuffix: string =
 Your ONLY valid response is action="plan". Respond with EXACTLY this JSON shape:
 {"thought": "<reasoning>", "action": "plan", "input": {"steps": [{"tool": "<tool>", "input": {}, "rationale": "<why>"}], "rationale": "<overall why>"}}
 where each "tool" is one of: read_file|write_file|list_dir|run_shell|edit_file|glob_search|grep_search.
-Constraints: 1-10 steps. Use the minimum steps needed; reserve the full budget only for tasks requiring reads across multiple files before editing. No two adjacent steps may be identical. Do NOT execute — user will approve first.
+Constraints: MAXIMUM 10 steps (HARD LIMIT — plans with 11+ steps are auto-rejected and your turn is wasted). Use the minimum steps needed; reserve the full budget only for tasks requiring reads across multiple files before editing. No two adjacent steps may be identical. Do NOT execute — user will approve first.
+
+Path rules: Every step's input.path (or pattern, or command argument) MUST be a literal file path or filename you have determined from the prompt or from a prior grep_search/glob_search/list_dir step. Do NOT emit placeholder forms such as "<file>", "<discovered_file_X>", "<placeholder>", "filename", "path/to/file". If you do not yet know the exact path, your FIRST step must be the discovery tool (grep_search / glob_search / list_dir) — never a write_file or edit_file with a guessed path.
 
 Example: rename add->sum AND add3->sum3 across Calculator.fs/Main.fs/Tests.fs
 Targets: [add->sum (Calculator.fs def+body, Main.fs, Tests.fs); add3->sum3 (Calculator.fs def, Main.fs, Tests.fs)]
