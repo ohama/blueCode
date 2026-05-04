@@ -136,7 +136,7 @@ let renderHelp : string =
   /sessions          list 10 most-recent sessions
   /resume <id>       switch to a saved session in-place
   /plan              toggle plan-mode on/off; next prompt uses plan-gate when on
-  /edit              open $EDITOR for multi-line input [coming in v2.5]"""
+  /edit              open $EDITOR for multi-line input"""
 
 /// Render the `/status` output. Pure: takes the current Session, ForcedModel option, and MaxModelLen,
 /// returns a multi-line string. NO Spectre markup (CLAUDE.md "Stream separation";

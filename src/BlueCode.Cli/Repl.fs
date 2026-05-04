@@ -178,6 +178,109 @@ let runMultiTurnWithSession
         let mutable lastCode = 0
         let mutable running = true
 
+        // Phase 34 (EDIT-01): shared prompt-dispatch helper. Factored out of the two
+        // `Some (Prompt ...)` arms so the Slash Edit arm can reuse the same
+        // plan-mode-aware dispatch path. Captures mutable cells via closure.
+        let handlePromptTurn (prompt: string) : Task<unit> =
+            task {
+                if planModeActive then
+                    // Phase 33 (SLASH-07): plan-gated turn. Mirrors Program.fs lines 172-256
+                    // (single-turn --plan mode) adapted for in-REPL context.
+                    //
+                    // Differences from Program.fs:
+                    //   - Quit returns to REPL prompt (NOT process exit).
+                    //   - planModeActive auto-disables on Accept (after execute), on Quit,
+                    //     and on rejectCount-exhaustion. Open Question #1+#2 resolution:
+                    //     one-shot semantics; user re-types /plan for next plan-gated turn.
+                    //   - lastCode behaves identically to the standard Prompt arm
+                    //     (130 → 0 mapping for graceful Ctrl+C; otherwise pass through).
+                    let model =
+                        components.Config.ForcedModel
+                        |> Option.defaultValue Qwen122B   // 122B canonical default; matches Program.fs:180
+                    let maxUserRejects = 3                // matches Program.fs:187 (research § Pitfall 7 — local constant OK)
+                    let mutable rejectCount = 0
+                    let mutable currentPrompt = prompt
+                    let mutable turnDone = false
+
+                    while not turnDone && rejectCount < maxUserRejects do
+                        let! planResult =
+                            BlueCode.Core.AgentLoop.runPlanTurn
+                                components.Config
+                                components.LlmClient
+                                model
+                                currentSession.Steps
+                                currentPrompt
+                                CompositionRoot.planSystemPromptSuffix
+                                CancellationToken.None
+
+                        match planResult with
+                        | Error e ->
+                            // runPlanTurn already retried internally (2 attempts).
+                            // Surface the error and abandon this turn; keep REPL alive.
+                            // planModeActive auto-disables — user can re-/plan to retry.
+                            printfn "%s" (renderError e)
+                            planModeActive <- false
+                            turnDone <- true
+                        | Ok plan ->
+                            BlueCode.Cli.PlanGate.render plan
+                            match BlueCode.Cli.PlanGate.promptUser BlueCode.Cli.PlanGate.realKeyReader with
+                            | BlueCode.Cli.PlanGate.Accept ->
+                                // Disable plan-mode BEFORE execute — one-shot semantics
+                                // (Open Question #1 resolution). User re-types /plan for
+                                // the next plan-gated turn.
+                                planModeActive <- false
+                                let! (code, newSteps) =
+                                    runSingleTurn prompt currentSession.Steps components renderMode
+                                let updated =
+                                    { currentSession with
+                                        Steps = currentSession.Steps @ newSteps
+                                        LastActivityAt = DateTimeOffset.UtcNow }
+                                currentSession <- updated
+                                let! saveRes = sessionStore.Save updated CancellationToken.None
+                                match saveRes with
+                                | Ok () -> ()
+                                | Error e ->
+                                    Log.Warning("Session save failed: {Error}", sprintf "%A" e)
+                                    eprintfn "WARNING: session save failed: %A" e
+                                lastCode <- if code = 130 then 0 else code
+                                turnDone <- true
+                            | BlueCode.Cli.PlanGate.Reject ->
+                                rejectCount <- rejectCount + 1
+                                currentPrompt <-
+                                    sprintf "[PLAN REJECTED] The previous plan was rejected by the user. Propose a different plan.\n\n%s" prompt
+                            | BlueCode.Cli.PlanGate.Edit comment ->
+                                rejectCount <- rejectCount + 1
+                                currentPrompt <-
+                                    sprintf "[PLAN EDIT NOTE: %s] Revise the previous plan accordingly.\n\n%s" comment prompt
+                            | BlueCode.Cli.PlanGate.Quit ->
+                                // User abandoned; return to REPL prompt (NOT process exit).
+                                // planModeActive auto-disables (Open Question #2 resolution).
+                                planModeActive <- false
+                                turnDone <- true
+
+                    if not turnDone then
+                        // Loop exited via rejectCount >= maxUserRejects without acceptance.
+                        printfn "Plan-mode: %d rejections without acceptance — abandoning." rejectCount
+                        planModeActive <- false
+                else
+                    let! (code, newSteps) =
+                        runSingleTurn prompt currentSession.Steps components renderMode
+                    // Always update Session.Steps with newSteps (even on failure — partial progress is informative).
+                    let updated =
+                        { currentSession with
+                            Steps = currentSession.Steps @ newSteps
+                            LastActivityAt = DateTimeOffset.UtcNow }
+                    currentSession <- updated
+                    // Save AFTER each turn (whether success or error) so a crash mid-session is recoverable.
+                    let! saveRes = sessionStore.Save updated CancellationToken.None
+                    match saveRes with
+                    | Ok () -> ()
+                    | Error e ->
+                        Log.Warning("Session save failed: {Error}", sprintf "%A" e)
+                        eprintfn "WARNING: session save failed: %A" e
+                    lastCode <- if code = 130 then 0 else code
+            }
+
         while running do
             printf "\nblueCode> "
             let line = Console.ReadLine()  // null on Ctrl+D / EOF
@@ -259,105 +362,33 @@ let runMultiTurnWithSession
                     else
                         printfn "[plan mode off] — returning to direct agent-loop"
                 | Some (Slash Edit) ->
-                    // Phase 34 future-stub. Phase 33 promoted /plan to a real handler;
-                    // /edit remains the sole "not yet implemented" command in v2.5.
-                    printfn "(not yet implemented — coming in a future v2.5 phase)"
-                | Some (Prompt prompt) when planModeActive ->
-                    // Phase 33 (SLASH-07): plan-gated turn. Mirrors Program.fs lines 172-256
-                    // (single-turn --plan mode) adapted for in-REPL context.
+                    // Phase 34 (EDIT-01): /edit opens $EDITOR (or vi) on a tmpfile, reads
+                    // content after the editor exits. Non-empty content is dispatched as
+                    // the next prompt through the same handlePromptTurn used for typed
+                    // prompts (so plan-mode branching is preserved if planModeActive=true
+                    // when /edit is invoked). Empty/whitespace-only content -> "Edit cancelled."
                     //
-                    // Differences from Program.fs:
-                    //   - Quit returns to REPL prompt (NOT process exit).
-                    //   - planModeActive auto-disables on Accept (after execute), on Quit,
-                    //     and on rejectCount-exhaustion. Open Question #1+#2 resolution:
-                    //     one-shot semantics; user re-types /plan for next plan-gated turn.
-                    //   - lastCode behaves identically to the standard Prompt arm
-                    //     (130 → 0 mapping for graceful Ctrl+C; otherwise pass through).
-                    let model =
-                        components.Config.ForcedModel
-                        |> Option.defaultValue Qwen122B   // 122B canonical default; matches Program.fs:180
-                    let maxUserRejects = 3                // matches Program.fs:187 (research § Pitfall 7 — local constant OK)
-                    let mutable rejectCount = 0
-                    let mutable currentPrompt = prompt
-                    let mutable turnDone = false
-
-                    while not turnDone && rejectCount < maxUserRejects do
-                        let! planResult =
-                            BlueCode.Core.AgentLoop.runPlanTurn
-                                components.Config
-                                components.LlmClient
-                                model
-                                currentSession.Steps
-                                currentPrompt
-                                CompositionRoot.planSystemPromptSuffix
-                                CancellationToken.None
-
-                        match planResult with
-                        | Error e ->
-                            // runPlanTurn already retried internally (2 attempts).
-                            // Surface the error and abandon this turn; keep REPL alive.
-                            // planModeActive auto-disables — user can re-/plan to retry.
-                            printfn "%s" (renderError e)
-                            planModeActive <- false
-                            turnDone <- true
-                        | Ok plan ->
-                            BlueCode.Cli.PlanGate.render plan
-                            match BlueCode.Cli.PlanGate.promptUser BlueCode.Cli.PlanGate.realKeyReader with
-                            | BlueCode.Cli.PlanGate.Accept ->
-                                // Disable plan-mode BEFORE execute — one-shot semantics
-                                // (Open Question #1 resolution). User re-types /plan for
-                                // the next plan-gated turn.
-                                planModeActive <- false
-                                let! (code, newSteps) =
-                                    runSingleTurn prompt currentSession.Steps components renderMode
-                                let updated =
-                                    { currentSession with
-                                        Steps = currentSession.Steps @ newSteps
-                                        LastActivityAt = DateTimeOffset.UtcNow }
-                                currentSession <- updated
-                                let! saveRes = sessionStore.Save updated CancellationToken.None
-                                match saveRes with
-                                | Ok () -> ()
-                                | Error e ->
-                                    Log.Warning("Session save failed: {Error}", sprintf "%A" e)
-                                    eprintfn "WARNING: session save failed: %A" e
-                                lastCode <- if code = 130 then 0 else code
-                                turnDone <- true
-                            | BlueCode.Cli.PlanGate.Reject ->
-                                rejectCount <- rejectCount + 1
-                                currentPrompt <-
-                                    sprintf "[PLAN REJECTED] The previous plan was rejected by the user. Propose a different plan.\n\n%s" prompt
-                            | BlueCode.Cli.PlanGate.Edit comment ->
-                                rejectCount <- rejectCount + 1
-                                currentPrompt <-
-                                    sprintf "[PLAN EDIT NOTE: %s] Revise the previous plan accordingly.\n\n%s" comment prompt
-                            | BlueCode.Cli.PlanGate.Quit ->
-                                // User abandoned; return to REPL prompt (NOT process exit).
-                                // planModeActive auto-disables (Open Question #2 resolution).
-                                planModeActive <- false
-                                turnDone <- true
-
-                    if not turnDone then
-                        // Loop exited via rejectCount >= maxUserRejects without acceptance.
-                        printfn "Plan-mode: %d rejections without acceptance — abandoning." rejectCount
-                        planModeActive <- false
+                    // Ctrl+C while editor is open: register a CancelKeyPress handler that
+                    // sets args.Cancel=true so SIGINT does NOT kill blueCode. The editor
+                    // (vi/vim) handles its own SIGINT (cancel -> normal mode); if user
+                    // force-kills the editor, WaitForExit returns and the empty-file path
+                    // produces "Edit cancelled." (research § Pattern 5 simplified handler).
+                    let cancelHandler =
+                        System.ConsoleCancelEventHandler(fun _ args -> args.Cancel <- true)
+                    Console.CancelKeyPress.AddHandler(cancelHandler)
+                    try
+                        let! contentOpt =
+                            BlueCode.Cli.EditCommand.openEditorAsync
+                                BlueCode.Cli.EditCommand.realEditorLauncher
+                        match contentOpt with
+                        | None ->
+                            printfn "Edit cancelled."
+                        | Some content ->
+                            do! handlePromptTurn content
+                    finally
+                        Console.CancelKeyPress.RemoveHandler(cancelHandler)
                 | Some (Prompt prompt) ->
-                    let! (code, newSteps) =
-                        runSingleTurn prompt currentSession.Steps components renderMode
-                    // Always update Session.Steps with newSteps (even on failure — partial progress is informative).
-                    let updated =
-                        { currentSession with
-                            Steps = currentSession.Steps @ newSteps
-                            LastActivityAt = DateTimeOffset.UtcNow }
-                    currentSession <- updated
-                    // Save AFTER each turn (whether success or error) so a crash mid-session is recoverable.
-                    let! saveRes = sessionStore.Save updated CancellationToken.None
-                    match saveRes with
-                    | Ok () -> ()
-                    | Error e ->
-                        Log.Warning("Session save failed: {Error}", sprintf "%A" e)
-                        eprintfn "WARNING: session save failed: %A" e
-                    lastCode <- if code = 130 then 0 else code
+                    do! handlePromptTurn prompt
 
         return lastCode
     }
