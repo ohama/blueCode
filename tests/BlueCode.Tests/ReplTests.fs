@@ -922,4 +922,325 @@ let tests =
               finally
                   try if File.Exists corruptPath then File.Delete corruptPath with _ -> ()
 
+          // ── Phase 33-02: /plan toggle + plan-gate integration tests ─────────────
+
+          testCase "runMultiTurn: '/plan' once toggles plan-mode on; prints '[plan mode on]'; zero LLM calls" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/plan\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-on-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []   // 0 LLM calls expected — toggle is in-process
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0"
+                  Expect.stringContains captured "[plan mode on]" "/plan prints on notification"
+                  Expect.isFalse (captured.Contains("[plan mode off]")) "single /plan does not also print off notification"
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: '/plan' twice toggles plan-mode off; prints both notifications" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/plan\n/plan\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-toggle-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []   // 0 LLM calls expected
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0"
+                  Expect.stringContains captured "[plan mode on]" "first /plan prints on notification"
+                  Expect.stringContains captured "[plan mode off]" "second /plan prints off notification"
+                  // Order matters: on must precede off.
+                  let onIdx  = captured.IndexOf("[plan mode on]")
+                  let offIdx = captured.IndexOf("[plan mode off]")
+                  Expect.isLessThan onIdx offIdx "[plan mode on] precedes [plan mode off] in stdout"
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: '/status' after '/plan' shows 'plan-mode: on' line" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/plan\n/status\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-status-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = Some Qwen122B }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0"
+                  Expect.stringContains captured "plan-mode: on" "status shows plan-mode line when active"
+                  Expect.stringContains captured "(next prompt uses plan-gate)" "descriptive suffix included"
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: plan-mode + Accept executes turn via runSingleTurn and auto-disables plan-mode" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              // Script: /plan → enable; "build feature X" → triggers plan-gate; "a\n" → Accept;
+              //         /status → confirm plan-mode auto-disabled (no "plan-mode" line); /exit
+              use stdinReader = new StringReader("/plan\nbuild feature X\na\n/status\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+              // Reset Spectre.Console's singleton after redirecting Console.Out.
+              // AnsiConsole lazily caches Console.Out at first use; if a prior test's StringWriter
+              // was already cached and then disposed, AnsiConsole.Write(table) would throw
+              // ObjectDisposedException. Creating a fresh IAnsiConsole here re-ties it to the
+              // current Console.Out (our stdoutWriter).
+              let originalSpectreConsole = Spectre.Console.AnsiConsole.Console
+              Spectre.Console.AnsiConsole.Console <- Spectre.Console.AnsiConsole.Create(Spectre.Console.AnsiConsoleSettings())
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-accept-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              // Build a minimal valid 1-step Plan that PlanValidator will accept.
+              // 1 step keeps the table render simple; read_file is a safe action that
+              // PlanValidator does NOT execute (Plan validation is structural, not behavioral).
+              let plannedStep =
+                  BlueCode.Tests.MockHelpers.makePlannedStep
+                      "read_file"
+                      "{\"path\":\"README.md\"}"
+                      "inspect README to understand the project"
+              let plan : Plan =
+                  { Steps = [ plannedStep ]
+                    Rationale = "examine README first to scope the requested feature" }
+
+              let llmResponses = [
+                  BlueCode.Tests.MockHelpers.makePlanResponse "let me plan this" plan       // runPlanTurn consumes this
+                  makeMockResponse "executing accepted plan" (FinalAnswer "feature X built") // runSingleTurn consumes this
+              ]
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm llmResponses
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 5; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0"
+                  // Plan rationale was rendered (PlanGate.render uses printfn for the rationale).
+                  Expect.stringContains captured "Proposed plan:" "PlanGate rendered the plan rationale"
+                  Expect.stringContains captured "examine README" "plan rationale text echoed"
+                  // Accept keystroke acknowledged.
+                  Expect.stringContains captured "Accepted." "PlanGate.promptUser printed Accept confirmation"
+                  // Final answer from the executed turn appears.
+                  Expect.stringContains captured "feature X built" "FinalAnswer from runSingleTurn printed"
+                  // After Accept, planModeActive auto-disabled — subsequent /status shows NO plan-mode line.
+                  // The captured stdout has both /status and the usual fields. Check the LAST occurrence
+                  // of the status block: the substring after "feature X built" represents post-Accept
+                  // /status output and must NOT contain "plan-mode".
+                  let finalAnswerIdx = captured.IndexOf("feature X built")
+                  Expect.isGreaterThan finalAnswerIdx 0 "final answer found in captured stdout"
+                  let postAccept = captured.Substring(finalAnswerIdx)
+                  Expect.isFalse (postAccept.Contains("plan-mode"))
+                      "post-Accept /status output does NOT include 'plan-mode' line (planModeActive auto-disabled)"
+              finally
+                  Spectre.Console.AnsiConsole.Console <- originalSpectreConsole
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: plan-mode + Quit returns to REPL and auto-disables; process does NOT exit on Quit" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              // Script: /plan → enable; "tricky prompt" → triggers plan-gate; "q\n" → Quit;
+              //         /status → if REPL is alive, this prints; /exit → graceful exit
+              use stdinReader = new StringReader("/plan\ntricky prompt\nq\n/status\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+              // Reset Spectre.Console singleton so AnsiConsole.Write(table) writes to
+              // the current redirected Console.Out (stdoutWriter) rather than a stale writer
+              // that may have been cached and disposed by a prior test (see test 4 comment).
+              let originalSpectreConsole = Spectre.Console.AnsiConsole.Console
+              Spectre.Console.AnsiConsole.Console <- Spectre.Console.AnsiConsole.Create(Spectre.Console.AnsiConsoleSettings())
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-quit-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              // Same minimal Plan as Test 4. Only one LLM call expected (no execute after Quit).
+              let plannedStep =
+                  BlueCode.Tests.MockHelpers.makePlannedStep
+                      "read_file"
+                      "{\"path\":\"README.md\"}"
+                      "examine README"
+              let plan : Plan =
+                  { Steps = [ plannedStep ]
+                    Rationale = "investigate the codebase before acting" }
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm [ BlueCode.Tests.MockHelpers.makePlanResponse "thinking" plan ]
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 5; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "REPL exited cleanly via /exit (NOT via plan-gate Quit)"
+                  // Plan was rendered.
+                  Expect.stringContains captured "Proposed plan:" "PlanGate rendered the plan"
+                  // Quit keystroke acknowledged.
+                  Expect.stringContains captured "Quit." "PlanGate.promptUser printed Quit confirmation"
+                  // After Quit, the REPL accepted /status — confirming process did NOT exit.
+                  // Locate the Quit line and assert "session:" appears AFTER it (status output post-Quit).
+                  let quitIdx = captured.IndexOf("Quit.")
+                  Expect.isGreaterThan quitIdx 0 "Quit. confirmation found"
+                  let postQuit = captured.Substring(quitIdx)
+                  Expect.stringContains postQuit "session:" "/status executed AFTER plan-gate Quit (REPL alive)"
+                  // planModeActive auto-disabled: post-Quit /status has NO "plan-mode" line.
+                  Expect.isFalse (postQuit.Contains("plan-mode"))
+                      "post-Quit /status output does NOT include 'plan-mode' line (planModeActive auto-disabled)"
+              finally
+                  Spectre.Console.AnsiConsole.Console <- originalSpectreConsole
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: plan-mode + runPlanTurn error prints renderError; auto-disables; REPL stays alive" <| fun () ->
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              // Script: /plan → enable; "broken prompt" → runPlanTurn fails; /status → REPL alive;
+              //         /exit → graceful
+              use stdinReader = new StringReader("/plan\nbroken prompt\n/status\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-err-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm [ Error (LlmUnreachable ("http://localhost:8001", "test-induced failure")) ]
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 5; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "REPL exited cleanly via /exit (NOT via plan-gate error)"
+                  // renderError(LlmUnreachable) appears (Rendering.fs:103: "LLM unreachable (...)").
+                  Expect.stringContains captured "LLM unreachable" "renderError(LlmUnreachable) printed"
+                  Expect.stringContains captured "test-induced failure" "error detail echoed"
+                  // After the error, /status must execute — REPL alive.
+                  let errIdx = captured.IndexOf("LLM unreachable")
+                  Expect.isGreaterThan errIdx 0 "LLM unreachable line found"
+                  let postErr = captured.Substring(errIdx)
+                  Expect.stringContains postErr "session:" "/status executed AFTER plan-gate error (REPL alive)"
+                  // planModeActive auto-disabled.
+                  Expect.isFalse (postErr.Contains("plan-mode"))
+                      "post-error /status does NOT include 'plan-mode' line (planModeActive auto-disabled)"
+              finally
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
           ] // end testSequenced
