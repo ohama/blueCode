@@ -86,6 +86,11 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 5. Editor 호출 중 Ctrl+C 처리 — child process 종료 후 REPL 으로 복귀 (current turn 영향 없음)
 6. Bench gate 7/7 PASS preserved
 
+**Plans:** 2 plans (created 2026-05-05 via /gsd:plan-phase 34)
+
+- [ ] 34-01-port-and-integration-PLAN.md — IEditorLauncher port (mirrors IKeyReader) + EditCommand.fs (openEditorAsync + atexit ProcessExit) + handlePromptTurn refactor in Repl.fs + Slash Edit arm + renderHelp delta + adapt 2 existing tests (Wave 1)
+- [ ] 34-02-behavior-tests-and-bench-PLAN.md — 5 EditCommandTests mock-launcher unit tests + editorLauncherOverride seam in Repl.fs + 2 ReplTests integration tests (/edit dispatch + cancel paths) + bench gate 7/7 (Wave 2)
+
 ### Phase 36: Manual test fixes ✓ (completed 2026-05-04)
 
 **Goal:** Address concrete bugs surfaced by 2026-05-04 manual test round (`documentation/manual-test-guide.md`, 65/82 tests executed; 4 FAIL + 5 MIXED). Cli-layer + doc only. Core untouched. Bench gate 7/7 PASS preserved.
