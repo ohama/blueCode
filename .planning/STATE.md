@@ -10,14 +10,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 36 (manual-test-fixes) — IN PROGRESS (2/3 plans complete)
-Plan: 2 of 3 complete (36-02 allow-paths)
-Status: Phase 36 Plan 02 complete; --allow-paths CLI flag shipped; 344 tests passing.
-Last activity: 2026-05-04 — Completed 36-02-allow-paths-PLAN.md (+8 tests, T-16..T-19/T-100/T-101 fix).
+Phase: 36 (manual-test-fixes) — COMPLETE (3/3 plans complete)
+Plan: 3 of 3 complete (36-03 prompt-suffix-and-doc)
+Status: Phase 36 complete; planSystemPromptSuffix tightened (T-75/T-76); --allow-paths docs updated; bench gate 7/7 PASS; 345 tests passing.
+Last activity: 2026-05-04 — Completed 36-03-prompt-suffix-and-doc-PLAN.md (+1 test, +578 chars suffix, bench gate 7/7).
 
-Next: Plan 36-03 (PlanValidator UX + bench gate).
+Next: /gsd:verify-work 36 UAT gate; then Phases 33-35 (REPL slash-cmd bundling etc.) pending.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32 COMPLETE; Phase 36 1/3 complete; Phases 33-36 pending)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 36 COMPLETE; Phases 33-35 pending)**
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -51,8 +51,8 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Single-model 122B canonical** (Phase 19) — `blueCode "..."` defaults to 122B; 35B requires `--with-35b` opt-in flag AND service loaded.
 - **10-step PLAN-04 ceiling** (Phase 22-01) — `PlanValidator.MaxPlanSteps = 10` + `AgentConfig.MaxLoops = 10` (independent constants).
 - **P1 enumeration directive in `defaultSystemPrompt`** (Phase 27-01) — Conditional clause "When the task requires renaming or restructuring multiple symbols..." applies to BOTH agent-loop and plan-mode invocations. Char count: 967.
-- **P2 few-shot example in `planSystemPromptSuffix`** (Phase 24-02; plan-mode-only) — 3-line Example/Targets/Steps block. Suffix char count: 999.
-- **Combined plan-mode prompt char count INVARIANT post-v2.3** — defaultSystemPrompt(967) + "\n\n" + planSystemPromptSuffix(999) = 1968 chars.
+- **P2 few-shot example in `planSystemPromptSuffix`** (Phase 24-02; plan-mode-only) — 3-line Example/Targets/Steps block. Suffix char count: 1577 (was 999 pre-Phase 36-03).
+- **Combined plan-mode prompt char count INVARIANT post-Phase 36-03** — defaultSystemPrompt(967) + "\n\n" + planSystemPromptSuffix(1577) = 2546 chars (was 1968 pre-Phase 36-03; Phase 36-03 added MAXIMUM 10 HARD LIMIT + Path rules clauses).
 - **PlanValidator pre-flight `checkRenameTargetsEnumerated`** (Phase 25-01) — Interpretation B detail-string encoding; PlanValidator.fs:108; bound at validatePlan:143; called from AgentLoop.fs:484. Plan-mode only.
 - **Plan-mode vs agent-loop distinction is load-bearing** (v2.3 lesson; preserved through v2.4) — `defaultSystemPrompt` for ALL invocations; `planSystemPromptSuffix` only when `--plan`; `PlanValidator.checkRenameTargetsEnumerated` only in `runPlanTurn`.
 - **Mandatory `launchctl kickstart` pre-flight for evaluations** (v2.3 Phase 26 Diagnostic D; reused in v2.4 Phase 28-04) — `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears KV cache contamination.
