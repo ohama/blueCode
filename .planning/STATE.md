@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 36 (manual-test-fixes) — COMPLETE (3/3 plans complete)
-Plan: 3 of 3 complete (36-03 prompt-suffix-and-doc)
-Status: Phase 36 complete; planSystemPromptSuffix tightened (T-75/T-76); --allow-paths docs updated; bench gate 7/7 PASS; 345 tests passing.
-Last activity: 2026-05-04 — Completed 36-03-prompt-suffix-and-doc-PLAN.md (+1 test, +578 chars suffix, bench gate 7/7).
+Phase: 33 (slash-plan-toggle) — IN PROGRESS (1/2 plans complete)
+Plan: 1 of 2 complete (33-01 toggle-and-wiring)
+Status: Phase 33 Plan 01 complete; /plan toggle wired + plan-gate inline loop + renderStatus 4-arg; 346 tests passing; Core untouched.
+Last activity: 2026-05-05 — Completed 33-01-toggle-and-wiring-PLAN.md (+1 test, renderStatus 4-arg, /plan live dispatch).
 
-Next: /gsd:verify-work 36 UAT gate; then Phases 33-35 (REPL slash-cmd bundling etc.) pending.
+Next: Plan 33-02 (behavior tests + bench gate) — behavior integration tests for /plan toggle on/off, /status plan-mode display, plan-gate Accept/Quit/auto-disable.
 
 Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 36 COMPLETE; Phases 33-35 pending)**
 
@@ -67,6 +67,9 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Empty-arg guard (Resume "") matched before general (Resume id)** (Phase 32-02) — Prevents empty SessionId from reaching `sessionStore.Load`; produces "usage: /resume <session-id>" hint instead.
 - **Slash dispatcher extension pattern** (Phase 32-02) — Add new arms ABOVE Prompt arm; slim future-stub by removing handled commands; use `printfn` not `AnsiConsole.MarkupLine`; use `let!` inside `task {}` CE for async calls. Phases 33+34 follow this same pattern.
 - **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01, commit `a6159c4`); orphan-grep-zero-match-exit-1 (v2.3 27-02, commit `9f8e06e`); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
+- **One-shot plan-mode semantics (Phase 33-01)** — `planModeActive` auto-disables after Accept+Execute, Quit, AND rejectCount exhaustion. User must re-type `/plan` for next plan-gated turn. Avoids "stuck in plan-review loop" surprise.
+- **Plan-gate Quit NEVER sets running <- false (Phase 33-01)** — Quit in the plan-gate inline loop sets `planModeActive <- false` + `turnDone <- true` only; returns to REPL prompt. Only `Slash Exit` and `null` (Ctrl+D) set `running <- false`.
+- **Fully-qualified BlueCode.Cli.PlanGate.* in Repl.fs (Phase 33-01)** — No new `open` directive; fully-qualified names (`BlueCode.Cli.PlanGate.render`, etc.) avoid module-alias conflict and match `BlueCode.Core.AgentLoop.runPlanTurn` style.
 - **F# fixture infrastructure** (v2.4 Phase 28) — `bench/fixtures/fs_idiomatic/` with 3 fixture pairs; `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` lines 328-391. Reusable for future F# coding-quality work. Research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate.
 - **FSI fixture skeleton pattern** (v2.4 Phase 28-02) — `.fs` skeletons use direct top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code.
 - **Sum-then-scale band table aggregate (v2.4 Phase 28-04)** — For multi-fixture rubric scoring, band table beats round(average) for outlier robustness.
@@ -80,7 +83,7 @@ Stable patterns established across milestones (load-bearing for next session):
 
 ### Pending Todos
 
-- **T-75 / T-76 human verification** (Phase 36 verifier output, 2026-05-04T18:25Z) — `planSystemPromptSuffix` MAXIMUM-10 + no-placeholder constraints are in place structurally; live model compliance under those constraints requires manual REPL invocation per `36-VERIFICATION.md` Human Verification section. Run when convenient before planning Phase 33.
+- **T-75 / T-76 human verification** (Phase 36 verifier output, 2026-05-04T18:25Z) — `planSystemPromptSuffix` MAXIMUM-10 + no-placeholder constraints are in place structurally; live model compliance under those constraints requires manual REPL invocation per `36-VERIFICATION.md` Human Verification section. Run when convenient.
 
 v2.5 scoping for remaining phases (33, 34, 35) is locked to existing ROADMAP.md (slash plan toggle / `/edit` / PrettyPrompt readline).
 
@@ -99,10 +102,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-04T18:25:00Z
-Stopped at: Phase 36 verifier PASSED 9/9 must-haves; T-75/T-76 surfaced for human verification (see Pending Todos).
+Last session: 2026-05-05T22:55:25Z
+Stopped at: Phase 33 Plan 01 complete — /plan toggle + plan-gate inline loop + renderStatus 4-arg; 346 tests passing.
 Resume file: None
-Next workflow trigger: `/gsd:plan-phase 33` (Phase 33 slash plan toggle — next per ROADMAP). Optionally run T-75/T-76 manual verification first.
+Next workflow trigger: `/gsd:execute-phase 33` (Plan 33-02 behavior tests + bench gate — already planned).
 
 ## Empirical Baselines (post-v2.4)
 
