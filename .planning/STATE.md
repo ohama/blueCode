@@ -11,9 +11,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
 Phase: 32 (slash-session-commands) — in progress
-Plan: 1 of 2 complete
-Status: In progress — Plan 32-01 done; Plan 32-02 ready to execute
-Last activity: 2026-04-30 — Completed 32-01-data-and-rendering-PLAN.md (SessionMeta + listRecent + renderSessions; 316→328 tests)
+Plan: 2 of 2 complete
+Status: In progress — Plans 32-01 + 32-02 done; bench gate 7/7 PASS; ready for /gsd:verify-work 32
+Last activity: 2026-05-04 — Completed 32-02-repl-dispatch-PLAN.md (/sessions + /resume live dispatcher arms; 328→333 tests; bench gate 7/7 PASS)
 
 Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phase 31 COMPLETE; Phase 32 1/2 plans done)**
 
@@ -60,6 +60,10 @@ Stable patterns established across milestones (load-bearing for next session):
 - **listRecent NOT on ISessionStore** (Phase 32-01) — `listRecent : int -> SessionMeta list` is a Cli-layer module-level function in `FileSessionStore.fs`, NOT an ISessionStore member. ISessionStore stays frozen at Save + Load (Core purity invariant).
 - **SessionMeta NOT [<CLIMutable>]** (Phase 32-01) — Plain F# domain record (Id, StartedAt, TurnCount, FirstPromptExcerpt); CLIMutable is reserved for JSON DTOs (SessionHeader, TurnEnvelope). Two-level excerpt truncation: listRecent caps at 80 chars, renderSessions display column caps at 40 chars + "...".
 - **"first thought" column label in renderSessions** (Phase 32-01) — User prompt not stored in jsonl; first envelope first step Thought is best proxy. Column labeled "first thought" not "first prompt". Research § Open Question #1 resolution.
+- **No Save on /resume** (Phase 32-02) — `FileSessionStore.Save` creates `.jsonl` lazily on first write; loaded session is already on disk; saving on resume would write a duplicate envelope. Per-Prompt-turn Save (inside Prompt arm) handles persistence from next user prompt onward.
+- **currentSession mutable rebind is the sole in-place switch** (Phase 32-02) — `currentSession <- loaded` is all that's needed; next iteration reads `currentSession.Steps` directly as priorSteps argument. No separate priorSteps variable exists.
+- **Empty-arg guard (Resume "") matched before general (Resume id)** (Phase 32-02) — Prevents empty SessionId from reaching `sessionStore.Load`; produces "usage: /resume <session-id>" hint instead.
+- **Slash dispatcher extension pattern** (Phase 32-02) — Add new arms ABOVE Prompt arm; slim future-stub by removing handled commands; use `printfn` not `AnsiConsole.MarkupLine`; use `let!` inside `task {}` CE for async calls. Phases 33+34 follow this same pattern.
 - **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01, commit `a6159c4`); orphan-grep-zero-match-exit-1 (v2.3 27-02, commit `9f8e06e`); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
 - **F# fixture infrastructure** (v2.4 Phase 28) — `bench/fixtures/fs_idiomatic/` with 3 fixture pairs; `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` lines 328-391. Reusable for future F# coding-quality work. Research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate.
 - **FSI fixture skeleton pattern** (v2.4 Phase 28-02) — `.fs` skeletons use direct top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code.
@@ -87,10 +91,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-04-30T19:23:45Z
-Stopped at: Completed 32-01-data-and-rendering-PLAN.md (Plan 32-01 complete; SessionMeta + listRecent + renderSessions)
+Last session: 2026-05-04T15:20:30Z
+Stopped at: Completed 32-02-repl-dispatch-PLAN.md (Plan 32-02 complete; /sessions + /resume live; bench gate 7/7 PASS; 333 tests)
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 32` for Plan 32-02 (Repl integration — /sessions dispatch arm)
+Next workflow trigger: `/gsd:verify-work 32` UAT gate
 
 ## Empirical Baselines (post-v2.4)
 
