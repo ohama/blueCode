@@ -10,14 +10,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 33 (slash-plan-toggle) — IN PROGRESS (1/2 plans complete)
-Plan: 1 of 2 complete (33-01 toggle-and-wiring)
-Status: Phase 33 Plan 01 complete; /plan toggle wired + plan-gate inline loop + renderStatus 4-arg; 346 tests passing; Core untouched.
-Last activity: 2026-05-05 — Completed 33-01-toggle-and-wiring-PLAN.md (+1 test, renderStatus 4-arg, /plan live dispatch).
+Phase: 33 (slash-plan-toggle) — COMPLETE (2/2 plans complete)
+Plan: 2 of 2 complete (33-02 behavior-tests-and-bench)
+Status: Phase 33 complete. /plan toggle live + plan-gate inline loop + renderStatus 4-arg + 6 behavior integration tests; 352 tests passing; bench gate 7/7 PASS; Core untouched.
+Last activity: 2026-05-05 — Completed 33-02-behavior-tests-and-bench-PLAN.md (+6 ReplTests; bench gate 7/7 PASS; smoke verified).
 
-Next: Plan 33-02 (behavior tests + bench gate) — behavior integration tests for /plan toggle on/off, /status plan-mode display, plan-gate Accept/Quit/auto-disable.
+Next: `/gsd:verify-work 33` UAT gate. Then Phase 34 (/edit multi-line input) or Phase 35 (PrettyPrompt readline).
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 36 COMPLETE; Phases 33-35 pending)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 36 COMPLETE; Phases 34-35 pending)**
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -70,6 +70,7 @@ Stable patterns established across milestones (load-bearing for next session):
 - **One-shot plan-mode semantics (Phase 33-01)** — `planModeActive` auto-disables after Accept+Execute, Quit, AND rejectCount exhaustion. User must re-type `/plan` for next plan-gated turn. Avoids "stuck in plan-review loop" surprise.
 - **Plan-gate Quit NEVER sets running <- false (Phase 33-01)** — Quit in the plan-gate inline loop sets `planModeActive <- false` + `turnDone <- true` only; returns to REPL prompt. Only `Slash Exit` and `null` (Ctrl+D) set `running <- false`.
 - **Fully-qualified BlueCode.Cli.PlanGate.* in Repl.fs (Phase 33-01)** — No new `open` directive; fully-qualified names (`BlueCode.Cli.PlanGate.render`, etc.) avoid module-alias conflict and match `BlueCode.Core.AgentLoop.runPlanTurn` style.
+- **Spectre.Console AnsiConsole reset in plan-gate REPL tests (Phase 33-02)** — `PlanGate.render` calls `AnsiConsole.Write(table)` which lazily caches `Console.Out` on first use. In `testSequenced` tests that redirect `Console.Out`, the cached `SyncTextWriter` may point to a prior test's disposed `StringWriter`, causing `ObjectDisposedException`. Fix: before each test that exercises `PlanGate.render` through the REPL loop, call `Spectre.Console.AnsiConsole.Console <- Spectre.Console.AnsiConsole.Create(Spectre.Console.AnsiConsoleSettings())` after `Console.SetOut(stdoutWriter)`, then restore in `finally`. This re-ties Spectre to the live `stdoutWriter`.
 - **F# fixture infrastructure** (v2.4 Phase 28) — `bench/fixtures/fs_idiomatic/` with 3 fixture pairs; `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` lines 328-391. Reusable for future F# coding-quality work. Research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate.
 - **FSI fixture skeleton pattern** (v2.4 Phase 28-02) — `.fs` skeletons use direct top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code.
 - **Sum-then-scale band table aggregate (v2.4 Phase 28-04)** — For multi-fixture rubric scoring, band table beats round(average) for outlier robustness.
@@ -102,10 +103,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-05T22:55:25Z
-Stopped at: Phase 33 Plan 01 complete — /plan toggle + plan-gate inline loop + renderStatus 4-arg; 346 tests passing.
+Last session: 2026-05-05T23:09:31Z
+Stopped at: Phase 33 complete — 33-02 behavior tests + bench gate; 352 tests passing; bench gate 7/7 PASS.
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 33` (Plan 33-02 behavior tests + bench gate — already planned).
+Next workflow trigger: `/gsd:verify-work 33` (Phase 33 UAT gate).
 
 ## Empirical Baselines (post-v2.4)
 
