@@ -8,6 +8,8 @@ files_modified:
   - src/BlueCode.Cli/CompositionRoot.fs
   - documentation/manual-test-guide.md
   - CLAUDE.md
+  - .planning/ROADMAP.md
+  - tests/BlueCode.Tests/CompositionRootTests.fs
 autonomous: true
 
 must_haves:
@@ -16,6 +18,8 @@ must_haves:
     - "planSystemPromptSuffix contains an explicit 'no placeholder paths' constraint listing the placeholder forms (e.g., '<file>', '<discovered_file>', 'placeholder') that the model must NOT emit"
     - "Updated planSystemPromptSuffix is non-empty, syntactically valid F# triple-quoted string; build succeeds"
     - "CLAUDE.md prompt-length invariant comment reflects the new char count of planSystemPromptSuffix (e.g., update '999' and '1968' if those numbers changed)"
+    - "ROADMAP.md Stats Target line `Zero changes to: ... planSystemPromptSuffix` is updated to acknowledge the Phase 36-03 exception (e.g., `planSystemPromptSuffix (modified by Phase 36 for T-75/T-76 mitigation)`)"
+    - "CompositionRootTests.fs has Expect.stringContains assertions proving planSystemPromptSuffix contains the literal strings 'MAXIMUM 10' and 'placeholder' so future prompt-suffix edits cannot silently remove the T-75/T-76 mitigation clauses"
     - "manual-test-guide.md T-16/T-17/T-18/T-19 commands include `--allow-paths /tmp/bc-test` so the next manual round PASSes"
     - "manual-test-guide.md T-100/T-101 commands include `--allow-paths /tmp/bc-e2e`"
     - "manual-test-guide.md T-100 result section is updated to reflect the Phase 36 research finding: no code bug, FinalAnswer step is structurally StepSuccess [ok], 'hallucinated success' is model behaviour after path-block; the doc fix uses --allow-paths to make the path-block disappear in the first place"
@@ -34,6 +38,13 @@ must_haves:
     - path: "CLAUDE.md"
       provides: "Updated prompt-length invariant numbers (if changed)"
       contains: "planSystemPromptSuffix"
+    - path: ".planning/ROADMAP.md"
+      provides: "Stats Target Zero-changes line updated to note the Phase 36-03 planSystemPromptSuffix exception"
+      contains: "Phase 36"
+    - path: "tests/BlueCode.Tests/CompositionRootTests.fs"
+      provides: "Regression guard asserting planSystemPromptSuffix contains 'MAXIMUM 10' and 'placeholder'"
+      contains: "MAXIMUM 10"
+      contains_2: "placeholder"
   key_links:
     - from: "src/BlueCode.Cli/CompositionRoot.fs (planSystemPromptSuffix)"
       to: "src/BlueCode.Cli/Program.fs (line 191 — passes suffix to runPlanTurn)"
@@ -241,10 +252,59 @@ Also add a brief note in the same paragraph:
 DO NOT edit `.planning/STATE.md` directly — it's the project history record; let the next
 session-end procedure update it.
 
-**Step 2.4 — Commit:**
+**Step 2.4 — Update ROADMAP.md Stats Target line:**
+
+The roadmap's `## Stats Target` section currently asserts `Zero changes to: ... planSystemPromptSuffix`. Phase 36-03 modifies that string. Locate the bullet (`grep -n "Zero changes to" .planning/ROADMAP.md`, expected line ~192) and replace:
 
 ```
-git add src/BlueCode.Cli/CompositionRoot.fs CLAUDE.md
+- Zero changes to: Core/, bench/baseline.json, schema validation, defaultSystemPrompt, planSystemPromptSuffix
+```
+
+WITH:
+
+```
+- Zero changes to: Core/, bench/baseline.json, schema validation, defaultSystemPrompt, planSystemPromptSuffix (modified by Phase 36 for T-75/T-76 mitigation)
+```
+
+This is a single-line edit acknowledging the exception. The sentinel text "modified by Phase 36" makes the exception searchable.
+
+**Step 2.5 — Add regression-guard unit test for prompt-suffix content:**
+
+`tests/BlueCode.Tests/CompositionRootTests.fs` already exists, is registered in `BlueCode.Tests.fsproj` (Compile Include line 22), and is in `RouterTests.rootTests` (line 107). NO fsproj or RouterTests changes needed.
+
+Append a NEW test case INSIDE the existing `tests` testList. Locate the closing `]` of the existing testList (currently line 44 — closes after the `bootstrap SystemPrompt mentions all 8 actions` testCase). Insert just BEFORE that closing `]`:
+
+```fsharp
+          testCase "planSystemPromptSuffix contains Phase 36-03 max-10 + no-placeholder regression markers"
+          <| fun _ ->
+              // Phase 36-03 (T-75/T-76 mitigation): the suffix MUST retain these literal
+              // strings. AgentLoop.buildCorrection (Core, immutable) cannot enforce them; this
+              // assertion is the only gate against silent removal during future prompt tuning.
+              let s = planSystemPromptSuffix
+              Expect.stringContains s "MAXIMUM 10" "T-75 mitigation: HARD LIMIT max-10-steps clause must remain"
+              Expect.stringContains s "placeholder" "T-76 mitigation: no-placeholder clause must remain"
+```
+
+Order INSIDE the testList: append AFTER the `bootstrap SystemPrompt mentions all 8 actions` testCase (so it becomes the third testCase). Verify by grepping after the edit:
+
+```
+grep -c "MAXIMUM 10\|placeholder" tests/BlueCode.Tests/CompositionRootTests.fs
+```
+Expected output: `≥2` (one occurrence each in the `Expect.stringContains` calls).
+
+Build + run the test alone first to verify it passes:
+
+```
+dotnet build tests/BlueCode.Tests/BlueCode.Tests.fsproj
+dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj -- --filter-test-case "planSystemPromptSuffix contains Phase 36-03"
+```
+
+Expected: `1 passed, 0 failed`. If failed, `planSystemPromptSuffix` (Step 2.1) does not actually contain the literal strings — return to Step 2.1 and verify the new clauses use those exact substrings.
+
+**Step 2.6 — Commit:**
+
+```
+git add src/BlueCode.Cli/CompositionRoot.fs CLAUDE.md .planning/ROADMAP.md tests/BlueCode.Tests/CompositionRootTests.fs
 git commit -m "feat(36-03): tighten planSystemPromptSuffix with explicit max-10 + no-placeholder constraints (T-75/T-76)
 
 T-75 root cause: model emits 11+ step plans then second retry returns
@@ -276,15 +336,19 @@ Core untouched: git diff master -- src/BlueCode.Core/ wc -l = 0."
 3. `dotnet build src/BlueCode.Cli/BlueCode.Cli.fsproj` exits 0.
 4. `grep -n "OVERRIDE — PLAN MODE\|Targets: \[" src/BlueCode.Cli/CompositionRoot.fs` confirms preamble + few-shot block still present (regression guard).
 5. `grep -n "planSystemPromptSuffix" CLAUDE.md` shows the updated invariant numbers.
-6. `git diff master -- src/BlueCode.Core/ | wc -l` outputs `0`.
+6. `grep -n "modified by Phase 36" .planning/ROADMAP.md` shows the Stats Target exception note.
+7. `dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj 2>&1 | grep "MAXIMUM 10\|planSystemPromptSuffix contains Phase 36"` shows the new test ran (or `tail -10` shows total +1 from baseline).
+8. `git diff master -- src/BlueCode.Core/ | wc -l` outputs `0`.
   </verify>
   <done>
 - [x] planSystemPromptSuffix has max-10-steps HARD LIMIT clause.
-- [x] planSystemPromptSuffix has Path rules / no-placeholder clause.
+- [x] planSystemPromptSuffix has Path rules / no-placeholder clause (containing literal "MAXIMUM 10" and "placeholder" substrings asserted in CompositionRootTests).
 - [x] Few-shot Example block preserved verbatim.
 - [x] Build clean.
 - [x] CLAUDE.md prompt-length invariant updated.
-- [x] Single atomic commit `feat(36-03): tighten planSystemPromptSuffix ...`.
+- [x] ROADMAP.md Stats Target line annotated with the Phase 36 exception.
+- [x] CompositionRootTests.fs has 1 new regression-guard test (Expect.stringContains MAXIMUM 10 + placeholder); existing tests unchanged.
+- [x] Single atomic commit `feat(36-03): tighten planSystemPromptSuffix ...` (stages CompositionRoot.fs + CLAUDE.md + ROADMAP.md + CompositionRootTests.fs).
 - [x] Core untouched.
   </done>
 </task>
@@ -597,9 +661,9 @@ Expected:
 dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj 2>&1 | tail -10
 ```
 
-Expected: 0 failures; total test count = pre-Phase-36-baseline (333) + 3 (36-01) + 8 (36-02) + 0 (36-03 has no new tests) = 344.
+Expected: 0 failures; total test count = pre-Phase-36-baseline (333) + 3 (36-01) + 8 (36-02) + 1 (36-03 regression guard) = 345.
 
-NOTE: total test count delta = +11 (within phase target +7..+12, satisfying ROADMAP success
+NOTE: total test count delta = +12 (within phase target +7..+12, satisfying ROADMAP success
 criterion 8).
 
 **Step 4.5 — Commit any incidental files (if any):**
@@ -615,7 +679,7 @@ gate run.
   <verify>
 1. `bash bench/run.sh --gate; echo $?` shows exit code `0` and final line `GATE PASS (7/7)`.
 2. `git diff master -- src/BlueCode.Core/ | wc -l` outputs `0` (cumulative phase invariant).
-3. `dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj 2>&1 | tail -5` shows 0 failures, total count delta +11 from pre-phase baseline.
+3. `dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj 2>&1 | tail -5` shows 0 failures, total count delta +12 from pre-phase baseline.
 4. `bash scripts/check-no-async.sh` exits 0 (no async {} introduced anywhere in Cli either).
 5. `git log --oneline master..HEAD | wc -l` shows 5-7 commits (matching the per-plan commit estimates).
   </verify>
@@ -652,8 +716,8 @@ Final phase-level gate (after all 4 tasks):
 - [ ] manual-test-guide.md top-of-file blockquote explains --allow-paths requirement for /tmp tests.
 - [ ] Bench gate `bash bench/run.sh --gate` PASS 7/7.
 - [ ] Cumulative `git diff master -- src/BlueCode.Core/` empty.
-- [ ] Cumulative test count delta = +11 (within phase target +7~12).
-- [ ] 2 atomic commits in this plan: `feat(36-03): tighten planSystemPromptSuffix ...`, `docs(36-03): update manual-test-guide ...`.
+- [ ] Cumulative test count delta = +12 (within phase target +7~12).
+- [ ] 2 atomic commits in this plan: `feat(36-03): tighten planSystemPromptSuffix ...` (stages CompositionRoot.fs + CLAUDE.md + ROADMAP.md + CompositionRootTests.fs), `docs(36-03): update manual-test-guide ...`.
 
 Phase-level success criteria (mirror ROADMAP §Phase 36 success criteria):
 1. T-14 invariant satisfied — `*.fsproj` enumerates 3 fsproj files (Plan 36-01).
@@ -663,7 +727,7 @@ Phase-level success criteria (mirror ROADMAP §Phase 36 success criteria):
 5. T-16/17/18/19/100/101 unblock with `--allow-paths` (Plan 36-02 + doc updates here).
 6. T-100 root cause identified — no code bug; documented in manual-test-guide.md.
 7. Bench gate 7/7 PASS preserved.
-8. Test count delta +11 (in [+7, +12] range).
+8. Test count delta +12 (in [+7, +12] range).
 9. `git diff master -- src/BlueCode.Core/` empty.
 </success_criteria>
 
@@ -678,17 +742,19 @@ plan: 03
 plan_name: prompt-suffix-and-doc
 status: complete
 completed_at: <ISO-8601 UTC>
-test_count_delta: 0   # this plan adds prompt-tuning + doc; no new unit tests (the planSystemPromptSuffix change is observed in integration / next manual round)
+test_count_delta: 1   # +1 regression guard for planSystemPromptSuffix content (CompositionRootTests.fs)
 files_modified:
   - src/BlueCode.Cli/CompositionRoot.fs
   - documentation/manual-test-guide.md
   - CLAUDE.md
+  - .planning/ROADMAP.md
+  - tests/BlueCode.Tests/CompositionRootTests.fs
 core_diff_lines: 0
 commits:
   - feat(36-03): tighten planSystemPromptSuffix with explicit max-10 + no-placeholder constraints (T-75/T-76)
   - docs(36-03): update manual-test-guide T-16/17/18/19/100/101 for --allow-paths + T-100 re-interp
 bench_gate: PASS (7/7)
-phase_test_count_delta: 11  # cumulative (3 from 36-01 + 8 from 36-02 + 0 here)
+phase_test_count_delta: 12  # cumulative (3 from 36-01 + 8 from 36-02 + 1 here)
 subsystem: cli-prompt+docs
 affects: []
 requires: [36-02]

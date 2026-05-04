@@ -22,7 +22,7 @@ must_haves:
     - "With `--allow-paths /tmp/bc-test`, file tools (read_file, write_file, edit_file, list_dir, glob_search, grep_search) accept paths that resolve under /tmp/bc-test"
     - "Path canonicalization defeats `..` traversal: `--allow-paths /tmp/bc-test` does NOT permit `/tmp/bc-test/../etc/passwd` (resolves to /etc/passwd, neither in projectRoot nor in /tmp/bc-test)"
     - "Trailing-separator prefix guard: `--allow-paths /tmp/bc-test` does NOT permit `/tmp/bc-testing/evil` (sibling-prefix attack)"
-    - "manual-test-guide.md T-16/17/18/19/100/101 commands include `--allow-paths /tmp/bc-test` (or /tmp/bc-e2e for T-100/101) so they pass when re-run"
+    - "FsToolExecutor.create accepts an extraAllowedPaths: string list parameter; FileToolsTests prove allow-listed paths pass and non-allow-listed paths are blocked with PathEscapeBlocked"
     - "Zero changes to src/BlueCode.Core/** (`git diff master -- src/BlueCode.Core/` empty for this plan's commits)"
   artifacts:
     - path: "src/BlueCode.Cli/CliArgs.fs"
@@ -537,14 +537,18 @@ let allowPathsTests =
               let root = newFixture ()
               let extra = newFixture ()
               try
-                  // Try to use .. to escape an allowed dir into the system root
-                  let traversal = Path.Combine(extra, "..", "etc", "passwd")
+                  // Use a path that is guaranteed-absent regardless of OS so file
+                  // existence cannot mask a security bug. PathEscapeBlocked must
+                  // fire BEFORE any file open is attempted; absence is irrelevant
+                  // to the security decision but the explicit single-arm match
+                  // ensures Ok(Failure _) (a legitimate file-op failure) never
+                  // masquerades as a security block.
+                  let traversal = Path.Combine(extra, "..", "etc", "definitely-not-real-file-12345")
                   let exe = create root [ extra ]
                   let result = exec exe (ReadFile(FilePath traversal, None))
                   match result with
                   | Ok(PathEscapeBlocked _) -> ()
-                  | Ok(Failure _) -> ()  // file may not exist; either is acceptable BLOCK signal
-                  | other -> failtestf "expected PathEscapeBlocked or Failure for .. traversal, got %A" other
+                  | other -> failtestf "expected PathEscapeBlocked for .. traversal, got %A" other
               finally
                   cleanup root
                   cleanup extra
