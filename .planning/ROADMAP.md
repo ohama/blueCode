@@ -1,8 +1,8 @@
 # Roadmap: blueCode v2.5 REPL ergonomics
 
-**Defined:** 2026-04-29
-**Phases:** 31 → 35 (5 phases)
-**Total requirements:** 12 across 3 categories
+**Defined:** 2026-04-29 (Phase 36 added 2026-05-04 — manual test round 1 fixes)
+**Phases:** 31 → 36 (6 phases)
+**Total requirements:** 12 across 3 categories (Phase 36 is hardening, no new requirements)
 
 ## Current Milestone: v2.5 REPL ergonomics
 
@@ -81,6 +81,47 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 5. Editor 호출 중 Ctrl+C 처리 — child process 종료 후 REPL 으로 복귀 (current turn 영향 없음)
 6. Bench gate 7/7 PASS preserved
 
+### Phase 36: Manual test fixes
+
+**Goal:** Address concrete bugs surfaced by 2026-05-04 manual test round (`documentation/manual-test-guide.md`, 65/82 tests executed; 4 FAIL + 5 MIXED). Cli-layer + doc only. Core untouched. Bench gate 7/7 PASS preserved.
+
+**Depends on:** None — independent of Phases 33/34/35 (Cli adapter + PlanValidator + doc; no REPL surface dependency). Can interleave or run after them.
+
+**Requirements:** None new (post-shipment hardening; no requirement IDs)
+
+**Scope (4 fix tracks):**
+
+1. **glob_search recursive default** (T-14 finding) — `Directory.GetFiles(path, pattern)` 가 default 로 top-level 만 매치. `*.fsproj` 같은 자연 패턴이 0 결과. `SearchOption.AllDirectories` 기본값 또는 `**/*` prefix 자동 expansion.
+2. **PlanValidator UX rebuild** (T-75/T-76 findings):
+   - retry 시 reject detail 을 next User message 로 inject (model 이 정정 가능)
+   - placeholder 패턴 (`<...>`, `placeholder`, `<file>`, 빈 string) 식별하는 enumeration 가드 강화
+   - PlanRejected 친화적 출력 (현재는 "invalid JSON twice" 로 wrap 됨)
+3. **`--allow-paths` CLI flag for scratch dir opt-in** (T-16/17/18/19/100/101 finding) — 신규 CLI 플래그 `--allow-paths <p1>[,<p2>,...]` 추가하여 사용자가 명시적으로 file tool 의 path 잠금을 확장. 기본값은 project-root only (security invariant 보존). `bc --allow-paths /tmp/bc-test "..."` 와 같이 호출 시 FsToolExecutor 가 해당 디렉토리 prefix 도 허용. 매뉴얼 테스트 가이드의 prompt (`/tmp/bc-test/*`, `/tmp/bc-e2e/*`) 는 그대로 유지하되 commands 에 `--allow-paths` 추가. bench/CI 는 플래그 미사용 → 보안 invariant 유지.
+4. **Hallucinated success investigation** (T-100 finding) — write_file 가 path 차단됐는데 step renderer 가 `[ok]` 표시 + model 이 "Successfully appended" 답변. FsToolExecutor → AgentLoop.Step.Status → Rendering chain 추적. 가설 (1) tool 결과 wrap 잘못, (2) status field 매핑 버그, (3) model hallucinate. 진단 후 수정 또는 문서화.
+
+**Success criteria:**
+1. T-14 재실행 → `*.fsproj` 패턴이 정확히 3개 fsproj 파일 enumerate (BlueCode.Cli/Core/Tests)
+2. T-75 재실행 → 11+ step plan 시도 시 친화적 "plan exceeds 10 steps" 메시지 (invalid JSON twice 메시지 아님)
+3. T-76 재실행 → placeholder path (`<discovered_file>`, `"placeholder"`) plan 거부 → 친화적 enumeration 가드 메시지
+4. PlanValidator reject detail 이 retry 시 LLM 에 visible (trace 로 메시지 배열 확인)
+5. T-16/17/18/19/100/101 재실행 시 모두 PASS — `--allow-paths /tmp/bc-test,/tmp/bc-e2e` 사용 시 file tool 들이 정상 동작; 플래그 없이는 기존대로 차단
+6. T-100 step status flow 의 root cause 식별 — fix or document
+7. Bench gate `bash bench/run.sh --gate` 7/7 PASS preserved
+8. Test count delta +7~12 (FsToolExecutor glob recursive test, allow-paths boundary tests [allow-listed pass / non-allow-listed block / parent traversal block], CliArgs `--allow-paths` parse test, PlanValidator placeholder test, retry feedback test, etc.)
+9. `git diff master -- src/BlueCode.Core/` 빈 줄 (Core 무수정)
+
+**Out of scope (explicit defer):**
+- Auto-allowlist 또는 기본 `/tmp/*` 허용 — 명시적 opt-in (`--allow-paths`) 만 — 자동 fallback 은 보안 invariant 약화 우려
+- priorSteps message-ordering quirk (T-54/59/61) — LLM prompt territory; trace 후 prompt-tuning 또는 v2.6+
+- Other model behavior issues not fixable at blueCode layer
+- `--allow-paths` 의 글로브/와일드카드 패턴 (`/tmp/bc-*`) — Phase 36 은 정확한 prefix 매칭만; glob 은 v2.6+
+
+**Plans:** 3 plans (created 2026-05-04 via /gsd:plan-phase 36)
+
+- [ ] 36-01-glob-recursive-PLAN.md — bare-pattern auto-expansion in globSearchImpl + 3 tests (Wave 1; T-14)
+- [ ] 36-02-allow-paths-PLAN.md — --allow-paths CLI flag + FsToolExecutor extra-roots threading + 8 tests (Wave 2; T-16..T-19/T-100/T-101)
+- [ ] 36-03-prompt-suffix-and-doc-PLAN.md — planSystemPromptSuffix tightening + manual-test-guide updates + bench gate (Wave 3; T-75/T-76 + T-100 re-interp)
+
 ### Phase 35: PrettyPrompt readline + history
 
 **Goal:** `Console.ReadLine` 을 `PrettyPrompt` 라이브러리로 대체. up/down arrow recall + cross-session history persistence + Ctrl+R 검색 + line editing.
@@ -108,9 +149,14 @@ Phase 31 (slash core)
   ├─→ Phase 33 (slash plan toggle)
   ├─→ Phase 34 (/edit)
   └─→ Phase 35 (PrettyPrompt readline)
+
+Phase 36 (manual test fixes) — independent (Cli adapter + PlanValidator + doc)
+                              — interleavable with 33/34/35
 ```
 
 Phase 31 = root. Phase 32-35 모두 31 위에 독립적으로 쌓임 (병렬 가능 / 순차 가능). 권장 순서는 위 (slash 우선 → multi-line → readline 마지막) — readline 이 가장 큰 변경이라 안정된 slash 기반 위에서 진행.
+
+Phase 36 은 REPL 표면과 무관 (FsToolExecutor.glob, PlanValidator, doc) — 33/34/35 와 동시 또는 milestone 끝부분 cleanup 으로 진행 가능.
 
 ## Out-of-scope (preserved from v2.4 close + new exclusions)
 
@@ -136,15 +182,16 @@ Continues at 31. Project phase history:
 - v2.2: 22-23
 - v2.3: 24-27 (Phase 26 BLOCKED; Phase 27 added mid-milestone)
 - v2.4: 28, 30 (Phase 29 SKIPPED-by-design)
-- **v2.5: 31-35**
+- **v2.5: 31-36** (Phase 36 added mid-milestone 2026-05-04 — manual test round 1 fixes)
 
 ## Stats Target
 
-- 5 phases, ~12 plans (2-3 per phase), ~30-40 tests added (parser + dispatcher + integration)
-- LOC estimate: ~280-350 (Cli only)
+- 6 phases, ~14-15 plans (2-3 per phase), ~35-50 tests added (parser + dispatcher + integration + 36 fixes)
+- LOC estimate: ~310-400 (Cli only)
 - Bench gate 7/7 PASS preserved throughout
 - Zero changes to: Core/, bench/baseline.json, schema validation, defaultSystemPrompt, planSystemPromptSuffix
 - New NuGet: 1 (PrettyPrompt — Key Decision recorded)
 
 ---
 *Roadmap created: 2026-04-29*
+*Phase 36 added: 2026-05-04 (manual test round 1 fixes)*
