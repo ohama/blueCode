@@ -12,10 +12,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
 Phase: 34 (edit-multi-line-input) — COMPLETE (2/2 plans complete)
 Plan: 2 of 2 complete (34-02 behavior-tests-and-bench)
-Status: Phase 34 complete (2026-05-05). 359 tests passing (+7 net delta: 5 EditCommandTests + 2 ReplTests); Core untouched; bench gate 7/7 PASS confirmed.
-Last activity: 2026-05-05 — Completed 34-02 (EditCommandTests.fs 5 mock-launcher unit tests + editorLauncherOverride seam in Repl.fs + 2 ReplTests /edit integration tests + bench gate 7/7 PASS).
+Status: Phase 34 VERIFIED + user-approved (2026-05-05). Verifier 12/12 must-haves; 4 human-verification items (live $EDITOR, Ctrl+C, missing $EDITOR, whitespace-only cancel) approved by user. 359 tests passing; bench gate 7/7 PASS; Core untouched; baseline.json byte-identical.
+Last activity: 2026-05-05 — Phase 34 complete (/edit multi-line input); 5/6 v2.5 phases done (31, 32, 33, 34, 36); 1 phase remains (35 PrettyPrompt readline + history — last v2.5 phase).
 
-Next: Phase 35 (PrettyPrompt readline + history) OR /gsd:verify-work 34 first.
+Next: Phase 35 (PrettyPrompt readline + history) — `/gsd:plan-phase 35`. After Phase 35 ships, v2.5 milestone is complete.
 
 Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 36 COMPLETE; Phase 34 COMPLETE; Phase 35 pending)**
 
@@ -81,6 +81,10 @@ Stable patterns established across milestones (load-bearing for next session):
 - **MessageRole.User is unqualified `User` (Phase 34-02)** — `type MessageRole = System | User | Assistant` in Domain.fs. Match pattern is `| User ->` not `| Role.User ->` or `| BlueCode.Core.Domain.Role.User ->`. With `open BlueCode.Core.Domain`, simply `User`.
 - **Fully-qualified BlueCode.Cli.PlanGate.* in Repl.fs (Phase 33-01)** — No new `open` directive; fully-qualified names (`BlueCode.Cli.PlanGate.render`, etc.) avoid module-alias conflict and match `BlueCode.Core.AgentLoop.runPlanTurn` style.
 - **Spectre.Console AnsiConsole reset in plan-gate REPL tests (Phase 33-02)** — `PlanGate.render` calls `AnsiConsole.Write(table)` which lazily caches `Console.Out` on first use. In `testSequenced` tests that redirect `Console.Out`, the cached `SyncTextWriter` may point to a prior test's disposed `StringWriter`, causing `ObjectDisposedException`. Fix: before each test that exercises `PlanGate.render` through the REPL loop, call `Spectre.Console.AnsiConsole.Console <- Spectre.Console.AnsiConsole.Create(Spectre.Console.AnsiConsoleSettings())` after `Console.SetOut(stdoutWriter)`, then restore in `finally`. This re-ties Spectre to the live `stdoutWriter`.
+- **IEditorLauncher port mirrors IKeyReader exactly (Phase 34-01)** — Single-method interface `Launch : tmpPath: string -> unit` in `src/BlueCode.Cli/EditCommand.fs`. Tests inject mock launcher (writes scripted content to tmpfile); production uses `realEditorLauncher` with `ProcessStartInfo { UseShellExecute = false; RedirectStandardInput = false; RedirectStandardOutput = false; RedirectStandardError = false }` for TTY inheritance. Pattern is direct copy of v2.0 PlanGate's `IKeyReader`.
+- **`handlePromptTurn` helper extraction (Phase 34-01)** — `Repl.runMultiTurnWithSession` factored out `handlePromptTurn: prompt -> Task<unit>` containing the `if planModeActive then runPlanTurn-inline else runSingleTurn` branching. Both `Some (Prompt _)` arm AND `Some (Slash Edit)` Some-content branch call `do! handlePromptTurn` (exactly 2 sites). This makes /edit content automatically inherit plan-mode when planModeActive=true. Extraction was research-recommended to avoid 60-line duplicate of plan-gate code.
+- **Tmpfile lifecycle in EditCommand.openEditorAsync (Phase 34-01)** — `Path.GetTempFileName()` → `File.Move` to `.md` extension (syntax-highlight hint; original `.tmp` disappears via Move atomically) → editor launch via injected `IEditorLauncher` → read content → `try/finally` delete after read. Module-level `do AppDomain.CurrentDomain.ProcessExit.Add(...)` handler for atexit cleanup of any leftover (handles REPL crash mid-edit case). 4 cleanup paths covered: read success, cancel (empty content), normal exit, atexit.
+- **`editorLauncherOverride: IEditorLauncher option` test seam (Phase 34-02)** — `Repl.runMultiTurnWithSession` accepts optional override (default None → uses `realEditorLauncher`); ReplTests integration tests pass `Some mockLauncher` to inject scripted content at the Repl boundary. Pattern is one-line addition to function signature; reusable for any future Cli adapter that needs Repl-boundary mock injection.
 - **F# fixture infrastructure** (v2.4 Phase 28) — `bench/fixtures/fs_idiomatic/` with 3 fixture pairs; `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` lines 328-391. Reusable for future F# coding-quality work. Research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate.
 - **FSI fixture skeleton pattern** (v2.4 Phase 28-02) — `.fs` skeletons use direct top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code.
 - **Sum-then-scale band table aggregate (v2.4 Phase 28-04)** — For multi-fixture rubric scoring, band table beats round(average) for outlier robustness.
@@ -115,10 +119,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-05 (Phase 34 Plan 02 execution)
-Stopped at: 34-02-behavior-tests-and-bench complete (3 commits: EditCommandTests.fs, Repl.fs seam, ReplTests integration tests). 359 tests passing. Bench gate 7/7 PASS.
+Last session: 2026-05-05 (Phase 34 plan + execute + verify + user approval same-day)
+Stopped at: Phase 34 verified PASSED (verifier 12/12) + user approved 4 human-verification items (live $EDITOR launch, Ctrl+C, missing $EDITOR friendly error, whitespace-only cancel UX). 5/6 v2.5 phases complete.
 Resume file: None
-Next workflow trigger: `/gsd:verify-work 34` (UAT gate for Phase 34) or `/gsd:execute-phase 35` (PrettyPrompt readline + history).
+Next workflow trigger: `/gsd:plan-phase 35` (PrettyPrompt readline + history — last v2.5 phase). After Phase 35 ships, run `/gsd:complete-milestone` to archive v2.5.
 
 ## Empirical Baselines (post-v2.4)
 

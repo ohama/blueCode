@@ -70,7 +70,7 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 - [x] 33-01-toggle-and-wiring-PLAN.md — planModeActive cell + /plan toggle + plan-gate REPL Prompt arm + renderStatus 4-arg + renderHelp delta + adapt 5 existing tests + 1 new RenderingTests testCase (Wave 1)
 - [x] 33-02-behavior-tests-and-bench-PLAN.md — 6 new ReplTests integration tests (toggle on/off, /status display, plan-gate Accept/Quit/Error paths, auto-disable) + smoke + bench gate (Wave 2)
 
-### Phase 34: `/edit` multi-line input
+### Phase 34: `/edit` multi-line input ✓ (completed 2026-05-05)
 
 **Goal:** `$EDITOR` 호출하여 multi-line prompt 입력. Long refactor / 다단계 명령 / structured prompt 작성 ergonomic.
 
@@ -86,10 +86,10 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 5. Editor 호출 중 Ctrl+C 처리 — child process 종료 후 REPL 으로 복귀 (current turn 영향 없음)
 6. Bench gate 7/7 PASS preserved
 
-**Plans:** 2 plans (created 2026-05-05 via /gsd:plan-phase 34)
+**Plans:** 2 plans (created + executed + verified 2026-05-05 via /gsd:plan-phase 34 → /gsd:execute-phase 34)
 
-- [ ] 34-01-port-and-integration-PLAN.md — IEditorLauncher port (mirrors IKeyReader) + EditCommand.fs (openEditorAsync + atexit ProcessExit) + handlePromptTurn refactor in Repl.fs + Slash Edit arm + renderHelp delta + adapt 2 existing tests (Wave 1)
-- [ ] 34-02-behavior-tests-and-bench-PLAN.md — 5 EditCommandTests mock-launcher unit tests + editorLauncherOverride seam in Repl.fs + 2 ReplTests integration tests (/edit dispatch + cancel paths) + bench gate 7/7 (Wave 2)
+- [x] 34-01-port-and-integration-PLAN.md — IEditorLauncher port (mirrors IKeyReader) + EditCommand.fs (openEditorAsync + atexit ProcessExit) + handlePromptTurn refactor in Repl.fs + Slash Edit arm + renderHelp delta + adapt 2 existing tests + 1 auto-fixed test (Wave 1)
+- [x] 34-02-behavior-tests-and-bench-PLAN.md — 5 EditCommandTests mock-launcher unit tests + editorLauncherOverride seam in Repl.fs + 2 ReplTests integration tests (/edit dispatch + cancel paths) + bench gate 7/7 (Wave 2)
 
 ### Phase 36: Manual test fixes ✓ (completed 2026-05-04)
 

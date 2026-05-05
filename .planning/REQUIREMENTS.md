@@ -18,7 +18,7 @@
 
 ### Multi-line input (1 req)
 
-- [ ] **EDIT-01**: User can type `/edit` to open `$EDITOR` (or `vi` fallback) on a tmpfile; saved content becomes the next prompt; tmpfile cleaned up after read or on REPL exit
+- [x] **EDIT-01**: User can type `/edit` to open `$EDITOR` (or `vi` fallback) on a tmpfile; saved content becomes the next prompt; tmpfile cleaned up after read or on REPL exit
 
 ### Readline + history (4 reqs)
 
@@ -66,7 +66,7 @@ Tracked for awareness; not pulled into v2.5. Observation-driven scoping after v2
 | SLASH-05 | Phase 32 | Complete |
 | SLASH-06 | Phase 32 | Complete |
 | SLASH-07 | Phase 33 | Complete |
-| EDIT-01 | Phase 34 | Pending |
+| EDIT-01 | Phase 34 | Complete |
 | HIST-01 | Phase 35 | Pending |
 | HIST-02 | Phase 35 | Pending |
 | HIST-03 | Phase 35 | Pending |
@@ -76,4 +76,4 @@ Tracked for awareness; not pulled into v2.5. Observation-driven scoping after v2
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-05-05 after Phase 33 completion (SLASH-07 → Complete; 7/12 requirements done; Phases 34-35 remain)*
+*Last updated: 2026-05-05 after Phase 34 completion (EDIT-01 → Complete; 8/12 requirements done; Phase 35 PrettyPrompt readline remains)*
