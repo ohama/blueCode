@@ -119,10 +119,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-05 (Phase 34 plan + execute + verify + user approval same-day)
-Stopped at: Phase 34 verified PASSED (verifier 12/12) + user approved 4 human-verification items (live $EDITOR launch, Ctrl+C, missing $EDITOR friendly error, whitespace-only cancel UX). 5/6 v2.5 phases complete.
+Last session: 2026-05-05 (Phase 34 complete + Phase 35 partial planning — opus quota cap hit)
+Stopped at: **Phase 35 PARTIAL PLANNING.** Research done (35-RESEARCH.md, HIGH confidence: PrettyPrompt 4.1.1 verified; all 4 HIST reqs solved by `new Prompt(persistentHistoryFilepath = path)`; 26 ReplTests need IPromptReader seam migration; bench zero-risk). Plan 35-01 (port-and-integration: IPromptReader port + PromptReader.fs + Repl.fs seam + PROJECT.md Key Decision) created and committed (`99f7c1e`). **Plan 35-02 (test migration + new HIST tests + bench gate) NOT created** — opus quota exhausted mid-planner-execution; planner returned 0 output tokens. 5/6 v2.5 phases shipped (31, 32, 33, 34, 36); Phase 35 pending plan completion.
 Resume file: None
-Next workflow trigger: `/gsd:plan-phase 35` (PrettyPrompt readline + history — last v2.5 phase). After Phase 35 ships, run `/gsd:complete-milestone` to archive v2.5.
+Next workflow trigger: After opus quota reset (11am Asia/Seoul on 2026-05-05+), one of: (a) `/gsd:plan-phase 35` re-run (planner sees 35-01 exists; offers continue-or-replan; choose "continue planning" → planner adds 35-02), or (b) SendMessage to agent `a0e2e50b4fc5c8994` to resume the partial planner. Then `/gsd:execute-phase 35` → verifier (with HUMAN VERIFICATION gate for SC-8 macOS Terminal/iTerm2) → `/gsd:complete-milestone` to archive v2.5.
 
 ## Empirical Baselines (post-v2.4)
 
