@@ -118,13 +118,13 @@ let tests =
 
           testCase "runMultiTurn: stdin '/exit' exits cleanly with code 0 and prints banner"
           <| fun () ->
-              // Arrange: redirect stdin to simulate user typing "/exit" immediately
-              let originalIn = Console.In
+              // Arrange: inject scripted prompts via promptReaderOverride seam (Phase 35-02
+              // migration; PrettyPrompt's Console.ReadKey loop bypasses Console.SetIn).
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-replmt-%s" (Guid.NewGuid().ToString("N")))
@@ -168,7 +168,7 @@ let tests =
                       "blueCode — multi-turn mode"
                       "banner 'blueCode — multi-turn mode' should appear in stdout"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase
@@ -446,12 +446,11 @@ let tests =
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/help' prints 9-command help without LLM call" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/help\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/help"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-help-%s" (Guid.NewGuid().ToString("N")))
@@ -483,16 +482,15 @@ let tests =
                   Expect.stringContains captured "/edit" "help lists /edit (Phase 34: live, no [coming in v2.5] marker)"
                   Expect.isFalse (captured.Contains("[coming in v2.5]")) "Phase 34: no [coming in v2.5] markers in help (all v2.5 commands live)"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/status' prints session id, model, steps, chars" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/status\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/status"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-stat-%s" (Guid.NewGuid().ToString("N")))
@@ -525,16 +523,15 @@ let tests =
                   Expect.stringContains captured "122b" "model name printed"
                   Expect.stringContains captured "[floor; probed on first LLM call]" "MaxModelLen floor disclaimer"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/clear' creates new session id, prints confirmation, leaves old jsonl untouched" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/clear\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/clear"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-clr-%s" (Guid.NewGuid().ToString("N")))
@@ -577,16 +574,15 @@ let tests =
                       clearSessionLines.[0].Substring(clearSessionLines.[0].IndexOf("New session:") + "New session:".Length).Trim()
                   Expect.notEqual bannerId clearId "session id rotated by /clear"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/quit' exits cleanly with code 0 (alias of /exit)" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/quit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/quit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-quit-%s" (Guid.NewGuid().ToString("N")))
@@ -612,7 +608,7 @@ let tests =
                       |> fun t -> t.GetAwaiter().GetResult()
                   Expect.equal exitCode 0 "/quit must exit with code 0 (graceful, alias of /exit)"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: 0 future-stub commands remaining (Phase 34 promoted /edit; nothing prints 'not yet implemented')" <| fun () ->
@@ -620,14 +616,13 @@ let tests =
               // This test asserts the post-Phase-34 invariant: NO slash command in the 9-command set
               // prints "not yet implemented" any more. Stays as a regression fence so any
               // re-introduction of a stub command is caught immediately.
-              let originalIn = Console.In
               let originalOut = Console.Out
               // Drive every slash command (skip /edit because real /edit would block on $EDITOR; in this
               // test we only validate the absence of the stub-marker for the in-process commands).
-              use stdinReader = new StringReader("/help\n/status\n/sessions\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/help"; "/status"; "/sessions"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-stub-%s" (Guid.NewGuid().ToString("N")))
@@ -660,7 +655,7 @@ let tests =
                   Expect.equal stubLines.Length 0
                       (sprintf "expected 0 'not yet implemented' lines (Phase 34 promoted /edit); captured:\n%s" captured)
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: /edit with mock launcher writing 'list files' dispatches to LLM as next prompt (Phase 34 EDIT-01 SC-3)" <| fun () ->
@@ -690,12 +685,11 @@ let tests =
                       member _.Launch tmpPath =
                           System.IO.File.WriteAllText(tmpPath, "list files\n") }
 
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/edit\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/edit"; "/exit" ])
               BlueCode.Cli.Repl.editorLauncherOverride <- Some mockLauncher
 
               let tempRoot =
@@ -727,8 +721,8 @@ let tests =
                   Expect.equal capturedPrompts.[0] "list files"
                       "LLM received the trimmed content from the mock launcher as the prompt"
               finally
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   BlueCode.Cli.Repl.editorLauncherOverride <- None
-                  Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: /edit with mock launcher writing empty string -> 'Edit cancelled.' + 0 LLM calls (Phase 34 EDIT-01 SC-3)" <| fun () ->
@@ -739,12 +733,11 @@ let tests =
                       member _.Launch tmpPath =
                           System.IO.File.WriteAllText(tmpPath, "") }
 
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/edit\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/edit"; "/exit" ])
               BlueCode.Cli.Repl.editorLauncherOverride <- Some mockLauncher
 
               let tempRoot =
@@ -775,17 +768,16 @@ let tests =
                   Expect.stringContains captured "Edit cancelled."
                       (sprintf "REPL printed cancel notice; captured:\n%s" captured)
               finally
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   BlueCode.Cli.Repl.editorLauncherOverride <- None
-                  Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/sessions' lists header + zero or more rows; no LLM call" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/sessions\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/sessions"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-ls-%s" (Guid.NewGuid().ToString("N")))
@@ -820,16 +812,15 @@ let tests =
                   Expect.isTrue (hasEmpty || hasHeader)
                       (sprintf "expected either 'no sessions found' or a header row; captured:\n%s" captured)
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/resume' (no arg) prints usage hint without crashing" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/resume\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/resume"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-r0-%s" (Guid.NewGuid().ToString("N")))
@@ -858,18 +849,17 @@ let tests =
                   Expect.equal exitCode 0 "exit code 0 — empty /resume arg does not crash"
                   Expect.stringContains captured "usage: /resume" "usage hint printed"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/resume <unknown>' prints SessionNotFound friendly error; REPL continues" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
               // Use a guaranteed-unique unknown id (32-N hex prefix matches our pattern).
               let unknownId = sprintf "ghost-%s" (Guid.NewGuid().ToString("N"))
-              use stdinReader = new StringReader(sprintf "/resume %s\n/exit\n" unknownId)
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ sprintf "/resume %s" unknownId; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-runk-%s" (Guid.NewGuid().ToString("N")))
@@ -899,16 +889,13 @@ let tests =
                   Expect.stringContains captured "Session not found:" "SessionNotFound friendly message printed"
                   Expect.stringContains captured unknownId "the unknown id is echoed in the error"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/resume <known>' swaps currentSession; subsequent prompt sees resumed steps" <| fun () ->
               // Pre-write a real session to disk via FileSessionStore.Save, then /resume it.
               // After resume, send a prompt — the LLM stub captures messages received.
               // Resumed session has 2 prior steps; the LLM should see those in priorSteps.
-              let originalIn = Console.In
-              let originalOut = Console.Out
-
               let preIdStr = sprintf "preset-%s" (Guid.NewGuid().ToString("N"))
               let preSession : Session =
                   let toolCall = ToolCall (ToolName "list_dir", ToolInput (Map.ofList [("_raw", "{\"path\":\".\"}")]))
@@ -944,10 +931,11 @@ let tests =
                               if q.Count = 0 then failwith "queue exhausted"
                               Task.FromResult(q.Dequeue()) }
 
-                  use stdinReader = new StringReader(sprintf "/resume %s\nhello after resume\n/exit\n" preIdStr)
+                  let originalOut = Console.Out
                   use stdoutWriter = new StringWriter()
-                  Console.SetIn(stdinReader)
                   Console.SetOut(stdoutWriter)
+                  BlueCode.Cli.Repl.promptReaderOverride <-
+                      Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ sprintf "/resume %s" preIdStr; "hello after resume"; "/exit" ])
 
                   let tempRoot =
                       Path.Combine(Path.GetTempPath(), sprintf "bluecode-rok-%s" (Guid.NewGuid().ToString("N")))
@@ -988,7 +976,7 @@ let tests =
                       Expect.isGreaterThan msgs.Length 2
                           (sprintf "expected >2 messages (system + prior steps + new user prompt); got %d" msgs.Length)
                   finally
-                      Console.SetIn(originalIn)
+                      BlueCode.Cli.Repl.promptReaderOverride <- None
                       Console.SetOut(originalOut)
               finally
                   // Cleanup the pre-written session jsonl.
@@ -996,8 +984,6 @@ let tests =
 
           testCase "runMultiTurn: '/resume <corrupt>' prints SessionCorrupt friendly error; REPL continues" <| fun () ->
               // Plant a corrupt session at a known path, /resume it, expect SessionCorrupt path.
-              let originalIn = Console.In
-              let originalOut = Console.Out
               let corruptIdStr = sprintf "corrupt-%s" (Guid.NewGuid().ToString("N"))
               let corruptPath = BlueCode.Cli.Adapters.FileSessionStore.buildSessionPath (SessionId corruptIdStr)
 
@@ -1005,10 +991,11 @@ let tests =
                   // Plant garbage at the path.
                   File.WriteAllText(corruptPath, "this is not json\n{also garbage}\n")
 
-                  use stdinReader = new StringReader(sprintf "/resume %s\n/exit\n" corruptIdStr)
+                  let originalOut = Console.Out
                   use stdoutWriter = new StringWriter()
-                  Console.SetIn(stdinReader)
                   Console.SetOut(stdoutWriter)
+                  BlueCode.Cli.Repl.promptReaderOverride <-
+                      Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ sprintf "/resume %s" corruptIdStr; "/exit" ])
 
                   let tempRoot =
                       Path.Combine(Path.GetTempPath(), sprintf "bluecode-rcrp-%s" (Guid.NewGuid().ToString("N")))
@@ -1037,7 +1024,7 @@ let tests =
                       Expect.equal exitCode 0 "exit code 0 — corrupt session does not exit REPL"
                       Expect.stringContains captured "Session file corrupt:" "SessionCorrupt friendly message printed"
                   finally
-                      Console.SetIn(originalIn)
+                      BlueCode.Cli.Repl.promptReaderOverride <- None
                       Console.SetOut(originalOut)
               finally
                   try if File.Exists corruptPath then File.Delete corruptPath with _ -> ()
@@ -1045,12 +1032,11 @@ let tests =
           // ── Phase 33-02: /plan toggle + plan-gate integration tests ─────────────
 
           testCase "runMultiTurn: '/plan' once toggles plan-mode on; prints '[plan mode on]'; zero LLM calls" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/plan\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/plan"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-on-%s" (Guid.NewGuid().ToString("N")))
@@ -1080,16 +1066,15 @@ let tests =
                   Expect.stringContains captured "[plan mode on]" "/plan prints on notification"
                   Expect.isFalse (captured.Contains("[plan mode off]")) "single /plan does not also print off notification"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/plan' twice toggles plan-mode off; prints both notifications" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/plan\n/plan\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/plan"; "/plan"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-toggle-%s" (Guid.NewGuid().ToString("N")))
@@ -1123,16 +1108,15 @@ let tests =
                   let offIdx = captured.IndexOf("[plan mode off]")
                   Expect.isLessThan onIdx offIdx "[plan mode on] precedes [plan mode off] in stdout"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: '/status' after '/plan' shows 'plan-mode: on' line" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
-              use stdinReader = new StringReader("/plan\n/status\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/plan"; "/status"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-status-%s" (Guid.NewGuid().ToString("N")))
@@ -1162,7 +1146,7 @@ let tests =
                   Expect.stringContains captured "plan-mode: on" "status shows plan-mode line when active"
                   Expect.stringContains captured "(next prompt uses plan-gate)" "descriptive suffix included"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: plan-mode + Accept executes turn via runSingleTurn and auto-disables plan-mode" <| fun () ->
@@ -1170,10 +1154,15 @@ let tests =
               let originalOut = Console.Out
               // Script: /plan → enable; "build feature X" → triggers plan-gate; "a\n" → Accept;
               //         /status → confirm plan-mode auto-disabled (no "plan-mode" line); /exit
-              use stdinReader = new StringReader("/plan\nbuild feature X\na\n/status\n/exit\n")
+              // Hybrid approach: promptReaderOverride for prompt lines; Console.SetIn for the
+              // plan-gate "a" keypress (PlanGate.realKeyReader falls back to Console.In.ReadLine
+              // when stdin is redirected in non-TTY env; it does NOT use promptReaderOverride).
+              use stdinReader = new StringReader("a\n")
               use stdoutWriter = new StringWriter()
               Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/plan"; "build feature X"; "/status"; "/exit" ])
               // Reset Spectre.Console's singleton after redirecting Console.Out.
               // AnsiConsole lazily caches Console.Out at first use; if a prior test's StringWriter
               // was already cached and then disposed, AnsiConsole.Write(table) would throw
@@ -1241,6 +1230,7 @@ let tests =
                   Expect.isFalse (postAccept.Contains("plan-mode"))
                       "post-Accept /status output does NOT include 'plan-mode' line (planModeActive auto-disabled)"
               finally
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Spectre.Console.AnsiConsole.Console <- originalSpectreConsole
                   Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
@@ -1250,10 +1240,14 @@ let tests =
               let originalOut = Console.Out
               // Script: /plan → enable; "tricky prompt" → triggers plan-gate; "q\n" → Quit;
               //         /status → if REPL is alive, this prints; /exit → graceful exit
-              use stdinReader = new StringReader("/plan\ntricky prompt\nq\n/status\n/exit\n")
+              // Hybrid: promptReaderOverride for prompt lines; Console.SetIn for "q" keypress
+              // (PlanGate.realKeyReader falls back to Console.In.ReadLine in non-TTY env).
+              use stdinReader = new StringReader("q\n")
               use stdoutWriter = new StringWriter()
               Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/plan"; "tricky prompt"; "/status"; "/exit" ])
               // Reset Spectre.Console singleton so AnsiConsole.Write(table) writes to
               // the current redirected Console.Out (stdoutWriter) rather than a stale writer
               // that may have been cached and disposed by a prior test (see test 4 comment).
@@ -1309,19 +1303,19 @@ let tests =
                   Expect.isFalse (postQuit.Contains("plan-mode"))
                       "post-Quit /status output does NOT include 'plan-mode' line (planModeActive auto-disabled)"
               finally
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Spectre.Console.AnsiConsole.Console <- originalSpectreConsole
                   Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
 
           testCase "runMultiTurn: plan-mode + runPlanTurn error prints renderError; auto-disables; REPL stays alive" <| fun () ->
-              let originalIn = Console.In
               let originalOut = Console.Out
               // Script: /plan → enable; "broken prompt" → runPlanTurn fails; /status → REPL alive;
               //         /exit → graceful
-              use stdinReader = new StringReader("/plan\nbroken prompt\n/status\n/exit\n")
               use stdoutWriter = new StringWriter()
-              Console.SetIn(stdinReader)
               Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.promptReaderOverride <-
+                  Some (BlueCode.Cli.PromptReader.makeTestPromptReader [ "/plan"; "broken prompt"; "/status"; "/exit" ])
 
               let tempRoot =
                   Path.Combine(Path.GetTempPath(), sprintf "bluecode-plan-err-%s" (Guid.NewGuid().ToString("N")))
@@ -1360,7 +1354,7 @@ let tests =
                   Expect.isFalse (postErr.Contains("plan-mode"))
                       "post-error /status does NOT include 'plan-mode' line (planModeActive auto-disabled)"
               finally
-                  Console.SetIn(originalIn)
+                  BlueCode.Cli.Repl.promptReaderOverride <- None
                   Console.SetOut(originalOut)
 
           ] // end testSequenced
