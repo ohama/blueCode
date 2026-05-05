@@ -151,6 +151,11 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 8. macOS Terminal.app + iTerm2 양쪽에서 up/down/Ctrl+R 정상 동작 manual verification
 9. Tests: SlashCommand parser tests (Phase 31 에서 추가) 가 PrettyPrompt 통합 후에도 PASS — input 추출 layer 가 readline 아래에 있으므로 영향 없을 것
 
+**Plans:** 2 plans (created 2026-05-05 via /gsd:plan-phase 35)
+
+- [ ] 35-01-port-and-integration-PLAN.md — IPromptReader port (mirrors IEditorLauncher) + PromptReader.fs (PrettyPrompt 4.1.1) + Repl.fs promptReaderOverride seam + PROJECT.md Key Decision (Wave 1)
+- [ ] 35-02-tests-migration-and-hist-PLAN.md — migrate 19 ReplTests to promptReaderOverride seam + new PromptReaderTests for IPromptReader port + HIST-03 file persistence (with rootTests registration) + bench gate 7/7 PASS (Wave 2)
+
 ## Phase Dependencies
 
 ```
