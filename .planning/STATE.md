@@ -10,14 +10,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 35 (prettyprompt-readline-history) — IN PROGRESS (1/2 plans complete)
-Plan: 1 of 2 complete (35-01 port-and-integration)
-Status: Phase 35 Plan 01 COMPLETE (2026-05-05). IPromptReader port + PromptReader.fs + PrettyPrompt 4.1.1 NuGet + Repl.fs promptReaderOverride seam + PROJECT.md Key Decision Verified. Build green. ReplTests RED (26 tests; expected — Plan 35-02 fixes). Non-ReplTests GREEN.
-Last activity: 2026-05-05 — Plan 35-01 complete (PrettyPrompt port-and-integration); 5/6 v2.5 phases shipped (31, 32, 33, 34, 36); Phase 35 in progress (Plan 35-02 remaining).
+Phase: 35 (prettyprompt-readline-history) — COMPLETE (2/2 plans complete)
+Plan: 2 of 2 complete (35-02 tests-migration-and-hist)
+Status: Phase 35 COMPLETE (2026-05-05). 19 ReplTests migrated to promptReaderOverride seam; 6 new PromptReaderTests added; bench gate 7/7 PASS; 365/365 tests GREEN. v2.5 milestone 12/12 requirements done. Pending: /gsd:verify-work 35 (verifier HV-1..HV-4 human verification gate).
+Last activity: 2026-05-05 — Plan 35-02 complete (tests migration + HIST tests + bench gate); Phase 35 COMPLETE; all 6 v2.5 phases shipped (31, 32, 33, 34, 35, 36).
 
-Next: Plan 35-02 (test-migration + new HIST tests + bench gate + manual SC-8 verification). After Plan 35-02 ships, Phase 35 VERIFICATION, then v2.5 milestone complete.
+Next: /gsd:verify-work 35 (Phase 35 VERIFICATION — includes human verification gate HV-1..HV-4 for PrettyPrompt readline/history in Terminal.app + iTerm2). After verifier approval + user signoff, /gsd:complete-milestone archives v2.5 + git tag.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 36 COMPLETE; Phase 34 COMPLETE; Phase 35 Plan 01 COMPLETE; Plan 35-02 pending)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 34, 35, 36 ALL COMPLETE; pending /gsd:verify-work 35 + /gsd:complete-milestone)**
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -81,6 +81,8 @@ Stable patterns established across milestones (load-bearing for next session):
 - **MessageRole.User is unqualified `User` (Phase 34-02)** — `type MessageRole = System | User | Assistant` in Domain.fs. Match pattern is `| User ->` not `| Role.User ->` or `| BlueCode.Core.Domain.Role.User ->`. With `open BlueCode.Core.Domain`, simply `User`.
 - **Fully-qualified BlueCode.Cli.PlanGate.* in Repl.fs (Phase 33-01)** — No new `open` directive; fully-qualified names (`BlueCode.Cli.PlanGate.render`, etc.) avoid module-alias conflict and match `BlueCode.Core.AgentLoop.runPlanTurn` style.
 - **Spectre.Console AnsiConsole reset in plan-gate REPL tests (Phase 33-02)** — `PlanGate.render` calls `AnsiConsole.Write(table)` which lazily caches `Console.Out` on first use. In `testSequenced` tests that redirect `Console.Out`, the cached `SyncTextWriter` may point to a prior test's disposed `StringWriter`, causing `ObjectDisposedException`. Fix: before each test that exercises `PlanGate.render` through the REPL loop, call `Spectre.Console.AnsiConsole.Console <- Spectre.Console.AnsiConsole.Create(Spectre.Console.AnsiConsoleSettings())` after `Console.SetOut(stdoutWriter)`, then restore in `finally`. This re-ties Spectre to the live `stdoutWriter`.
+- **Two-seam injection for plan-gate tests (Phase 35-02)** — Accept/Quit plan-gate tests use BOTH `promptReaderOverride` (REPL prompt lines) AND `Console.SetIn` (plan-gate `a`/`q` keypresses). `PlanGate.realKeyReader` falls back to `Console.In.ReadLine()` in non-TTY env — a different I/O path from `promptReaderOverride`. Two separate I/O seams, each needs its own injection. Error plan-gate test uses only `promptReaderOverride` (LLM fails before `PlanGate.promptUser` is reached).
+- **PrettyPrompt.Prompt is IAsyncDisposable not IDisposable (Phase 35-02)** — Cannot use F# `use pp = new Prompt(...)` binding (requires IDisposable). Use `let _pp = new Prompt(...)` to verify construction without type constraint mismatch. This affects both the HIST-03 unit test and any future code that tries to dispose Prompt synchronously.
 - **IPromptReader port pattern (Phase 35-01)** — `PromptReader.IPromptReader` mirrors `EditCommand.IEditorLauncher` (Phase 34-01). Production: `makeRealPromptReader ()` wraps PrettyPrompt 4.1.1; test: `makeTestPromptReader lines` wraps Queue<string>. Seam: `let mutable promptReaderOverride : BlueCode.Cli.PromptReader.IPromptReader option = None` in `Repl.fs` immediately after `editorLauncherOverride`. Reader instantiated inside `runMultiTurnWithSession` before `while` loop (NOT at module level — Pitfall 2 avoidance).
 - **PrettyPrompt F# API nuances (Phase 35-01)** — `PromptConfiguration` is in `PrettyPrompt` namespace (NOT `PrettyPrompt.Configuration`); `FormattedString` is in `PrettyPrompt.Highlighting`; `prompt` ctor parameter is `Nullable<FormattedString>`, not `string` (F# requires `System.Nullable(FormattedString("blueCode> "))` — no implicit C# coercion applies).
 - **PrettyPrompt 500-entry history cap (Phase 35-01)** — `HistoryLog.MaxHistoryEntries` is internal hard-coded constant; ROADMAP SC-5 "N = 1000" was placeholder. Adopted 500-entry cap. PrettyPrompt owns `~/.bluecode/history` (base64-per-line format); blueCode never writes to it directly.
@@ -123,10 +125,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-05 (Phase 35 Plan 01 executed — port-and-integration complete)
-Stopped at: **Phase 35 Plan 01 COMPLETE.** IPromptReader port + PromptReader.fs + PrettyPrompt 4.1.1 NuGet + Repl.fs seam wired. Build green. ReplTests RED (expected; Plan 35-02 fixes). Plan 35-02 (test migration + new HIST tests + bench gate + SC-8 manual checkpoint) ready to execute.
+Last session: 2026-05-05 (Phase 35 Plan 02 executed — tests migration + HIST tests + bench gate complete)
+Stopped at: **Phase 35 COMPLETE.** 19 ReplTests migrated to promptReaderOverride seam; 6 new PromptReaderTests (IPromptReader port + HIST-03 smoke); bench gate 7/7 PASS; 365 tests GREEN. SUMMARY at `.planning/phases/35-prettyprompt-readline-history/35-02-SUMMARY.md`.
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 35` to execute Plan 35-02 (planner already created it; PLAN.md exists at `.planning/phases/35-prettyprompt-readline-history/35-02-test-migration-PLAN.md`). After Plan 35-02 ships, run `/gsd:verify-work 35` (verifier — includes HUMAN VERIFICATION gate for SC-8 macOS Terminal/iTerm2), then `/gsd:complete-milestone` to archive v2.5.
+Next workflow trigger: `/gsd:verify-work 35` (verifier — includes HUMAN VERIFICATION gate HV-1..HV-4 for SC-3 Up/Down, SC-6 Ctrl+R, SC-8 Terminal.app+iTerm2, HIST-03 cross-session). After verifier approval + user signoff, `/gsd:complete-milestone` archives v2.5 + git tag.
 
 ## Empirical Baselines (post-v2.4)
 
