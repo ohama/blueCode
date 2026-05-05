@@ -4,9 +4,11 @@
 
 F#으로 작성한 로컬 Qwen 기반 coding agent. Claude Code의 아키텍처는 참고하되 Qwen 특성에 맞춰 단순화한 구조 — 엄격한 JSON 출력, 최대 5루프, 최소 툴셋, 타입-중심 에러 모델. **v1.0 출시 이후 본인의 Mac 일상 코딩 도구로 `~/projs/claw-code-agent/` (Python 구현)를 대체함**.
 
-## Current State (post-v2.4)
+## Current State (post-v2.5)
 
-v2.4 Coding Quality shipped 2026-04-29. Third **measurement-first data-driven** milestone (v2.2 + v2.3 set the data-driven precedent; v2.4 inverted the pattern to measure-first vs intervene-first). Two-phase milestone (Phase 28 + Phase 30; Phase 29 SKIPPED-by-design — conditional that didn't trigger). **Path A (1/5 disproved) won** — F# fixture rescore yielded grand_total 13/15 → mapped_score 5/5 → `passed_disprove_1of5`. Final verdict **92 → 96/100, KEEP** (Coding-quality 6/10 → 10/10; +4 free points without code change). All 4 dimensions now ≥80%; widest KEEP margin in project history. Bench gate 7/7 PASS preserved throughout. **Zero `src/` diff** across entire v2.4 milestone. 10 milestones shipped. Daily-driver use ongoing.
+v2.5 REPL ergonomics shipped 2026-05-05. Fifth-generation **Cli-only** milestone (v1.2 Tool ergonomics + v1.4 Test hygiene precedent). Six phases (31-36; Phase 36 inserted mid-milestone for manual-test-round-1 fixes), 13 plans, 12 requirements (all 12 satisfied). Ships **9-command REPL slash surface** (/help /status /clear /exit /quit /sessions /resume /plan /edit), `$EDITOR`-based multi-line input via `IEditorLauncher` port + `EditCommand.fs`, **PrettyPrompt 4.1.1 readline** with Up/Down recall + Ctrl+R reverse-search + cross-session history persistence at `~/.bluecode/history`. First new NuGet in v2.5 (PrettyPrompt 4.1.1, MPL-2.0). 282 → 365 tests (+83). Bench gate 7/7 PASS preserved milestone-wide; **zero `src/BlueCode.Core/` diff** (Cli-only invariant held). Notable repo pattern crystallized: **port-template (`IKeyReader` v2.0 → `IEditorLauncher` Phase 34 → `IPromptReader` Phase 35)** now load-bearing for future TTY-bound Cli adapters. 11 milestones shipped. Daily-driver use ongoing.
+
+**v2.4 (prior, 2026-04-29):** Coding Quality. Third measurement-first data-driven milestone. F# fixture rescore yielded 13/15 → mapped 5/5 (`passed_disprove_1of5`); verdict 92 → 96/100 KEEP (Coding-quality 6/10 → 10/10). **Zero src/ diff** across entire milestone.
 
 **v2.3 (prior, 2026-04-29):** Comprehension Layer. CORR-EVAL-02 PASS empirically via P1 migration to `defaultSystemPrompt`; verdict 87 → 92/100 KEEP. Phase 26 BLOCKED diagnostic preserved as architectural scope mismatch lesson.
 
@@ -16,81 +18,28 @@ v2.4 Coding Quality shipped 2026-04-29. Third **measurement-first data-driven** 
 
 **v2.0 (prior, 2026-04-27):** Persistence + Planning. Multi-turn REPL memory + JSONL session persistence + `--resume <id>` + plan-then-execute + Qwen 3.5 122B canonical + Qwen 2.5 retirement (-85 GB disk).
 
-Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3,2.4}-ROADMAP.md`.
+Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3,2.4,2.5}-ROADMAP.md`.
 
-## Current Milestone: v2.5 REPL ergonomics
+## Next Milestone: v2.6 (unscoped)
 
-**Goal:** REPL 인터랙티브 사용성을 daily-driver 가치 수준으로 끌어올림. 4 가지 ergonomic gap 을 한 milestone 에 묶음 — slash commands (메타-제어), $EDITOR multi-line 입력, readline + history (up/down/Ctrl+R). v1.2 Tool ergonomics 와 같은 shape (여러 small ergonomic 개선의 묶음); Cli-layer only, Core purity 보존, bench gate 7/7 / schema 0/50 invariant 유지.
+v2.5 closed all v2.5-scoped REPL ergonomic gaps. Next milestone scope is **observation-driven** — start daily-driver use of the new REPL surface (PrettyPrompt + 9 slash commands + /edit) and let pain signals from real coding sessions surface v2.6 candidates via `/gsd:add-todo`. Run `/gsd:new-milestone` when ready to scope.
 
-**Why now:** v2.4 가 모든 visible scorecard gap 을 닫았음 (96/100 KEEP, 4 dimensions ≥80%). 다음 신호는 daily-driver UX. 현재 REPL 은 "bare" — Ctrl+C/D 외 quit 방법 없음, session 메타 보이지 않음, plan-mode toggle 불가, prior prompt recall 불가, multi-line 입력 어색. 매 turn 마다 visible 효과를 가지는 4 개 ergonomic 추가가 v1.2 와 동일한 가치 패턴.
+## Future Milestone Goals (post-v2.5)
 
-**Target features (4 갈래):**
+v2.6+ candidates (observation-driven; not yet scoped):
 
-- **SLASH commands** — `/help`, `/status` (token usage 포함; OBS-06 absorbs), `/clear`, `/exit`, `/sessions`, `/resume <id>`, `/plan` toggle. SLASH-01 후보가 v2.0 부터 carried-forward; 이번에 정식 scope.
-- **/edit multi-line input** — `/edit` 호출 시 `$EDITOR` (vim/nano/code 등) 으로 임시 파일 편집; 저장 시 prompt 로 사용. 긴 multi-step prompt 의 ergonomic gap.
-- **PrettyPrompt readline + history** — `Console.ReadLine` 대체. up/down arrow recall, Ctrl+R 검색, line editing, cross-session history persistence (`~/.bluecode/history`). NEW NuGet dependency (Key Decision 추가; § Key Decisions table).
-- **Token visibility (`/status` 안에 흡수)** — char-based token estimate 표시; future COMPACT-01 의 prereq.
-
-**Scope (5 phases):**
-
-- Phase 31: SLASH-01 core (`/help`, `/status`, `/clear`, `/exit`)
-- Phase 32: SLASH-01 sessions (`/sessions`, `/resume <id>`)
-- Phase 33: SLASH-01 plan toggle (`/plan` mid-REPL on/off)
-- Phase 34: EDIT-01 (`/edit` multi-line via $EDITOR)
-- Phase 35: HIST-01..04 (PrettyPrompt readline + history file + Ctrl+R)
-
-Bench gate 7/7 PASS mandatory after each phase; Core purity preserved (전부 Cli layer); schema 0/50 perfect 무관 (slash 는 LLM 호출 가로챔); `bench/baseline.json` 변경 없음 (REPL 은 bench 영역 밖).
-
-**Phase numbering:** continues at 31 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20, v2.1: 21, v2.2: 22-23, v2.3: 24-27, v2.4: 28+30; Phase 29 SKIPPED-by-design).
-
-**Excluded** with explicit rationale (deferred to later milestones):
-- `/model` mid-session switch — `--with-35b` opt-in semantics + 35B service load 검증 비용 큼; v2.6+ 후보
-- `/save <name>` named sessions — bare session id 로 충분; 명명은 future ergonomic
-- Auto-completion of slash commands — PrettyPrompt 가 cheap 하면 future polish
-- Cross-session history search UI — Ctrl+R 가 In-session 에서 일단 충분
-- COMPACT-01 — token visibility 만 v2.5 (`/status`); auto-compaction 은 32k hit 측정 후 v2.6+
-- AGENT-LOOP-FEW-SHOT-01 / COLDSTART-PRISTINE-01 / SUBAG-01 / PLAN-MODE-BENCH-01 / STM-01 / THINK-01 / TOOLCALLS-01 — 직전 milestone 검토에서 동일 사유로 deferred
-
-## Current Milestone: v2.4 Coding Quality (SHIPPED)
-
-**Goal:** Close the only remaining ≤60%-threshold dimension on the eval scorecard — Coding-quality 6/10 (Idiomatic F# 1/5). v2.2/v2.3 audit hedged that the 1/5 score may be a Python-transcript artifact (HumanEval+ scoring Python answers under chat mode); the real F# generation quality during daily-driver use is not directly measured. This milestone is **measurement-first**: build F# task fixtures, measure idiomatic-F# generation in agent-loop mode, then intervene only if data justifies. Mirrors v2.2's data-driven discipline.
-
-**Why now:** v2.3 closed the only Correctness gap (CORR-EVAL-02 PASS) and surfaced no new constraint discoveries. The eval scorecard's `Coding quality 6/10` is the only dimension at threshold (60.0%; 1 step from KEEP-WITH-CAVEATS). Either the score is real (intervention needed) or the score is artifact (re-measure with proper F# fixtures yields free +2~4 points). Both paths are useful; both start with the same Phase 28 measurement.
-
-**Target features (3 prongs, conditional structure):**
-
-- **FS-EVAL: F# task fixture design + measurement** — 3-5 idiomatic-F#-requiring tasks under `bench/fixtures/fs_idiomatic/` (pipeline `|>`, DU pattern matching, `Result.bind`/`Option` chains, record `with`-update); new `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh`; transcript review against rubric; eval doc §5 re-score
-- **FS-INTERVENE (conditional): F# style hint** — only if FS-EVAL confirms low score. F# style directive added to `defaultSystemPrompt` (conditional clause; mirrors v2.3 P1 pattern); re-run F# fixtures; re-score
-- **HARNESS-AUDIT: bash-strict-mode patterns codified** — `bench/eval-qwen35-122b.sh` accumulated 4 macOS bash-strict-mode patches across v2.1-v2.3; one-pass audit + new `documentation/howto/macos-bash-strict-mode-patterns.md` codifying the rule
-
-**Scope (per user-approved recommendation 2026-04-29):**
-
-- 2-3 phases (28, 29-conditional, 30): measurement + harness audit → conditional intervention → close
-- Phase 29 added via `/gsd:add-phase` only if Phase 28 measurement confirms 1/5 (data-driven; mirrors v2.3's Phase 27 supersession pattern in spirit)
-- Bench gate 7/7 PASS mandatory after each phase; Core purity preserved (any intervention is Cli-only via `defaultSystemPrompt`)
-- No `bench/baseline.json` modifications
-
-**Phase numbering:** continues at 28 (v1.0: 1-5, v1.1: 6-7, v1.2: 8/9/9.1, v1.3: 10-11, v1.4: 12-13, v2.0: 14-20, v2.1: 21, v2.2: 22-23, v2.3: 24-27).
-
-**Excluded** with explicit rationale (deferred to later milestones):
-- AGENT-LOOP-FEW-SHOT-01 — v2.3 closed CORR-EVAL-02 without it; Phase 27 deliberately left P2 in plan-mode. v2.5+ candidate if observation surfaces value
-- COLDSTART-PRISTINE-01 — Post-reboot pristine case still untested; needs scheduled disruption window; v2.5+ candidate (low urgency)
-- SLASH-01, COMPACT-01, SUBAG-01, PLAN-MODE-BENCH-01 — observation-driven (no daily-driver pain signal); v2.5+ candidates
-- THINK-01 — defer indefinitely (thinking-OFF gives perfect schema 0/50)
-- TOOLCALLS-01 — v3.0 territory
-- STM-01 — deferred 9th cycle; defer pattern is the signal
-
-## Future Milestone Goals (post-v2.4)
-
-v2.5+ candidates (observation-driven; not yet scoped):
-
-- **AGENT-LOOP-FEW-SHOT-01** (carried-forward from v2.3) — Migrate or adapt P2 for agent-loop mode if observation surfaces a need
+- **MODEL-SWITCH-01** — `/model 35b` / `/model 122b` mid-session switch (carried-forward from v2.5; requires `--with-35b` opt-in + 35B service load probe at runtime)
+- **SLASH-COMP-01** — Slash command auto-completion via PrettyPrompt completion API (newly-surfaced from v2.5)
+- **HIST-SEARCH-01** — Cross-session history search beyond Ctrl+R (e.g., `/find <pattern>`) (newly-surfaced from v2.5)
+- **COMPACT-01** — Auto-compaction trigger when `/status` shows ≥80% context (v2.5 shipped visibility only; trigger is v2.6+ measurement-driven)
+- **PRETTYPROMPT-HIST-1000** — Bump PrettyPrompt history cap from 500 to 1000 (upstream PR; v2.5 deviated from ROADMAP spec by adopting 500 default — see v2.5-MILESTONE-AUDIT tech debt)
+- **PRIORSTEPS-MSG-ORDER-01** — priorSteps message-ordering quirk (T-54/T-59/T-61) — prompt-tuning territory; v2.6+ if observation surfaces value
+- **ALLOWPATHS-GLOB-01** — `--allow-paths` glob/wildcard pattern support (Phase 36 deferred-by-design)
+- **AGENT-LOOP-FEW-SHOT-01** (carried-forward from v2.3+v2.4) — Migrate or adapt P2 for agent-loop mode if observation surfaces a need
 - **COLDSTART-PRISTINE-01** (low; carried-forward) — Post-reboot pristine cold-start measurement (warm-OS-cache 37s already documented in v2.2)
-- **SLASH-01** — `/sessions`, `/plan`, `/clear` slash commands inside REPL (carried-forward; observation-driven)
-- **COMPACT-01** — Auto-compaction when session approaches 80% of `max_model_len` (carried-forward; observation-driven)
-- **SUBAG-01** — Sub-agent delegation via Agent tool (carried-forward; observation-driven; now meaningful since memory + planning + plan-mode all shipped)
+- **SUBAG-01** — Sub-agent delegation via Agent tool (carried-forward; observation-driven; now meaningful since memory + planning + plan-mode + REPL all shipped)
 - **PLAN-MODE-BENCH-01** — Plan-mode bench fixture via mocked-IKeyReader (carried-forward; complementary not load-bearing)
-- **STM-01** — SSE token streaming (deferred 9th cycle; TTFT 222ms warm is instant; defer pattern is the signal)
+- **STM-01** — SSE token streaming (deferred 10th cycle; TTFT 222ms warm is instant; defer pattern is the signal)
 - **THINK-01** — Thinking-mode-on consumption of `<think>` blocks (defer indefinitely; v2.1 says thinking-OFF gives perfect schema 0/50)
 - **TOOLCALLS-01** — Native OpenAI `tool_calls` (v3.0 territory; custom JSON schema is 0/50 perfect)
 
@@ -166,6 +115,14 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - ✓ HARNESS-AUDIT-01 howto codified — `documentation/howto/macos-bash-strict-mode-patterns.md` with 5 patterns (4 carried-forward + Pattern 5); each pattern has symptom/cause/canonical-fix/commit-ref structure — v2.4 (28-01; HARNESS-01)
 - ✓ Bench gate 7/7 PASS preserved through entire v2.4 — milestone-wide invariants held; `git diff milestone-v2.3 HEAD -- src/` empty; `bench/baseline.json` byte-for-byte preserved; zero source-code change milestone — v2.4 (REGRESSION-01; Phase 28 + Phase 30 both verified)
 - ✓ Conditional Phase 29 SKIPPED-by-design pattern established — Phase 29 never created (cleaner than v2.3 Phase 26 BLOCKED-with-record); FS-INTERVENE-01..02 marked SKIPPED in REQUIREMENTS.md traceability — v2.4 (Path A clean disprove)
+
+- ✓ 9-command REPL slash surface (`/help` `/status` `/clear` `/exit` `/quit` `/sessions` `/resume <id>` `/plan` `/edit`) — `Cli/SlashCommand.fs` pure parser DU + `Cli/Repl.fs` `runMultiTurnWithSession` dispatcher with arms; all in-process (zero LLM calls — verified via `stubLlm []` test pattern); `printfn` (not Spectre) for testable output — v2.5 (SLASH-01..07; Phases 31-33)
+- ✓ `/sessions` lists 10 most-recent persisted sessions (id, started_at, turn count, first-thought excerpt); sorted by mtime descending; corrupt files silently skipped — `FileSessionStore.listRecent` (Cli-layer module function, NOT on `ISessionStore` interface — Core purity invariant preserved) — v2.5 (SLASH-05; Phase 32)
+- ✓ `/resume <id>` switches to saved session in-place; unknown id → friendly "Session not found" error; corrupt jsonl → "Session file corrupt" error; both keep REPL alive — `currentSession <- loaded` mutable rebind only mutation needed — v2.5 (SLASH-06; Phase 32)
+- ✓ `/plan` mid-REPL toggle (`planModeActive: bool` cell + new `Some (Prompt _) when planModeActive` arm running plan-gate inline loop mirroring Program.fs single-turn); one-shot semantics (auto-disable after Accept/Quit/exhausted-rejects); `[plan mode on/off]` `printfn` notification (Role=System invariant preserved); `renderStatus` 4-arg signature — v2.5 (SLASH-07; Phase 33)
+- ✓ `/edit` `$EDITOR` multi-line input — `Cli/EditCommand.fs` with `IEditorLauncher` port (mirrors v2.0 `IKeyReader`); `realEditorLauncher` uses `ProcessStartInfo` with `UseShellExecute=false` + all `Redirect*=false` for TTY inheritance; `openEditorAsync` orchestrates `Path.GetTempFileName` → `File.Move` to `.md` → editor → read → `try/finally` delete + `AppDomain.ProcessExit` atexit handler; `handlePromptTurn` helper extracted (called exactly 2 sites — Prompt arm + Slash Edit Some-content branch — so /edit content auto-inherits plan-mode); `editorLauncherOverride: IEditorLauncher option` test seam — v2.5 (EDIT-01; Phase 34)
+- ✓ PrettyPrompt 4.1.1 readline + cross-session history — first new NuGet in v2.5 (MPL-2.0; .NET 8 forward-compat to .NET 10; transitive dep TextCopy); `Cli/PromptReader.fs` defines `IPromptReader` port (third application of v2.0 IKeyReader / Phase 34 IEditorLauncher port-template); `makeRealPromptReader ()` constructs `new Prompt(persistentHistoryFilepath = ~/.bluecode/history)` — all 4 HIST reqs (Up/Down recall, persistence, Ctrl+R reverse-search, line editing) satisfied by constructor parameter alone (PrettyPrompt's built-in HistoryLog: base64-per-line, 500-cap, async append, dedup); `Repl.fs` `Console.ReadLine` + `printf "blueCode> "` fully removed; `promptReaderOverride: IPromptReader option` seam — v2.5 (HIST-01..04; Phase 35)
+- ✓ Manual-test hardening: `globSearchImpl` bare-pattern auto-expansion (`*.fsproj` → `**/*.fsproj` at FsToolExecutor.fs:519-522); `--allow-paths <comma-sep>` CLI flag for explicit scratch-dir opt-in (defaults project-root only — preserves security invariant; `validatePathWithExtras` with `Path.GetFullPath` canonicalization defends sibling-prefix attacks); `planSystemPromptSuffix` tightened with `MAXIMUM 10 (HARD LIMIT)` + no-placeholder constraints (T-75/T-76 mitigation; CLAUDE.md prompt-length invariant updated to 967 + 1577 = 2546 chars) — v2.5 (Phase 36 inserted mid-milestone for manual-test-round-1 fix tracks)
 
 ### Deferred (v1.5+ candidates — scope from observation window, not backlog)
 
@@ -340,4 +297,4 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-04-29 after starting v2.5 REPL ergonomics milestone — 4 ergonomic gaps bundled (slash commands + $EDITOR multi-line + PrettyPrompt readline + history + token visibility); 5 phases planned; v1.2 Tool ergonomics shape; Cli-layer only.*
+*Last updated: 2026-05-05 after v2.5 REPL ergonomics milestone shipped — 6 phases (31-36; Phase 36 inserted), 13 plans, 12 requirements (all satisfied), +83 tests (282→365), bench gate 7/7 PASS preserved milestone-wide, zero `src/BlueCode.Core/` diff. Port-template (IKeyReader v2.0 → IEditorLauncher Phase 34 → IPromptReader Phase 35) crystallized as load-bearing. 11 milestones shipped.*

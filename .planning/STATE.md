@@ -2,22 +2,20 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics milestone started)
+See: `.planning/PROJECT.md` (updated 2026-05-05 after v2.5 REPL ergonomics milestone shipped)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.4 verdict 96/100 KEEP; all 4 dimensions ≥80%; widest KEEP margin in project history)
-**Current focus:** v2.5 REPL ergonomics — bundling slash commands (SLASH-01..07) + `/edit` multi-line input + PrettyPrompt readline + history + token visibility. Cli-layer only; Core purity preserved; bench/schema invariants untouched.
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.4 verdict 96/100 KEEP; all 4 dimensions ≥80%; widest KEEP margin in project history). **v2.5 ships REPL ergonomics**: 9 slash commands + $EDITOR multi-line + PrettyPrompt readline + cross-session history.
+**Current focus:** **Between milestones.** v2.5 SHIPPED 2026-05-05; v2.6 unscoped (observation-driven from daily-driver use). Run `/gsd:new-milestone` when ready to scope.
 
 ## Current Position
 
-Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 35 (prettyprompt-readline-history) — COMPLETE (2/2 plans complete)
-Plan: 2 of 2 complete (35-02 tests-migration-and-hist)
-Status: Phase 35 VERIFIED + user-approved (2026-05-05). Verifier 9/9 must-haves + 4 human-verification items (HV-1 Up/Down arrow, HV-2 Ctrl+R, HV-3 Terminal.app+iTerm2, HV-4 cross-session HIST-03) approved by user. **v2.5 milestone COMPLETE — 12/12 requirements done; 6/6 phases shipped + verified.** 365 tests passing; bench gate 7/7 PASS; Core untouched; baseline.json byte-identical.
-Last activity: 2026-05-05 — Phase 35 (PrettyPrompt readline + history) complete + verified + user-approved. v2.5 milestone ready for `/gsd:complete-milestone` (archive + git tag milestone-v2.5).
+**Between milestones — v2.5 SHIPPED.**
 
-Next: `/gsd:complete-milestone` — archive v2.5 phases to .planning/milestones/v2.5-phases/, create milestone-v2.5 git tag, prepare PROJECT.md for v2.6.
+11 milestones total. Most recent: v2.5 REPL ergonomics (6 phases / 13 plans / 12 reqs / +83 tests / bench 7/7 PASS preserved / zero Core diff / shipped 2026-05-05).
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 ✓ (COMPLETE 2026-05-05 — all 6 phases + 12/12 requirements + 365 tests + bench 7/7 PASS preserved + zero Core diff)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 ✓ (shipped 2026-05-05)** → v2.6 (unscoped)
+
+Next: `/gsd:new-milestone` to scope v2.6 (observation-driven; not from carried-forward backlog).
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -31,21 +29,22 @@ Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 
 **v2.2:** 2 phases (22, 23), 5 plans (4+1), 284 tests (+2 boundary), 27 files +3569/-81 LOC, 19 commits, ~1 day; verdict 82→87/100 KEEP
 **v2.3:** 4 phases (24, 25, 26 BLOCKED-historical, 27), 9 plans (8+1 blocked-by-design), 287 tests (+3 PlanValidator boundary), 34 files +9152/-54 LOC, 31 commits, ~2 days; verdict 87→92/100 KEEP; bench gate 7/7 PASS preserved; src/ diff confined to 4 files
 **v2.4:** 2 actual phases (28, 30; Phase 29 SKIPPED-by-design — never created), 7 plans, 287 tests (unchanged — F# bench fixtures, not Expecto), 37 files +6816/-38 LOC (heavily docs/eval/research-driven), 21 commits, ~3 hours same-day; verdict 92→96/100 KEEP (Coding-quality 6/10→10/10 via F# fixture Path A disprove); bench gate 7/7 PASS preserved; **zero src/ diff**
+**v2.5:** 6 phases (31-36; Phase 36 inserted mid-milestone for manual-test-round-1 fixes), 13 plans, 12 requirements (all 12 satisfied), 365 tests (+83 net delta), 71 files +19,833/-201 LOC, 68 commits, ~7 days wall-clock (2026-04-29 → 2026-05-05); 1 new NuGet (PrettyPrompt 4.1.1, MPL-2.0); bench gate 7/7 PASS preserved milestone-wide; **zero `src/BlueCode.Core/` diff** (Cli-only invariant held); port-template (IKeyReader v2.0 → IEditorLauncher Phase 34 → IPromptReader Phase 35) crystallized as load-bearing
 
-Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3,2.4}-phases/`.
+Detailed per-plan history archived in `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3,2.4,2.5}-phases/`.
 
 ## Accumulated Context
 
 ### Decisions
 
-Cumulative log in `.planning/PROJECT.md` Key Decisions table. See PROJECT.md for outcomes through v2.4.
+Cumulative log in `.planning/PROJECT.md` Key Decisions table. See PROJECT.md for outcomes through v2.5.
 
 Stable patterns established across milestones (load-bearing for next session):
 
-- **Core purity** — `src/BlueCode.Core/**` no Serilog/Spectre/Argu/HttpClient/file I/O; `task {}` only (CI-enforced via `scripts/check-no-async.sh`).
-- **Test discovery** — explicit `rootTests` list in `RouterTests.fs` + ordered `<Compile Include>` in `BlueCode.Tests.fsproj`. New test modules need BOTH places.
+- **Core purity** — `src/BlueCode.Core/**` no Serilog/Spectre/Argu/HttpClient/file I/O/PrettyPrompt; `task {}` only (CI-enforced via `scripts/check-no-async.sh`).
+- **Test discovery** — explicit `rootTests` list in `RouterTests.fs` + ordered `<Compile Include>` in `BlueCode.Tests.fsproj`. New test modules need BOTH places (4+ prior plans hit this pitfall — silent test skip).
 - **Canonical test runner** — `dotnet run --project tests/BlueCode.Tests/BlueCode.Tests.fsproj` (NOT `dotnet test`).
-- **Bench gate** — `bash bench/run.sh --gate` is the structural authority. 7/7 PASS post-v2.4 with single-model 122B (T6/T5/B2/T1/W1/W2/MT).
+- **Bench gate** — `bash bench/run.sh --gate` is the structural authority. 7/7 PASS post-v2.5 with single-model 122B (T6/T5/B2/T1/W1/W2/MT). `bench/baseline.json` byte-identical milestone-wide.
 - **Atomic commits** — `{type}({phase}-{plan}): {name}` per task; plan-meta separate; phase-complete bundles. NEVER `git add -A` or `git add .`.
 - **Role = User invariant** (Phase 17-02 + Phase 20-03) — Qwen 3.5 122B REJECTS mid-conversation `Role = System` with HTTP 404. ALL mid-conversation injections are `Role = User`.
 - **Single-model 122B canonical** (Phase 19) — `blueCode "..."` defaults to 122B; 35B requires `--with-35b` opt-in flag AND service loaded.
@@ -54,91 +53,55 @@ Stable patterns established across milestones (load-bearing for next session):
 - **P2 few-shot example in `planSystemPromptSuffix`** (Phase 24-02; plan-mode-only) — 3-line Example/Targets/Steps block. Suffix char count: 1577 (was 999 pre-Phase 36-03).
 - **Combined plan-mode prompt char count INVARIANT post-Phase 36-03** — defaultSystemPrompt(967) + "\n\n" + planSystemPromptSuffix(1577) = 2546 chars (was 1968 pre-Phase 36-03; Phase 36-03 added MAXIMUM 10 HARD LIMIT + Path rules clauses).
 - **PlanValidator pre-flight `checkRenameTargetsEnumerated`** (Phase 25-01) — Interpretation B detail-string encoding; PlanValidator.fs:108; bound at validatePlan:143; called from AgentLoop.fs:484. Plan-mode only.
-- **Plan-mode vs agent-loop distinction is load-bearing** (v2.3 lesson; preserved through v2.4) — `defaultSystemPrompt` for ALL invocations; `planSystemPromptSuffix` only when `--plan`; `PlanValidator.checkRenameTargetsEnumerated` only in `runPlanTurn`.
+- **Plan-mode vs agent-loop distinction is load-bearing** (v2.3 lesson; preserved through v2.4+v2.5) — `defaultSystemPrompt` for ALL invocations; `planSystemPromptSuffix` only when `--plan` (or REPL `/plan` toggle); `PlanValidator.checkRenameTargetsEnumerated` only in `runPlanTurn`.
 - **Mandatory `launchctl kickstart` pre-flight for evaluations** (v2.3 Phase 26 Diagnostic D; reused in v2.4 Phase 28-04) — `launchctl kickstart -k gui/501/com.ohama.qwen122b` clears KV cache contamination.
-- **renderStatus primitive-arg signature** (Phase 31-02) — `renderStatus` takes `(Session, Model option, int)` not `AppComponents`; `Rendering.fs` compiles before `CompositionRoot.fs` so passing `AppComponents` would be a forward reference. Caller extracts fields at call site.
-- **No Save on /clear** (Phase 31-02) — `FileSessionStore.Save` creates `.jsonl` lazily on first write; empty new session has nothing to persist; old session jsonl stays untouched by design.
-- **Slash dispatcher test pattern** (Phase 31-02) — Repl integration tests use `stubLlm []` (throws on first call) to assert 0 LLM calls from in-process slash commands; any routing leak fails fast.
+- **Port-template pattern** (v2.0 IKeyReader + v2.5 Phase 34 IEditorLauncher + v2.5 Phase 35 IPromptReader) — Single-method interface in `Cli/X.fs`; `makeRealX` production impl; `makeTestX` mock for unit tests; `xOverride: IX option` mutable seam at Repl boundary for integration tests. Three-application precedent makes this load-bearing for any future TTY-bound Cli adapter.
+- **REPL dispatcher extension pattern** (Phase 32-02 + 33-01 + 34-01) — Add new arms ABOVE Prompt arm; slim future-stub by removing handled commands; use `printfn` not `AnsiConsole.MarkupLine`; use `let!` inside `task {}` CE for async calls.
+- **handlePromptTurn helper extraction** (Phase 34-01) — `Repl.runMultiTurnWithSession` factored out `handlePromptTurn: prompt -> Task<unit>` containing `if planModeActive then runPlanTurn-inline else runSingleTurn` branching. Both `Some (Prompt _)` arm AND `Some (Slash Edit)` Some-content branch call `do! handlePromptTurn` (exactly 2 sites). /edit content auto-inherits plan-mode.
+- **One-shot plan-mode semantics** (Phase 33-01) — `planModeActive` auto-disables after Accept+Execute, Quit, AND rejectCount exhaustion. User must re-type `/plan` for next plan-gated turn. Plan-gate Quit sets `planModeActive <- false` + `turnDone <- true` only — NEVER `running <- false` (would exit REPL).
+- **renderStatus 4-arg signature** (Phase 33-01) — `(Session, Model option, int, bool)` where the bool is `planModeActive`. When true, appends `\nplan-mode: on (next prompt uses plan-gate)` to output.
+- **Spectre.Console singleton reset for plan-gate REPL tests** (Phase 33-02 auto-fix) — `AnsiConsole.Console <- AnsiConsole.Create(AnsiConsoleSettings())` after `Console.SetOut` redirect; restore in `finally`. Required only for tests that route through PlanGate.render.
 - **listRecent NOT on ISessionStore** (Phase 32-01) — `listRecent : int -> SessionMeta list` is a Cli-layer module-level function in `FileSessionStore.fs`, NOT an ISessionStore member. ISessionStore stays frozen at Save + Load (Core purity invariant).
-- **SessionMeta NOT [<CLIMutable>]** (Phase 32-01) — Plain F# domain record (Id, StartedAt, TurnCount, FirstPromptExcerpt); CLIMutable is reserved for JSON DTOs (SessionHeader, TurnEnvelope). Two-level excerpt truncation: listRecent caps at 80 chars, renderSessions display column caps at 40 chars + "...".
-- **"first thought" column label in renderSessions** (Phase 32-01) — User prompt not stored in jsonl; first envelope first step Thought is best proxy. Column labeled "first thought" not "first prompt". Research § Open Question #1 resolution.
-- **No Save on /resume** (Phase 32-02) — `FileSessionStore.Save` creates `.jsonl` lazily on first write; loaded session is already on disk; saving on resume would write a duplicate envelope. Per-Prompt-turn Save (inside Prompt arm) handles persistence from next user prompt onward.
-- **currentSession mutable rebind is the sole in-place switch** (Phase 32-02) — `currentSession <- loaded` is all that's needed; next iteration reads `currentSession.Steps` directly as priorSteps argument. No separate priorSteps variable exists.
-- **Empty-arg guard (Resume "") matched before general (Resume id)** (Phase 32-02) — Prevents empty SessionId from reaching `sessionStore.Load`; produces "usage: /resume <session-id>" hint instead.
-- **Slash dispatcher extension pattern** (Phase 32-02) — Add new arms ABOVE Prompt arm; slim future-stub by removing handled commands; use `printfn` not `AnsiConsole.MarkupLine`; use `let!` inside `task {}` CE for async calls. Phases 33+34 follow this same pattern.
-- **Plan-mode auto-disable on Accept/Quit** (Phase 33-01) — `planModeActive` is a one-shot toggle: after PlanGate Accept executes the plan, OR after Quit abandons it, the cell is set back to `false`. User re-types `/plan` for next plan-gated turn. Avoids "stuck in plan-review loop" surprise. Researcher-recommended; planner-adopted.
-- **REPL plan-gate inline loop mirrors Program.fs single-turn** (Phase 33-01) — `runMultiTurnWithSession` Prompt-when-planModeActive arm reuses `AgentLoop.runPlanTurn` + `CompositionRoot.planSystemPromptSuffix` + `PlanGate.render` + `PlanGate.promptUser PlanGate.realKeyReader`. Quit branch sets `planModeActive <- false` but NEVER `running <- false` (would exit REPL). `[plan mode on/off]` notification is `printfn` only — Role=System invariant preserved.
-- **renderStatus 4-arg signature** (Phase 33-01) — `renderStatus` now takes `(Session, Model option, int, bool)` where the bool is `planModeActive`. When true, appends `\nplan-mode: on (next prompt uses plan-gate)` to output. All call sites and tests updated in same plan to keep build green.
-- **Spectre.Console singleton reset for ReplTests** (Phase 33-02 auto-fix) — `Spectre.Console.AnsiConsole` lazily caches `Console.Out` on first `AnsiConsole.Write`. Tests redirecting `Console.SetOut` to a `StringWriter` then disposing it cause `ObjectDisposedException` in subsequent tests. Fix: reset `AnsiConsole.Console <- AnsiConsole.Create(AnsiConsoleSettings())` after each `Console.SetOut` redirect; restore in `finally`. Required only for tests that exercise PlanGate (which uses AnsiConsole directly).
-- **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01, commit `a6159c4`); orphan-grep-zero-match-exit-1 (v2.3 27-02, commit `9f8e06e`); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
-- **One-shot plan-mode semantics (Phase 33-01)** — `planModeActive` auto-disables after Accept+Execute, Quit, AND rejectCount exhaustion. User must re-type `/plan` for next plan-gated turn. Avoids "stuck in plan-review loop" surprise.
-- **IEditorLauncher port pattern (Phase 34-01)** — `EditCommand.IEditorLauncher` mirrors `PlanGate.IKeyReader`. Production: UseShellExecute=false + all three Redirect*=false for TTY inheritance. Tests: write scripted content directly to tmpPath (Plan 34-02 scope). Content-based cancel (empty/whitespace = None); exit-code ignored (`:q!` returns 0 anyway). atexit cleanup via module-level ProcessExit handler + mutable currentTmpPath cell.
-- **handlePromptTurn shared helper (Phase 34-01)** — Factored out of both Prompt arms so Slash Edit arm reuses identical plan-mode-aware dispatch path. Fully-qualified BlueCode.Cli.EditCommand.* in Repl.fs (no new `open`); mirrors Phase 33-01 PlanGate.* style.
-- **Slash Edit Ctrl+C suppression (Phase 34-01)** — `Console.CancelKeyPress.AddHandler` with `args.Cancel=true` in the Slash Edit arm prevents SIGINT from killing blueCode while $EDITOR is running. Handler removed in `finally`. Editor (vi/vim) handles its own SIGINT internally.
-- **Plan-gate Quit NEVER sets running <- false (Phase 33-01)** — Quit in the plan-gate inline loop sets `planModeActive <- false` + `turnDone <- true` only; returns to REPL prompt. Only `Slash Exit` and `null` (Ctrl+D) set `running <- false`.
-- **editorLauncherOverride test seam pattern (Phase 34-02)** — Module-level `let mutable editorLauncherOverride : IEditorLauncher option = None` in Repl.fs; tests set before calling `runMultiTurn`, reset in `finally`. Mirrors Console.SetIn/SetOut convention. Must run inside `testSequenced` envelope (process-level mutable cell; concurrent tests would race). Production path: `editorLauncherOverride = None` -> `realEditorLauncher` unchanged.
-- **makeMockResponse already wraps in Ok (Phase 34-02)** — `makeMockResponse : string -> LlmOutput -> Result<LlmResponse, AgentError>` returns `Ok { Thought = Thought ...; Output = ... }`. NEVER wrap in another `Ok`; doing so produces a double-wrapped type error at compile time.
-- **MessageRole.User is unqualified `User` (Phase 34-02)** — `type MessageRole = System | User | Assistant` in Domain.fs. Match pattern is `| User ->` not `| Role.User ->` or `| BlueCode.Core.Domain.Role.User ->`. With `open BlueCode.Core.Domain`, simply `User`.
-- **Fully-qualified BlueCode.Cli.PlanGate.* in Repl.fs (Phase 33-01)** — No new `open` directive; fully-qualified names (`BlueCode.Cli.PlanGate.render`, etc.) avoid module-alias conflict and match `BlueCode.Core.AgentLoop.runPlanTurn` style.
-- **Spectre.Console AnsiConsole reset in plan-gate REPL tests (Phase 33-02)** — `PlanGate.render` calls `AnsiConsole.Write(table)` which lazily caches `Console.Out` on first use. In `testSequenced` tests that redirect `Console.Out`, the cached `SyncTextWriter` may point to a prior test's disposed `StringWriter`, causing `ObjectDisposedException`. Fix: before each test that exercises `PlanGate.render` through the REPL loop, call `Spectre.Console.AnsiConsole.Console <- Spectre.Console.AnsiConsole.Create(Spectre.Console.AnsiConsoleSettings())` after `Console.SetOut(stdoutWriter)`, then restore in `finally`. This re-ties Spectre to the live `stdoutWriter`.
-- **Two-seam injection for plan-gate tests (Phase 35-02)** — Accept/Quit plan-gate tests use BOTH `promptReaderOverride` (REPL prompt lines) AND `Console.SetIn` (plan-gate `a`/`q` keypresses). `PlanGate.realKeyReader` falls back to `Console.In.ReadLine()` in non-TTY env — a different I/O path from `promptReaderOverride`. Two separate I/O seams, each needs its own injection. Error plan-gate test uses only `promptReaderOverride` (LLM fails before `PlanGate.promptUser` is reached).
-- **PrettyPrompt.Prompt is IAsyncDisposable not IDisposable (Phase 35-02)** — Cannot use F# `use pp = new Prompt(...)` binding (requires IDisposable). Use `let _pp = new Prompt(...)` to verify construction without type constraint mismatch. This affects both the HIST-03 unit test and any future code that tries to dispose Prompt synchronously.
-- **IPromptReader port pattern (Phase 35-01)** — `PromptReader.IPromptReader` mirrors `EditCommand.IEditorLauncher` (Phase 34-01). Production: `makeRealPromptReader ()` wraps PrettyPrompt 4.1.1; test: `makeTestPromptReader lines` wraps Queue<string>. Seam: `let mutable promptReaderOverride : BlueCode.Cli.PromptReader.IPromptReader option = None` in `Repl.fs` immediately after `editorLauncherOverride`. Reader instantiated inside `runMultiTurnWithSession` before `while` loop (NOT at module level — Pitfall 2 avoidance).
-- **PrettyPrompt F# API nuances (Phase 35-01)** — `PromptConfiguration` is in `PrettyPrompt` namespace (NOT `PrettyPrompt.Configuration`); `FormattedString` is in `PrettyPrompt.Highlighting`; `prompt` ctor parameter is `Nullable<FormattedString>`, not `string` (F# requires `System.Nullable(FormattedString("blueCode> "))` — no implicit C# coercion applies).
-- **PrettyPrompt 500-entry history cap (Phase 35-01)** — `HistoryLog.MaxHistoryEntries` is internal hard-coded constant; ROADMAP SC-5 "N = 1000" was placeholder. Adopted 500-entry cap. PrettyPrompt owns `~/.bluecode/history` (base64-per-line format); blueCode never writes to it directly.
-- **Console.SetIn irrelevant post-PrettyPrompt (Phase 35-01)** — PrettyPrompt's `Console.ReadKey(intercept=true)` bypasses `Console.In`; legacy `Console.SetIn(StringReader(...))` in ReplTests no longer reaches input layer. Fix: `promptReaderOverride` seam (Plan 35-02 migration). In non-TTY environments PrettyPrompt throws `InvalidOperationException: Cannot read keys...` immediately (no hang).
-- **IEditorLauncher port mirrors IKeyReader exactly (Phase 34-01)** — Single-method interface `Launch : tmpPath: string -> unit` in `src/BlueCode.Cli/EditCommand.fs`. Tests inject mock launcher (writes scripted content to tmpfile); production uses `realEditorLauncher` with `ProcessStartInfo { UseShellExecute = false; RedirectStandardInput = false; RedirectStandardOutput = false; RedirectStandardError = false }` for TTY inheritance. Pattern is direct copy of v2.0 PlanGate's `IKeyReader`.
-- **`handlePromptTurn` helper extraction (Phase 34-01)** — `Repl.runMultiTurnWithSession` factored out `handlePromptTurn: prompt -> Task<unit>` containing the `if planModeActive then runPlanTurn-inline else runSingleTurn` branching. Both `Some (Prompt _)` arm AND `Some (Slash Edit)` Some-content branch call `do! handlePromptTurn` (exactly 2 sites). This makes /edit content automatically inherit plan-mode when planModeActive=true. Extraction was research-recommended to avoid 60-line duplicate of plan-gate code.
-- **Tmpfile lifecycle in EditCommand.openEditorAsync (Phase 34-01)** — `Path.GetTempFileName()` → `File.Move` to `.md` extension (syntax-highlight hint; original `.tmp` disappears via Move atomically) → editor launch via injected `IEditorLauncher` → read content → `try/finally` delete after read. Module-level `do AppDomain.CurrentDomain.ProcessExit.Add(...)` handler for atexit cleanup of any leftover (handles REPL crash mid-edit case). 4 cleanup paths covered: read success, cancel (empty content), normal exit, atexit.
-- **`editorLauncherOverride: IEditorLauncher option` test seam (Phase 34-02)** — `Repl.runMultiTurnWithSession` accepts optional override (default None → uses `realEditorLauncher`); ReplTests integration tests pass `Some mockLauncher` to inject scripted content at the Repl boundary. Pattern is one-line addition to function signature; reusable for any future Cli adapter that needs Repl-boundary mock injection.
-- **IPromptReader port mirrors IEditorLauncher / IKeyReader (Phase 35-01)** — `PromptReader.fs` defines `IPromptReader { abstract ReadLineAsync : unit -> Task<string option> }` and provides `makeRealPromptReader ()` (PrettyPrompt-backed) + `makeTestPromptReader (inputs: string list)` (Queue-based). Pattern is the third application of the port-template (after v2.0 IKeyReader for plan-gate keypresses + Phase 34 IEditorLauncher for $EDITOR launch); now firmly load-bearing for any future TTY-bound Cli adapter that needs test injection.
-- **promptReaderOverride seam mirrors editorLauncherOverride (Phase 35-01)** — `Repl.fs` adds `let mutable promptReaderOverride : IPromptReader option = None` immediately after `editorLauncherOverride`. Production None → uses `makeRealPromptReader`; tests set `Some mockReader` before invoking `runMultiTurn`, reset in `finally`. Module-level mutable cell requires `testSequenced` (process-level mutable; concurrent tests would race) — same constraint as editorLauncherOverride.
-- **PrettyPrompt 4.1.1 — first new NuGet in v2.5** (Phase 35-01) — MPL-2.0 license, .NET 8 forward-compat to .NET 10, single transitive dep TextCopy. Constructor: `new Prompt(persistentHistoryFilepath = path, configuration = PromptConfiguration(prompt = ...))`. All 4 HIST reqs (HIST-01..04) satisfied by the constructor parameter alone — built-in features handle Up/Down recall, persistent history (base64-per-line, 500-entry cap, async append, dedup), and Ctrl+R reverse search. Verified version pin tracked in PROJECT.md Key Decisions as ✓ Verified (Phase 35-01).
-- **PromptConfiguration.prompt is Nullable<FormattedString> (Phase 35-01 auto-fix)** — Not a plain `string`; the F# call site needs `FormattedString` from `PrettyPrompt.Highlighting` namespace, not `PrettyPrompt.Configuration`. PrettyPrompt API quirk worth recording for future API surface work.
-- **Hybrid Console.SetIn + promptReaderOverride for plan-gate tests (Phase 35-02)** — 4 ReplTests for plan-gate Accept/Quit retain `Console.SetIn(StringReader)` for `a`/`q` keypresses to `PlanGate.realKeyReader` while ALSO using `promptReaderOverride <- Some (makeTestPromptReader [...])` for REPL prompt lines. PLAN.md explicitly authorized this hybrid approach: "If in doubt, leave those 3 tests using BOTH seams." Documented as expected non-zero `grep -c "Console.SetIn"` count post-migration.
-- **PrettyPrompt history file 500-entry cap (Phase 35-01)** — ROADMAP.md SC-5 specified "N=1000 default"; PrettyPrompt's internal HistoryLog cap is hard-coded at 500 (not configurable without forking). Adopted 500 as deviation-from-spec per planner judgment: actual user history typically <100 entries; 500 is sufficient for daily-driver use; bumping requires upstream PR. Documented in 35-01 SUMMARY.
+- **No Save on /clear or /resume** (Phase 31-02 + Phase 32-02) — `FileSessionStore.Save` creates `.jsonl` lazily on first write; empty new session has nothing to persist; loaded session is already on disk.
+- **Tmpfile lifecycle in EditCommand.openEditorAsync** (Phase 34-01) — `Path.GetTempFileName()` → `File.Move` to `.md` (atomic; original `.tmp` disappears) → editor → read → `try/finally` delete; module-level `AppDomain.CurrentDomain.ProcessExit` handler for atexit (4 cleanup paths: read success, cancel, normal exit, atexit).
+- **PrettyPrompt 4.1.1 — first new NuGet in v2.5** (Phase 35-01) — MPL-2.0; .NET 8 forward-compat to .NET 10; single transitive dep TextCopy. All 4 HIST reqs satisfied by `new Prompt(persistentHistoryFilepath = path)` constructor parameter alone (built-in HistoryLog: base64-per-line, 500-cap hardcoded, async append, dedup, Ctrl+R reverse-search). PromptConfiguration.prompt is `Nullable<FormattedString>` from `PrettyPrompt.Highlighting` namespace (NOT plain string from Configuration).
+- **Hybrid Console.SetIn + promptReaderOverride for plan-gate tests** (Phase 35-02) — 4 ReplTests for plan-gate Accept/Quit retain `Console.SetIn` for `a`/`q` keypresses to `PlanGate.realKeyReader` while ALSO using `promptReaderOverride` for REPL prompt lines. Authorized hybrid; documented as expected non-zero `grep -c "Console.SetIn"` count post-v2.5.
+- **PrettyPrompt history file 500-entry cap** (Phase 35-01 deviation-from-spec) — ROADMAP.md SC-5 specified "N=1000 default"; PrettyPrompt's HistoryLog cap is hard-coded at 500. Adopted 500 as deviation per planner judgment; bumping requires upstream PR (tracked as PRETTYPROMPT-HIST-1000 v2.6+ candidate).
+- **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01); orphan-grep-zero-match-exit-1 (v2.3 27-02); grep-oE-pipeline-zero-match (v2.4 28-01). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
 - **F# fixture infrastructure** (v2.4 Phase 28) — `bench/fixtures/fs_idiomatic/` with 3 fixture pairs; `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` lines 328-391. Reusable for future F# coding-quality work. Research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate.
 - **FSI fixture skeleton pattern** (v2.4 Phase 28-02) — `.fs` skeletons use direct top-level `try...with` + printfn (NO `[<EntryPoint>]`). FSI executes module-level code directly. `dotnet fsi <file>.fs </dev/null` always exits 1 (interactive EOF); compile verification uses absence of `error FS` in output, not exit code.
 - **Sum-then-scale band table aggregate (v2.4 Phase 28-04)** — For multi-fixture rubric scoring, band table beats round(average) for outlier robustness.
 - **Conditional SKIP-by-design pattern (v2.4 Phase 29)** — When a conditional phase doesn't trigger, never create the phase directory (cleaner than BLOCKED-with-record). Use BLOCKED preservation only when partial-attempt produces diagnostic value (v2.3 Phase 26).
-- **Zero-source-diff milestone pattern (v2.1 + v2.4)** — Eval/measurement work can ship meaningful capability without `src/` changes. `git diff milestone-v<prev> HEAD -- src/` empty assertion is an established invariant for these milestones.
-- **Measurement-first scoping (v2.4)** — Inverted v2.2/v2.3's intervention-first pattern. When prior measurement evidence is category-mismatched (HumanEval+ Python answers vs Idiomatic F# scoring), proper category-matched fixtures may yield free score improvement. *"Is the score real, or is the measurement instrument wrong?"*
-
-### Roadmap Evolution
-
-- **Phase 36 added (2026-05-04):** "Manual test fixes" — independent, post-shipment hardening from manual test round 1. Scope: (1) glob_search recursive default, (2) PlanValidator UX rebuild (retry feedback + placeholder enum guard + PlanRejected friendly error), (3) **`--allow-paths` CLI flag for explicit scratch dir opt-in** (replaces manual-test-guide path-rewrite approach; user opt-in preserves security invariant), (4) hallucinated-success investigation. Out of scope (deferred): auto/default `/tmp/*` allowlist (only explicit `--allow-paths`), priorSteps message-ordering quirk, glob/wildcard patterns in --allow-paths. No new requirements; bench 7/7 PASS preserved invariant. Cli + doc only, Core untouched.
+- **Zero-source-diff milestone pattern (v2.1 + v2.4)** — Eval/measurement work can ship meaningful capability without `src/` changes. **Cli-only milestone variant (v2.5)** — meaningful Cli expansion ships with `git diff milestone-v<prev> HEAD -- src/BlueCode.Core/` empty assertion as established invariant.
+- **Measurement-first scoping (v2.4)** — Inverted v2.2/v2.3's intervention-first pattern. *"Is the score real, or is the measurement instrument wrong?"*
 
 ### Pending Todos
 
 None pending.
 
-- ✅ **T-75 / T-76 human verification** — RESOLVED 2026-05-05 via round 2 live re-run against 122B (`documentation/manual-test-guide.md`). T-75: Phase 36-03 prompt prevention working (model self-restrains to ≤10 steps). T-76: friendly validator message confirmed (`Plan invalid: rename targets not enumerated: foo`).
-
-v2.5 scoping for remaining phases (34, 35) is locked to existing ROADMAP.md (`/edit` $EDITOR / PrettyPrompt readline + history).
+v2.6 scoping is observation-driven (start daily-driver use of new REPL ergonomics; capture pain via `/gsd:add-todo`).
 
 ### Blockers/Concerns
 
-None active. All v2.2/v2.3/v2.4 surfaced bottlenecks resolved:
-- ~~CORR-EVAL-02 FAIL (v2.2 + Phase 26)~~ — RESOLVED in v2.3 Phase 27
-- ~~Persistent extraction bias on shared-prefix function names~~ — RESOLVED via P1 directive in `defaultSystemPrompt`
-- ~~Architectural scope mismatch (P1+P2+P3 plan-mode-only vs agent-loop eval)~~ — RESOLVED via Phase 27 P1 migration
-- ~~Idiomatic F# 1/5 sub-score (Python-transcript artifact)~~ — RESOLVED in v2.4 Phase 28 via F# fixture rescore (5/5)
+None active.
 
-Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; eligible for v2.5 cleanup):
+Documentation drift items flagged in v2.0 audit (still non-blocking; carried-forward to v2.6 cleanup):
 - Phase 20 missing formal `20-VERIFICATION.md` (per-plan SUMMARYs substitute)
 - CLAUDE.md Key Seams has 1 stale "72B" sentence (historical)
 - `documentation/` retains legacy 32B/72B install docs (kept as historical reference)
 
+Plus v2.5 tech debt aggregated in `.planning/milestones/v2.5-MILESTONE-AUDIT.md` (6 items, all deferred-by-design or external).
+
 ## Session Continuity
 
-Last session: 2026-05-05 (Phase 35 plan + execute + verify + user approval same-day; v2.5 milestone close)
-Stopped at: **v2.5 MILESTONE COMPLETE.** Phase 35 verified PASSED (verifier 9/9) + user approved 4 human-verification items (HV-1 Up/Down arrow, HV-2 Ctrl+R, HV-3 Terminal.app+iTerm2, HV-4 cross-session HIST-03). All 6 v2.5 phases shipped (31, 32, 33, 34, 35, 36). 12/12 v2.5 requirements done. 365 tests passing; bench gate 7/7 PASS preserved through entire milestone.
+Last session: 2026-05-05 (v2.5 milestone close — audit + complete-milestone same session)
+Stopped at: **v2.5 MILESTONE COMPLETE.** All 6 phases shipped + verified + user-approved. Audit ran (status: tech_debt — no critical gaps; 7/7 cross-phase integration; 7/7 E2E flows). Milestone archived to `.planning/milestones/v2.5-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `.planning/milestones/v2.5-phases/`. PROJECT.md evolved with 8 v2.5 Validated requirements + v2.6 candidates. ROADMAP.md + REQUIREMENTS.md + .planning/phases/ deleted (fresh for next milestone).
 Resume file: None
-Next workflow trigger: `/gsd:complete-milestone` — archives v2.5 phases to `.planning/milestones/v2.5-phases/`, creates `milestone-v2.5` git tag, prepares PROJECT.md for v2.6 scoping. Optional: `/gsd:audit-milestone` first for full integration + cross-phase + E2E verification (recommended given the milestone's 6 phases + new NuGet + 4 HV gates). After milestone close, v2.6 scoping via `/gsd:new-milestone` (observation-driven candidates from daily-driver use; no carried-forward backlog blocking).
+Next workflow trigger: `/gsd:new-milestone` to scope v2.6 (observation-driven; not from carried-forward backlog). Recommended `/clear` first.
 
-## Empirical Baselines (post-v2.4)
+## Empirical Baselines (post-v2.5)
 
-Load-bearing measurements for v2.5+ scoping:
+Load-bearing measurements for v2.6+ scoping:
 
 - **HumanEval+ chat pass@1 = 0.939 / pass@1+ = 0.902** (v2.1) — re-evaluation trigger if mlx_lm.server major version, Qwen 3.5 model card update / YaRN config change, or sampling defaults change
 - **Throughput median 34.6 tok/s; TTFT median 222 ms warm** (v2.1) — interactive UX baseline
@@ -148,8 +111,11 @@ Load-bearing measurements for v2.5+ scoping:
 - **Cold-start 37s warm-OS-cache** (v2.2 Phase 23)
 - **10-step PLAN-04 ceiling** (Phase 22-01)
 - **CORR-EVAL-02 PASS** (Phase 27-02; 2026-04-29) — orphan_count=0 with all 3 v2.3 prongs in production
-- **Idiomatic F# 5/5** (v2.4 Phase 28-04; UPDATED from 1/5 in v2.1) — F# fixture rescore: grand_total 13/15 (band ≥12) → mapped 5/5 → `passed_disprove_1of5`. Prior 1/5 was Python-transcript artifact (category mismatch).
-- **Coding-quality 10/10** (v2.4 Phase 28-05; UPDATED from 6/10 in v2.1/v2.3) — Idiomatic F# 5/5 + Tests compile+pass 3/3 + Bug identification 2/2 = 10/10 (100%).
+- **Idiomatic F# 5/5** (v2.4 Phase 28-04; UPDATED from 1/5 in v2.1)
+- **Coding-quality 10/10** (v2.4 Phase 28-05; UPDATED from 6/10 in v2.1/v2.3)
 - **Aggregate verdict 96/100 KEEP** (post-v2.4) — Correctness 36/40, Performance 25/25, Reliability 25/25, Coding-quality 10/10. **All 4 dimensions ≥80%.** Widest KEEP margin in project history.
+- **REPL test count 365/365 GREEN** (post-v2.5) — +83 net delta from v2.4 close (282); bench 7/7 PASS preserved milestone-wide
+- **PrettyPrompt 4.1.1 NuGet** (post-v2.5) — first new dep in v2.5; MPL-2.0; .NET 8 forward-compat to .NET 10; transitive TextCopy
+- **9-command REPL slash surface** (post-v2.5) — /help /status /clear /exit /quit /sessions /resume /plan /edit; all in-process (zero LLM calls); printfn-only output (testable via Console.SetOut)
 
-For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v{1.0..2.4}-phases/`.
+For full per-section results, see `documentation/qwen35-122b-coding-eval.md`. Per-plan execution history archived in `.planning/milestones/v{1.0..2.5}-phases/`.

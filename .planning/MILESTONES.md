@@ -1,5 +1,56 @@
 # Project Milestones: blueCode
 
+## v2.5 REPL ergonomics (Shipped: 2026-05-05)
+
+**Delivered:** Fifth-generation Cli-only milestone (v1.2 Tool ergonomics shape; v1.4 Test hygiene precedent). Six phases (31-36; Phase 36 inserted mid-milestone for manual-test-round-1 fixes) closing the daily-driver REPL ergonomic gap surfaced post-v2.4: bare REPL had no quit besides Ctrl+C/D, no session metadata, no plan-mode toggle, no prior-prompt recall, awkward multi-line input. v2.5 ships **9 slash commands** (`/help` `/status` `/clear` `/exit` `/quit` `/sessions` `/resume` `/plan` `/edit`), `$EDITOR`-based multi-line input, and **PrettyPrompt readline** (Up/Down recall + Ctrl+R reverse-search + cross-session history persistence at `~/.bluecode/history`). All 12 v2.5 requirements satisfied; bench gate 7/7 PASS preserved milestone-wide; Cli-only (zero `src/BlueCode.Core/` diff).
+
+**Phases completed:** 31-36 (6 phases, 13 plans total — Phase 36 inserted 2026-05-04 for manual-test-round-1 fix tracks)
+
+**Key accomplishments:**
+
+- **9-command REPL slash surface (Phases 31, 32, 33, 34; SLASH-01..07 + EDIT-01):** `Cli/SlashCommand.fs` pure parser DU (8 variants); `Cli/Repl.fs` `runMultiTurnWithSession` dispatcher with arms for Help/Status/Clear/Exit/Quit/Sessions/Resume/Plan/Edit. All slash commands are in-process (zero LLM calls — verified by `stubLlm []` test pattern from Phase 31-02). `renderHelp` / `renderStatus` / `renderSessions` use `printfn` (not Spectre.Console) so output is testable via `Console.SetOut`. The `[coming in v2.5]` marker progressively removed from `/sessions`+`/resume` (Phase 32), `/plan` (Phase 33), `/edit` (Phase 34); zero stubs remain at milestone close.
+
+- **Plan-mode toggle in REPL (Phase 33; SLASH-07):** `mutable planModeActive = false` cell in `runMultiTurnWithSession`; `/plan` toggle arm with `printfn "[plan mode on/off]"` notification (Role=System invariant preserved — never sent to LLM); new `Some (Prompt _) when planModeActive` arm runs full plan-gate inline loop mirroring `Program.fs:172-256` (reuses `AgentLoop.runPlanTurn` + `CompositionRoot.planSystemPromptSuffix` + `PlanGate.render` + `PlanGate.promptUser PlanGate.realKeyReader`). **One-shot semantics:** `planModeActive` auto-disables after Accept, Quit, OR rejectCount exhaustion — user re-types `/plan` for next plan-gated turn (avoids "stuck in plan-review loop" surprise). `renderStatus` 4-arg signature shows `plan-mode: on (next prompt uses plan-gate)` when active.
+
+- **/edit `$EDITOR` multi-line input (Phase 34; EDIT-01):** New `Cli/EditCommand.fs` with `IEditorLauncher` port mirroring v2.0 PlanGate `IKeyReader` pattern. Production `realEditorLauncher` uses `ProcessStartInfo { UseShellExecute = false; RedirectStandardInput/Output/Error = false }` for TTY inheritance (vi/vim/nano/emacs all work). `openEditorAsync` orchestrates `Path.GetTempFileName` → `File.Move` to `.md` extension → editor launch via injected `IEditorLauncher` → read content → `try/finally` delete. Module-level `AppDomain.CurrentDomain.ProcessExit` handler for atexit cleanup. `handlePromptTurn` helper extracted in `Repl.fs` (called exactly 2 sites: Prompt arm + Slash Edit Some-content branch) so /edit content automatically inherits plan-mode when planModeActive=true. `editorLauncherOverride: IEditorLauncher option` test seam mirrors editor pattern at the Repl boundary.
+
+- **PrettyPrompt 4.1.1 readline + history (Phase 35; HIST-01..04):** First new NuGet in v2.5 (MPL-2.0; .NET 8 forward-compat to .NET 10; single transitive dep TextCopy). `Cli/PromptReader.fs` defines `IPromptReader` port (third application of the v2.0 IKeyReader / Phase 34 IEditorLauncher port-template; now firmly load-bearing for any future TTY-bound Cli adapter). `makeRealPromptReader ()` constructs `new Prompt(persistentHistoryFilepath = ~/.bluecode/history, configuration = ...)` — all 4 HIST reqs (Up/Down recall, history persistence, Ctrl+R reverse-search, line editing) satisfied by the constructor parameter alone (PrettyPrompt's built-in HistoryLog: base64-per-line storage, 500-entry hardcoded cap, async append, dedup). `Repl.fs` `Console.ReadLine` + `printf "blueCode> "` fully removed; replaced with `reader.ReadLineAsync()` via `promptReaderOverride: IPromptReader option` seam. Test impact: 19 `Console.SetIn`-based ReplTests migrated to seam injection (PrettyPrompt bypasses Console.SetIn for arrow-key support); 6 new PromptReaderTests for queue contract + historyFilePath shape + construction smoke. 4 hybrid Console.SetIn calls retained for plan-gate keypresses (authorized hybrid per PLAN.md).
+
+- **Manual-test hardening (Phase 36 inserted mid-milestone; T-14, T-16..T-19, T-75/T-76, T-100, T-101):** Three independent fix tracks from 2026-05-04 manual test round 1 (4 FAIL + 5 MIXED). (1) `globSearchImpl` bare-pattern auto-expansion in `FsToolExecutor.fs:519-522` — `*.fsproj` now expands to `**/*.fsproj` (T-14 fix). (2) **`--allow-paths` CLI flag for explicit scratch-dir opt-in** — comma-separated path prefixes added to FsToolExecutor's allowlist via `validatePathWithExtras` with `Path.GetFullPath` canonicalization (defends sibling-prefix attacks); preserves security invariant (default = project-root only); enables manual-test-guide `/tmp/bc-test/*` and `/tmp/bc-e2e/*` workflows without auto-allowlist (T-16..T-19, T-100, T-101 fixes). (3) `planSystemPromptSuffix` tightened with explicit `MAXIMUM 10 (HARD LIMIT)` clause + no-placeholder-path constraint (T-75/T-76 mitigation; CLAUDE.md prompt-length invariant updated to 967 + 1577 = 2546 chars). 2026-05-05 round 2 manual re-run against live 122B: 7/9 round-1 FAIL/MIXED tests now PASS (T-14, T-16, T-17, T-18, T-19, T-100, T-101, T-76); T-75 prompt-prevention working (model self-restrains to ≤10 steps); T-54/T-59/T-61 priorSteps quirk remains (LLM-behavior, no Phase 36 fix targets these — v2.6+ candidate).
+
+- **Cli-only milestone invariants held throughout:** `git diff milestone-v2.4 HEAD -- src/BlueCode.Core/` empty (zero Core diff across 6 phases — Cli adapter pattern preserved). `git diff milestone-v2.4 HEAD -- bench/baseline.json` empty (byte-identical). Bench gate 7/7 PASS held milestone-wide (T6/W1/W2/T1/T5/B2/MT). `bash scripts/check-no-async.sh` exits 0 (no `async {}` literal in Core). 282 → 365 tests (+83 net delta).
+
+- **Three-application port-template pattern solidified (v2.0 IKeyReader + Phase 34 IEditorLauncher + Phase 35 IPromptReader):** Consistent shape — single-method interface in `Cli/X.fs`, `makeRealX` production impl, `makeTestX` mock for unit tests, `xOverride: IX option` mutable seam at Repl boundary for integration tests. Pattern is now load-bearing repo knowledge for any future TTY-bound Cli adapter. STATE.md captures all three precedents.
+
+**Stats:**
+
+- 6 phases (31, 32, 33, 34, 35; Phase 36 inserted 2026-05-04), 13 plans, 12 requirements (all 12 satisfied)
+- 282 → 365 tests (+83 net delta across 13 plans)
+- 71 files changed (+19,833 / -201 LOC; heavy on planning + tests, plus PromptReader.fs / EditCommand.fs / SlashCommand.fs source + PrettyPrompt 4.1.1 NuGet)
+- 68 commits in milestone range (atomic per-task commits + plan-meta + phase-completion bundles)
+- ~7 days wall-clock (2026-04-29 milestone start → 2026-05-05 Phase 35 user-approved + milestone close)
+- 1 new NuGet (PrettyPrompt 4.1.1; first new dep in v2.5)
+- Bench gate 7/7 PASS preserved throughout; **zero `src/BlueCode.Core/` diff** (Cli-only milestone invariant held)
+
+**Git range:** `994b076 docs: start milestone v2.5 REPL ergonomics` → `e4470fd docs(35): complete prettyprompt-readline-history phase (closes v2.5)`
+
+**What's next:**
+
+v2.6 candidates (observation-driven from daily-driver use post-v2.5; not yet scoped):
+
+- **MODEL-SWITCH-01** — `/model 35b` / `/model 122b` mid-session switch (carried-forward; requires `--with-35b` opt-in + 35B service load probe at runtime)
+- **SLASH-COMP-01** — Slash command auto-completion via PrettyPrompt completion API
+- **HIST-SEARCH-01** — Cross-session history search beyond Ctrl+R (e.g., `/find <pattern>`)
+- **COMPACT-01** — Auto-compaction trigger when `/status` shows ≥80% context (v2.5 shipped visibility only; trigger is v2.6+ measurement-driven)
+- **PRETTYPROMPT-HIST-1000** — Bump PrettyPrompt history cap from 500 to 1000 (upstream PR; v2.5 deviated from ROADMAP spec by adopting 500 default — see v2.5-MILESTONE-AUDIT tech debt)
+- **PRIORSTEPS-MSG-ORDER-01** — priorSteps message-ordering quirk (T-54/T-59/T-61) — prompt-tuning territory; v2.6+ prompt iteration if observation surfaces value
+- **ALLOWPATHS-GLOB-01** — `--allow-paths` glob/wildcard pattern support (Phase 36 deferred-by-design; v2.6+ if user hits the friction)
+- v2.4-deferred candidates: AGENT-LOOP-FEW-SHOT-01, COLDSTART-PRISTINE-01, SUBAG-01, PLAN-MODE-BENCH-01, STM-01 (10th deferral), THINK-01 (defer indefinitely), TOOLCALLS-01 (v3.0)
+
+**Audit note:** v2.5 ran `/gsd:audit-milestone` post-Phase-35 (status: tech_debt — no critical gaps; 7/7 cross-phase integration PASS; 7/7 E2E flows PASS [F1 pure-slash, F2 prompt→answer, F3 plan-mode toggle+accept, F4 plan+edit, F5 resume cross-session, F6 history persistence (HV), F7 --allow-paths]; 12/12 requirements verified). 6 tech debt items aggregated for awareness (PrettyPrompt 500-cap deviation, 4 hybrid Console.SetIn calls, PlanValidator reject-detail SC-4 SKIPPED, priorSteps quirk, --allow-paths glob defer, 3 documentation drift items carried from v2.0 audit). All HV items (33: 2, 34: 4, 35: 4) user-approved during the same session that planned + executed + verified the phases. Notable repo-level pattern crystallized: **port-template (`IKeyReader` v2.0 → `IEditorLauncher` Phase 34 → `IPromptReader` Phase 35)** now load-bearing for future TTY-bound Cli adapters.
+
+---
+
 ## v2.4 Coding Quality (Shipped: 2026-04-29)
 
 **Delivered:** Third **measurement-first data-driven** milestone (v2.2 + v2.3 set the data-driven precedent; v2.4 inverted the pattern to measure-first vs intervene-first). Scoped from v2.2/v2.3 audits' carried-forward IDIOMATIC-FS-01 candidate (Coding-quality 1/5 sub-score may be Python-transcript artifact). **Path A (1/5 disproved) won** — Phase 28's F# fixture rescore yielded grand_total 13/15 → mapped_score 5/5 → `passed_disprove_1of5`. Phase 29 SKIPPED-by-design (never created — cleaner than v2.3's BLOCKED-with-record). Phase 30 closed with aggregate verdict **92 → 96/100, KEEP** (Coding-quality 6/10 → 10/10; +4 free points without code change). All 4 dimensions now ≥80%; widest KEEP margin in project history.
