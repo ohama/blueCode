@@ -663,6 +663,122 @@ let tests =
                   Console.SetIn(originalIn)
                   Console.SetOut(originalOut)
 
+          testCase "runMultiTurn: /edit with mock launcher writing 'list files' dispatches to LLM as next prompt (Phase 34 EDIT-01 SC-3)" <| fun () ->
+              // Mock launcher writes scripted content; assert the LLM stub receives that
+              // exact content as the prompt (proves /edit -> openEditorAsync -> handlePromptTurn -> runSingleTurn -> LLM dispatch).
+              // Captures the messages sent to LLM via a recording stub (capturingLlm pattern).
+              let capturedPrompts = System.Collections.Generic.List<string>()
+              let recordingLlm : ILlmClient =
+                  { new ILlmClient with
+                      member _.CompleteAsync messages _model _ct =
+                          // The most-recent User message is the prompt being dispatched.
+                          let lastUser =
+                              messages
+                              |> List.tryFindBack (fun (m: Message) ->
+                                  match m.Role with
+                                  | User -> true
+                                  | _ -> false)
+                              |> Option.map (fun m -> m.Content)
+                              |> Option.defaultValue ""
+                          capturedPrompts.Add(lastUser)
+                          // Return immediate FinalAnswer so the turn ends in 1 step.
+                          // makeMockResponse already wraps in Ok; no extra Ok wrapper needed.
+                          Task.FromResult(makeMockResponse "done" (FinalAnswer "done")) }
+
+              let mockLauncher : BlueCode.Cli.EditCommand.IEditorLauncher =
+                  { new BlueCode.Cli.EditCommand.IEditorLauncher with
+                      member _.Launch tmpPath =
+                          System.IO.File.WriteAllText(tmpPath, "list files\n") }
+
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/edit\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.editorLauncherOverride <- Some mockLauncher
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-edit-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = recordingLlm
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  Expect.equal exitCode 0 "/edit dispatch + /exit -> exit code 0"
+                  Expect.equal capturedPrompts.Count 1
+                      (sprintf "exactly 1 LLM call made (one for the /edit-produced prompt); captured: %A" (capturedPrompts |> Seq.toList))
+                  Expect.equal capturedPrompts.[0] "list files"
+                      "LLM received the trimmed content from the mock launcher as the prompt"
+              finally
+                  BlueCode.Cli.Repl.editorLauncherOverride <- None
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
+          testCase "runMultiTurn: /edit with mock launcher writing empty string -> 'Edit cancelled.' + 0 LLM calls (Phase 34 EDIT-01 SC-3)" <| fun () ->
+              // Mock launcher writes empty string; assert REPL prints "Edit cancelled."
+              // and the LLM stub is NEVER called (cancel path bypasses dispatch entirely).
+              let mockLauncher : BlueCode.Cli.EditCommand.IEditorLauncher =
+                  { new BlueCode.Cli.EditCommand.IEditorLauncher with
+                      member _.Launch tmpPath =
+                          System.IO.File.WriteAllText(tmpPath, "") }
+
+              let originalIn = Console.In
+              let originalOut = Console.Out
+              use stdinReader = new StringReader("/edit\n/exit\n")
+              use stdoutWriter = new StringWriter()
+              Console.SetIn(stdinReader)
+              Console.SetOut(stdoutWriter)
+              BlueCode.Cli.Repl.editorLauncherOverride <- Some mockLauncher
+
+              let tempRoot =
+                  Path.Combine(Path.GetTempPath(), sprintf "bluecode-editc-%s" (Guid.NewGuid().ToString("N")))
+              Directory.CreateDirectory(tempRoot) |> ignore
+              let sinkPath =
+                  Path.Combine(tempRoot, sprintf "session_%s.jsonl" (Guid.NewGuid().ToString("N")))
+              use sink = new BlueCode.Cli.Adapters.JsonlSink.JsonlSink(sinkPath)
+
+              let components: AppComponents =
+                  { LlmClient = stubLlm []   // throws on first call — proves 0 LLM calls
+                    ToolExecutor = stubToolsOk
+                    SessionStore = BlueCode.Cli.Adapters.FileSessionStore.FileSessionStore() :> BlueCode.Core.Ports.ISessionStore
+                    JsonlSink = sink
+                    Config =
+                      { MaxLoops = 5; ContextCapacity = 3; SystemPrompt = "test"; ForcedModel = None }
+                    ProjectRoot = tempRoot
+                    LogPath = sinkPath
+                    MaxModelLen = 8192 }
+
+              try
+                  let exitCode =
+                      BlueCode.Cli.Repl.runMultiTurn components Compact
+                      |> fun t -> t.GetAwaiter().GetResult()
+                  Console.Out.Flush()
+                  let captured = stdoutWriter.ToString()
+                  Expect.equal exitCode 0 "exit code 0 — empty content treated as cancel; REPL stays alive"
+                  Expect.stringContains captured "Edit cancelled."
+                      (sprintf "REPL printed cancel notice; captured:\n%s" captured)
+              finally
+                  BlueCode.Cli.Repl.editorLauncherOverride <- None
+                  Console.SetIn(originalIn)
+                  Console.SetOut(originalOut)
+
           testCase "runMultiTurn: '/sessions' lists header + zero or more rows; no LLM call" <| fun () ->
               let originalIn = Console.In
               let originalOut = Console.Out
