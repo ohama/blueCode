@@ -10,14 +10,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 34 (edit-multi-line-input) — IN PROGRESS (1/2 plans complete)
-Plan: 1 of 2 complete (34-01 port-and-integration)
-Status: Phase 34 Plan 01 complete (2026-05-05). 352 tests passing (no net delta); Core untouched; bench gate deferred to Plan 34-02.
-Last activity: 2026-05-05 — Completed 34-01 (IEditorLauncher port + openEditorAsync + handlePromptTurn refactor + Slash Edit arm wired); /edit live in REPL (drops [coming in v2.5] marker).
+Phase: 34 (edit-multi-line-input) — COMPLETE (2/2 plans complete)
+Plan: 2 of 2 complete (34-02 behavior-tests-and-bench)
+Status: Phase 34 complete (2026-05-05). 359 tests passing (+7 net delta: 5 EditCommandTests + 2 ReplTests); Core untouched; bench gate 7/7 PASS confirmed.
+Last activity: 2026-05-05 — Completed 34-02 (EditCommandTests.fs 5 mock-launcher unit tests + editorLauncherOverride seam in Repl.fs + 2 ReplTests /edit integration tests + bench gate 7/7 PASS).
 
-Next: Phase 34 Plan 02 (behavior-tests-and-bench) — mock-launcher integration tests + bench gate 7/7 PASS.
+Next: Phase 35 (PrettyPrompt readline + history) OR /gsd:verify-work 34 first.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 36 COMPLETE; Phase 34 Plan 01 complete; Plan 02 + Phase 35 pending)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 36 COMPLETE; Phase 34 COMPLETE; Phase 35 pending)**
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -76,6 +76,9 @@ Stable patterns established across milestones (load-bearing for next session):
 - **handlePromptTurn shared helper (Phase 34-01)** — Factored out of both Prompt arms so Slash Edit arm reuses identical plan-mode-aware dispatch path. Fully-qualified BlueCode.Cli.EditCommand.* in Repl.fs (no new `open`); mirrors Phase 33-01 PlanGate.* style.
 - **Slash Edit Ctrl+C suppression (Phase 34-01)** — `Console.CancelKeyPress.AddHandler` with `args.Cancel=true` in the Slash Edit arm prevents SIGINT from killing blueCode while $EDITOR is running. Handler removed in `finally`. Editor (vi/vim) handles its own SIGINT internally.
 - **Plan-gate Quit NEVER sets running <- false (Phase 33-01)** — Quit in the plan-gate inline loop sets `planModeActive <- false` + `turnDone <- true` only; returns to REPL prompt. Only `Slash Exit` and `null` (Ctrl+D) set `running <- false`.
+- **editorLauncherOverride test seam pattern (Phase 34-02)** — Module-level `let mutable editorLauncherOverride : IEditorLauncher option = None` in Repl.fs; tests set before calling `runMultiTurn`, reset in `finally`. Mirrors Console.SetIn/SetOut convention. Must run inside `testSequenced` envelope (process-level mutable cell; concurrent tests would race). Production path: `editorLauncherOverride = None` -> `realEditorLauncher` unchanged.
+- **makeMockResponse already wraps in Ok (Phase 34-02)** — `makeMockResponse : string -> LlmOutput -> Result<LlmResponse, AgentError>` returns `Ok { Thought = Thought ...; Output = ... }`. NEVER wrap in another `Ok`; doing so produces a double-wrapped type error at compile time.
+- **MessageRole.User is unqualified `User` (Phase 34-02)** — `type MessageRole = System | User | Assistant` in Domain.fs. Match pattern is `| User ->` not `| Role.User ->` or `| BlueCode.Core.Domain.Role.User ->`. With `open BlueCode.Core.Domain`, simply `User`.
 - **Fully-qualified BlueCode.Cli.PlanGate.* in Repl.fs (Phase 33-01)** — No new `open` directive; fully-qualified names (`BlueCode.Cli.PlanGate.render`, etc.) avoid module-alias conflict and match `BlueCode.Core.AgentLoop.runPlanTurn` style.
 - **Spectre.Console AnsiConsole reset in plan-gate REPL tests (Phase 33-02)** — `PlanGate.render` calls `AnsiConsole.Write(table)` which lazily caches `Console.Out` on first use. In `testSequenced` tests that redirect `Console.Out`, the cached `SyncTextWriter` may point to a prior test's disposed `StringWriter`, causing `ObjectDisposedException`. Fix: before each test that exercises `PlanGate.render` through the REPL loop, call `Spectre.Console.AnsiConsole.Console <- Spectre.Console.AnsiConsole.Create(Spectre.Console.AnsiConsoleSettings())` after `Console.SetOut(stdoutWriter)`, then restore in `finally`. This re-ties Spectre to the live `stdoutWriter`.
 - **F# fixture infrastructure** (v2.4 Phase 28) — `bench/fixtures/fs_idiomatic/` with 3 fixture pairs; `--fs-idiomatic` mode in `bench/eval-qwen35-122b.sh` lines 328-391. Reusable for future F# coding-quality work. Research Q4 verbatim binary 5-criterion rubric (C1-C5) + sum-then-scale band table aggregate.
@@ -112,10 +115,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-05 (Phase 34 Plan 01 execution)
-Stopped at: 34-01-port-and-integration complete (3 commits: EditCommand.fs, Repl.fs refactor, test adaptations). 352 tests passing. Bench gate deferred to Plan 34-02.
+Last session: 2026-05-05 (Phase 34 Plan 02 execution)
+Stopped at: 34-02-behavior-tests-and-bench complete (3 commits: EditCommandTests.fs, Repl.fs seam, ReplTests integration tests). 359 tests passing. Bench gate 7/7 PASS.
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 34` for Plan 34-02 (behavior-tests-and-bench).
+Next workflow trigger: `/gsd:verify-work 34` (UAT gate for Phase 34) or `/gsd:execute-phase 35` (PrettyPrompt readline + history).
 
 ## Empirical Baselines (post-v2.4)
 
