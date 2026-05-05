@@ -10,14 +10,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-29 after v2.5 REPL ergonomics miles
 ## Current Position
 
 Milestone: v2.5 REPL ergonomics (started 2026-04-29)
-Phase: 33 (slash-plan-toggle) — COMPLETE (2/2 plans complete)
-Plan: 2 of 2 complete (33-02 behavior-tests-and-bench)
-Status: Phase 33 VERIFIED + user-approved (2026-05-05). Verifier 7/7 must-haves; 2 human-verification items (plan-gate Accept/Quit in real TTY) approved by user. 352 tests passing; bench gate 7/7 PASS; Core untouched.
-Last activity: 2026-05-05 — Phase 33 complete (slash plan toggle); 4/6 v2.5 phases done (31, 32, 33, 36); 2 phases remain (34 /edit, 35 PrettyPrompt readline).
+Phase: 34 (edit-multi-line-input) — IN PROGRESS (1/2 plans complete)
+Plan: 1 of 2 complete (34-01 port-and-integration)
+Status: Phase 34 Plan 01 complete (2026-05-05). 352 tests passing (no net delta); Core untouched; bench gate deferred to Plan 34-02.
+Last activity: 2026-05-05 — Completed 34-01 (IEditorLauncher port + openEditorAsync + handlePromptTurn refactor + Slash Edit arm wired); /edit live in REPL (drops [coming in v2.5] marker).
 
-Next: Phase 34 (/edit multi-line input) — `/gsd:plan-phase 34`. Or Phase 35 (PrettyPrompt readline) if scope priorities shift.
+Next: Phase 34 Plan 02 (behavior-tests-and-bench) — mock-launcher integration tests + bench gate 7/7 PASS.
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 36 COMPLETE; Phases 34-35 pending)**
+Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 (in progress — Phases 31, 32, 33, 36 COMPLETE; Phase 34 Plan 01 complete; Plan 02 + Phase 35 pending)**
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -72,6 +72,9 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Spectre.Console singleton reset for ReplTests** (Phase 33-02 auto-fix) — `Spectre.Console.AnsiConsole` lazily caches `Console.Out` on first `AnsiConsole.Write`. Tests redirecting `Console.SetOut` to a `StringWriter` then disposing it cause `ObjectDisposedException` in subsequent tests. Fix: reset `AnsiConsole.Console <- AnsiConsole.Create(AnsiConsoleSettings())` after each `Console.SetOut` redirect; restore in `finally`. Required only for tests that exercise PlanGate (which uses AnsiConsole directly).
 - **macOS bash-strict-mode patterns documented** (5 patterns across v2.1-v2.4): set-e/dotnet-exit (v2.1 21-03); grep-c/pipefail double-output (v2.1 21-04); mkdir-before-tee (v2.2 23-01, commit `a6159c4`); orphan-grep-zero-match-exit-1 (v2.3 27-02, commit `9f8e06e`); grep-oE-pipeline-zero-match (v2.4 28-01, commit `94d905c`). Common rule: under `set -euo pipefail`, `grep -c`/`grep -cE`/`grep -oE` exits 1 on zero-match; guard with `|| true`. Full reference: `documentation/howto/macos-bash-strict-mode-patterns.md`.
 - **One-shot plan-mode semantics (Phase 33-01)** — `planModeActive` auto-disables after Accept+Execute, Quit, AND rejectCount exhaustion. User must re-type `/plan` for next plan-gated turn. Avoids "stuck in plan-review loop" surprise.
+- **IEditorLauncher port pattern (Phase 34-01)** — `EditCommand.IEditorLauncher` mirrors `PlanGate.IKeyReader`. Production: UseShellExecute=false + all three Redirect*=false for TTY inheritance. Tests: write scripted content directly to tmpPath (Plan 34-02 scope). Content-based cancel (empty/whitespace = None); exit-code ignored (`:q!` returns 0 anyway). atexit cleanup via module-level ProcessExit handler + mutable currentTmpPath cell.
+- **handlePromptTurn shared helper (Phase 34-01)** — Factored out of both Prompt arms so Slash Edit arm reuses identical plan-mode-aware dispatch path. Fully-qualified BlueCode.Cli.EditCommand.* in Repl.fs (no new `open`); mirrors Phase 33-01 PlanGate.* style.
+- **Slash Edit Ctrl+C suppression (Phase 34-01)** — `Console.CancelKeyPress.AddHandler` with `args.Cancel=true` in the Slash Edit arm prevents SIGINT from killing blueCode while $EDITOR is running. Handler removed in `finally`. Editor (vi/vim) handles its own SIGINT internally.
 - **Plan-gate Quit NEVER sets running <- false (Phase 33-01)** — Quit in the plan-gate inline loop sets `planModeActive <- false` + `turnDone <- true` only; returns to REPL prompt. Only `Slash Exit` and `null` (Ctrl+D) set `running <- false`.
 - **Fully-qualified BlueCode.Cli.PlanGate.* in Repl.fs (Phase 33-01)** — No new `open` directive; fully-qualified names (`BlueCode.Cli.PlanGate.render`, etc.) avoid module-alias conflict and match `BlueCode.Core.AgentLoop.runPlanTurn` style.
 - **Spectre.Console AnsiConsole reset in plan-gate REPL tests (Phase 33-02)** — `PlanGate.render` calls `AnsiConsole.Write(table)` which lazily caches `Console.Out` on first use. In `testSequenced` tests that redirect `Console.Out`, the cached `SyncTextWriter` may point to a prior test's disposed `StringWriter`, causing `ObjectDisposedException`. Fix: before each test that exercises `PlanGate.render` through the REPL loop, call `Spectre.Console.AnsiConsole.Console <- Spectre.Console.AnsiConsole.Create(Spectre.Console.AnsiConsoleSettings())` after `Console.SetOut(stdoutWriter)`, then restore in `finally`. This re-ties Spectre to the live `stdoutWriter`.
@@ -109,10 +112,10 @@ Documentation drift items flagged in v2.0 audit (non-blocking; carried-forward; 
 
 ## Session Continuity
 
-Last session: 2026-05-05 (Phase 33 + verifier + user approval same-day)
-Stopped at: Phase 33 verified PASSED (verifier 7/7) + user approved 2 human-verification items (plan-gate Accept/Quit in real TTY). 4/6 v2.5 phases complete.
+Last session: 2026-05-05 (Phase 34 Plan 01 execution)
+Stopped at: 34-01-port-and-integration complete (3 commits: EditCommand.fs, Repl.fs refactor, test adaptations). 352 tests passing. Bench gate deferred to Plan 34-02.
 Resume file: None
-Next workflow trigger: `/gsd:plan-phase 34` (Phase 34 /edit multi-line input — next per ROADMAP).
+Next workflow trigger: `/gsd:execute-phase 34` for Plan 34-02 (behavior-tests-and-bench).
 
 ## Empirical Baselines (post-v2.4)
 
