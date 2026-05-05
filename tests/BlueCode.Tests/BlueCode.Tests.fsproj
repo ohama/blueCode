@@ -29,6 +29,7 @@
     <Compile Include="SessionStoreTests.fs" />
     <Compile Include="SlashCommandTests.fs" />
     <Compile Include="ToolExpansionTests.fs" />
+    <Compile Include="EditCommandTests.fs" />
     <Compile Include="RouterTests.fs" />
   </ItemGroup>
 
