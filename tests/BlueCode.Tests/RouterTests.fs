@@ -113,7 +113,8 @@ let rootTests =
           BlueCode.Tests.ContextWarningTests.tests
           BlueCode.Tests.SessionStoreTests.tests           // NEW (15-03)
           BlueCode.Tests.SlashCommandTests.tests           // NEW (Phase 31-01)
-          BlueCode.Tests.EditCommandTests.tests ]          // NEW (Phase 34-02)
+          BlueCode.Tests.EditCommandTests.tests           // NEW (Phase 34-02)
+          BlueCode.Tests.PromptReaderTests.tests ]        // NEW (Phase 35-02)
 
 [<EntryPoint>]
 let main args = runTestsWithCLIArgs [] args rootTests
