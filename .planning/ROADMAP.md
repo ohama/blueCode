@@ -132,7 +132,7 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 - [x] 36-02-allow-paths-PLAN.md — --allow-paths CLI flag + FsToolExecutor extra-roots threading + 8 tests (Wave 2; T-16..T-19/T-100/T-101)
 - [x] 36-03-prompt-suffix-and-doc-PLAN.md — planSystemPromptSuffix tightening + manual-test-guide updates + bench gate (Wave 3; T-75/T-76 + T-100 re-interp)
 
-### Phase 35: PrettyPrompt readline + history
+### Phase 35: PrettyPrompt readline + history ✓ (completed 2026-05-05)
 
 **Goal:** `Console.ReadLine` 을 `PrettyPrompt` 라이브러리로 대체. up/down arrow recall + cross-session history persistence + Ctrl+R 검색 + line editing.
 
@@ -153,8 +153,8 @@ REPL 인터랙티브 사용성 4 갈래 ergonomic gap 묶음. v1.2 Tool ergonomi
 
 **Plans:** 2 plans (created 2026-05-05 via /gsd:plan-phase 35)
 
-- [ ] 35-01-port-and-integration-PLAN.md — IPromptReader port (mirrors IEditorLauncher) + PromptReader.fs (PrettyPrompt 4.1.1) + Repl.fs promptReaderOverride seam + PROJECT.md Key Decision (Wave 1)
-- [ ] 35-02-tests-migration-and-hist-PLAN.md — migrate 19 ReplTests to promptReaderOverride seam + new PromptReaderTests for IPromptReader port + HIST-03 file persistence (with rootTests registration) + bench gate 7/7 PASS (Wave 2)
+- [x] 35-01-port-and-integration-PLAN.md — IPromptReader port (mirrors IEditorLauncher) + PromptReader.fs (PrettyPrompt 4.1.1) + Repl.fs promptReaderOverride seam + PROJECT.md Key Decision (Wave 1)
+- [x] 35-02-tests-migration-and-hist-PLAN.md — migrate 19 ReplTests to promptReaderOverride seam + new PromptReaderTests for IPromptReader port + HIST-03 file persistence (with rootTests registration) + bench gate 7/7 PASS (Wave 2)
 
 ## Phase Dependencies
 

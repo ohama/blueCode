@@ -22,10 +22,10 @@
 
 ### Readline + history (4 reqs)
 
-- [ ] **HIST-01**: REPL uses PrettyPrompt NuGet for input; replaces `Console.ReadLine` in `Repl.fs` multi-turn loop
-- [ ] **HIST-02**: User can press Up/Down arrow keys to navigate prior prompts within the current REPL session
-- [ ] **HIST-03**: Prompt history persists across REPL invocations to `~/.bluecode/history` (line-per-prompt; loaded on REPL start; written on each prompt submit)
-- [ ] **HIST-04**: User can press Ctrl+R to reverse-search through history (PrettyPrompt built-in)
+- [x] **HIST-01**: REPL uses PrettyPrompt NuGet for input; replaces `Console.ReadLine` in `Repl.fs` multi-turn loop
+- [x] **HIST-02**: User can press Up/Down arrow keys to navigate prior prompts within the current REPL session
+- [x] **HIST-03**: Prompt history persists across REPL invocations to `~/.bluecode/history` (line-per-prompt; loaded on REPL start; written on each prompt submit)
+- [x] **HIST-04**: User can press Ctrl+R to reverse-search through history (PrettyPrompt built-in)
 
 ## Out of Scope
 
@@ -67,13 +67,13 @@ Tracked for awareness; not pulled into v2.5. Observation-driven scoping after v2
 | SLASH-06 | Phase 32 | Complete |
 | SLASH-07 | Phase 33 | Complete |
 | EDIT-01 | Phase 34 | Complete |
-| HIST-01 | Phase 35 | Pending |
-| HIST-02 | Phase 35 | Pending |
-| HIST-03 | Phase 35 | Pending |
-| HIST-04 | Phase 35 | Pending |
+| HIST-01 | Phase 35 | Complete |
+| HIST-02 | Phase 35 | Complete |
+| HIST-03 | Phase 35 | Complete |
+| HIST-04 | Phase 35 | Complete |
 
 **Coverage:** 12 requirements total; mapped to 5 phases (31-35); 0 unmapped ✓
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-05-05 after Phase 34 completion (EDIT-01 → Complete; 8/12 requirements done; Phase 35 PrettyPrompt readline remains)*
+*Last updated: 2026-05-05 after Phase 35 completion (HIST-01..04 → Complete; **12/12 requirements done; v2.5 milestone complete**)*
