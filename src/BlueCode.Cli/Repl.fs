@@ -31,6 +31,13 @@ let shouldWarnContextWindow (totalChars: int) (maxModelLen: int) (alreadyWarned:
         // Equivalent: totalChars * 5 >= maxModelLen * 16
         int64 totalChars * 5L >= int64 maxModelLen * 16L
 
+/// Test-only seam: when set to Some, the Slash Edit arm uses this launcher
+/// instead of EditCommand.realEditorLauncher. Production never sets this.
+/// Mirrors Console.SetIn/SetOut redirection for stdio.
+/// Concurrent tests must use testSequenced (CLAUDE.md "Console.SetOut in tests"
+/// rule generalizes to any process-level mutable cell).
+let mutable editorLauncherOverride : BlueCode.Cli.EditCommand.IEditorLauncher option = None
+
 /// Single-turn REPL entry. Phase 4 scope: ONE prompt, ONE turn, exit.
 /// Phase 5 (CLI-02) extends this to a multi-turn loop via runMultiTurn.
 ///
@@ -377,9 +384,12 @@ let runMultiTurnWithSession
                         System.ConsoleCancelEventHandler(fun _ args -> args.Cancel <- true)
                     Console.CancelKeyPress.AddHandler(cancelHandler)
                     try
+                        let launcher =
+                            match editorLauncherOverride with
+                            | Some l -> l
+                            | None -> BlueCode.Cli.EditCommand.realEditorLauncher
                         let! contentOpt =
-                            BlueCode.Cli.EditCommand.openEditorAsync
-                                BlueCode.Cli.EditCommand.realEditorLauncher
+                            BlueCode.Cli.EditCommand.openEditorAsync launcher
                         match contentOpt with
                         | None ->
                             printfn "Edit cancelled."
