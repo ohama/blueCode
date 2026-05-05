@@ -38,6 +38,15 @@ let shouldWarnContextWindow (totalChars: int) (maxModelLen: int) (alreadyWarned:
 /// rule generalizes to any process-level mutable cell).
 let mutable editorLauncherOverride : BlueCode.Cli.EditCommand.IEditorLauncher option = None
 
+/// Test-only seam: when set to Some, runMultiTurnWithSession uses this reader
+/// instead of PromptReader.makeRealPromptReader (). Production never sets this.
+/// PrettyPrompt's `Console.ReadKey(intercept=true)` loop bypasses Console.SetIn,
+/// so legacy Console.SetIn(StringReader(...)) test inputs no longer reach the
+/// input layer; this seam is the replacement (Plan 35-02 migrates all 26
+/// existing ReplTests to use it).
+/// Concurrent tests must use testSequenced (same reason as editorLauncherOverride).
+let mutable promptReaderOverride : BlueCode.Cli.PromptReader.IPromptReader option = None
+
 /// Single-turn REPL entry. Phase 4 scope: ONE prompt, ONE turn, exit.
 /// Phase 5 (CLI-02) extends this to a multi-turn loop via runMultiTurn.
 ///
@@ -288,9 +297,19 @@ let runMultiTurnWithSession
                     lastCode <- if code = 130 then 0 else code
             }
 
+        // Phase 35 (HIST-01..04): instantiate the prompt reader once per REPL session.
+        // Production: PrettyPrompt-backed with ~/.bluecode/history persistence
+        // (up/down arrow recall, Ctrl+R reverse search, line editing keys).
+        // Tests: Plan 35-02 sets `promptReaderOverride` before invocation to inject
+        // a pre-canned string queue (avoids PrettyPrompt's TTY-bound ReadKey loop).
+        let reader =
+            match promptReaderOverride with
+            | Some r -> r
+            | None -> BlueCode.Cli.PromptReader.makeRealPromptReader ()
+
         while running do
-            printf "\nblueCode> "
-            let line = Console.ReadLine()  // null on Ctrl+D / EOF
+            let! lineOpt = reader.ReadLineAsync()
+            let line = lineOpt |> Option.toObj  // null on None = Ctrl+C / Ctrl+D / EOF
 
             match line with
             | null -> running <- false
