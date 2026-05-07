@@ -2,12 +2,9 @@
 
 **작성일:** 2026-05-07
 **Project codename:** `mlx-openai-router` (이 문서에서는 "Router" 로 표기)
-**Goal:** mlx_lm.server (Apple Silicon, MoE 모델) 위에서 **OpenAI Python SDK 가 그대로 작동하는** 독립 reverse-proxy 를 만든다. blueCode 와 별개의 product.
-**Source materials:**
-- `documentation/qwen35-122b-openai-compat.md` — 252-line scorecard (HIGH=3 / MEDIUM=2 / LOW=5 / PASS=15) — 보완해야 할 gap 의 empirical evidence
-- `documentation/phase42-openai-compat-narrative.md` — 592-line narrative — 각 gap 의 의사결정 맥락
-- `bench/runs/qwen35-eval-20260507-131320/probes.jsonl` — 25 raw probe records — regression test fixture 으로 재사용 가능
-- `bench/eval-openai-compat.py` — probe driver — Router 의 conformance test 로 그대로 재사용
+**Goal:** mlx_lm.server (Apple Silicon, MoE 모델) 위에서 **OpenAI Python SDK 가 그대로 작동하는** 독립 reverse-proxy 를 만든다.
+
+**Source — empirical evidence base:** mlx_lm.server 0.31.3 에 대한 25-probe / 8-surface OpenAI-API conformance evaluation. 측정 결과: HIGH=3 (response_format silent-ignore × 3), MEDIUM=2 (n>1 silent-1, logprobs unverified), LOW=5 (error envelope shape, /v1/responses 404, [DONE] sentinel timing 등), PASS=15 (tools/tool_choice 완전 conformant, parallel decode N=2 confirmed, mid-conv role:system rejection invariant 등). 상세 probe 명세 + verdict mapping 은 §2 (Compensation Surface) 와 §9.4 (Conformance probe replay) 에 inline. 이 문서를 새 repo 에 복사하면 self-contained — 외부 의존성 없음.
 
 ---
 
@@ -39,7 +36,7 @@ response = client.chat.completions.create(
 
 **왜 "smart" router 인가** — 단순 passthrough proxy 가 아니다. 7개 gap 을 적극적으로 보완 (request/response 양방향 transformation), state-aware (capacity tracking, 429 emulation), observability built-in (per-route metrics, conformance test fixture).
 
-**왜 standalone 인가** — blueCode 또는 다른 client 와 분리. 누구든 `pip install mlx-openai-router` 하고 바로 쓸 수 있는 product. 자체 repo, 자체 CI, 자체 release cycle.
+**왜 standalone 인가** — 어떤 특정 client 와도 결합되지 않은 universal protocol shim. 누구든 `pip install mlx-openai-router` 하고 바로 쓸 수 있는 product. 자체 repo, 자체 CI, 자체 release cycle.
 
 ---
 
@@ -52,7 +49,7 @@ response = client.chat.completions.create(
 | Backend | mlx_lm.server (mainline mlx-lm 0.31.x+), Apple Silicon Mac only |
 | Models | MLX 4-bit MoE 계열 (Qwen 3.5 122B-A10B / 35B-A3B; Llama-MoE 계열 호환 가능) |
 | API | OpenAI v1 — `/v1/chat/completions`, `/v1/completions`, `/v1/models`, `/v1/embeddings` (옵션) |
-| Compensation | Phase 42 의 7 gaps 모두 (response_format × 2, error envelope, n>1, mid-conv role, 429, /v1/responses) |
+| Compensation | 아래 §2 의 7 gaps 모두 (response_format × 2, error envelope, n>1, mid-conv role, 429, /v1/responses) |
 | Streaming | SSE chat/completions 양방향 — chunk shape 보정 + `[DONE]` 처리 |
 | Auth | None for v1 (loopback only); v2 에서 bearer token 추가 |
 | Multi-model | 단일 backend 시작; v2 에서 multi-backend (122B + 35B + cloud fallback) |
@@ -80,7 +77,7 @@ response = client.chat.completions.create(
 
 ## 2. Compensation Surface — 무엇을 보완하는가
 
-Phase 42 가 발견한 7 gap 을 **product feature** 로 재구성.
+25-probe / 8-surface conformance evaluation 이 발견한 7 gap 을 **product feature** 로 재구성. 각 strategy 는 명시적 probe 결과 (probe ID, expected vs observed) 에 근거.
 
 ### 2.1 Feature: `response_format` enforcement
 
@@ -95,7 +92,7 @@ Phase 42 가 발견한 7 gap 을 **product feature** 로 재구성.
 3. mlx_lm forward
 4. 응답 content 가 parseable JSON 인지 검증 (`json.loads()` try)
 5. Parse 실패 시:
-   - **Recovery 1**: 3-stage extraction (bare → brace-counted → fence-stripped — blueCode pattern)
+   - **Recovery 1**: 3-stage extraction (bare JSON parse → brace-counted brace-matched substring → markdown-fence stripping — well-established pattern for prose-wrapped LLM JSON)
    - **Recovery 2**: 같은 request 1회 retry with reinforced instruction
    - **Recovery 3**: OpenAI 표준 에러 반환 (`invalid_response_format`)
 6. 성공 시 OpenAI envelope 으로 응답
@@ -163,7 +160,7 @@ Phase 42 가 발견한 7 gap 을 **product feature** 로 재구성.
 1. Request 의 `n` 추출. `n == 1` 또는 누락이면 passthrough.
 2. `n: K` (K > 1) 이면:
    - Request 에서 `n` 제거
-   - K 개의 동일 request 를 `asyncio.gather` 로 병렬 fire (mlx_lm BatchGenerator 가 native batch — Phase 42 probe 22 PASS)
+   - K 개의 동일 request 를 `asyncio.gather` 로 병렬 fire (mlx_lm BatchGenerator 가 native batch — N=2 empirical: wall=max(t1,t2)=0.39s vs sum=0.76s, 즉 진짜 parallel decode)
 3. K 응답 aggregate:
 
 ```json
@@ -369,9 +366,9 @@ mlx-openai-router/
 │   │   └── test_e2e_n_fanout.py
 │   ├── conformance/
 │   │   ├── test_openai_sdk.py           # openai-python 으로 호출 → 정상?
-│   │   └── test_phase42_probes.py       # Phase 42 의 25 probes 가 모두 PASS or HIGH→PASS conversion
+│   │   └── test_conformance_probes.py   # 25 conformance probes 가 모두 PASS or HIGH→PASS conversion
 │   └── fixtures/
-│       └── phase42-probes.jsonl         # blueCode 의 probes.jsonl 복사
+│       └── conformance-probes.jsonl     # 25-record probe transcript (Stage 0 에 import)
 ├── benchmarks/
 │   ├── latency.py                       # router 추가 latency 측정 (vs mlx_lm 직접)
 │   └── throughput.py                    # n>1 fan-out 효율
@@ -380,7 +377,7 @@ mlx-openai-router/
 │   ├── strategies.md
 │   ├── deployment.md
 │   ├── development.md
-│   └── compensation-matrix.md           # Phase 42 findings 기반
+│   └── compensation-matrix.md           # 7 gaps × 8 strategies × verdict mapping (empirical)
 ├── packaging/
 │   ├── launchd/
 │   │   └── com.ohama.mlx-openai-router.plist
@@ -614,7 +611,7 @@ Router 의 Strategy B (prompt + validate + retry) 는:
 - Router 가 직접 model load + sampling — 더 이상 reverse-proxy 가 아닌 standalone server
 - 이는 v3+ 영역 — Router 의 scope 을 넘어섬
 
-Router v1/v2 는 prompt-instructed best-effort 가 충분하다는 가정 위에 작동. Phase 21 의 schema 0/50 InvalidJsonOutput 결과가 이를 뒷받침.
+Router v1/v2 는 prompt-instructed best-effort 가 충분하다는 가정 위에 작동. 50-invocation prompt-instructed schema test 에서 50/50 perfect compliance 가 empirical 으로 관찰됨 (Qwen 3.5 122B-A10B-4bit MoE; thinking-mode disabled). 즉 well-structured prompt 만으로도 실용 수준의 conformance 가능.
 
 ---
 
@@ -788,20 +785,38 @@ def test_openai_sdk_chat_completions_basic():
 
 8개 feature 각각에 대해 conformance test 1개. 총 ~10-15 테스트.
 
-### 9.4 Phase 42 probe replay
+### 9.4 Conformance probe regression replay
 
-Router 위에서 `bench/eval-openai-compat.py` (blueCode 의 probe driver) 를 다시 실행하면, 25 probe 의 verdict 가 어떻게 변하는지 측정.
+Stage 0 에 import 된 25 conformance probe (`tests/fixtures/conformance-probes.jsonl` + 그것을 생성하는 driver) 를 Router 위에서 재실행. 각 probe 의 verdict 가 mlx_lm 직접 호출 vs Router 호출에서 어떻게 변하는지 측정.
 
-| Phase 42 verdict (mlx_lm 직접) | Router 위 expected |
-|--------------------------------|-------------------|
-| HIGH × 3 (response_format silent-ignore) | **PASS** (Strategy A/B 가 강제) |
-| MEDIUM × 2 | mostly **PASS** |
-| LOW × 5 | mostly **PASS**; 1-2 는 그대로 LOW (expected behavior 자체가 OpenAI compliant 아닌 경우) |
-| PASS × 15 | **PASS** (passthrough; regression 없어야) |
+#### 25 probe 의 8 surface 분포
 
-목표: **HIGH=0, MEDIUM=0, LOW=≤2, PASS=23+**. 즉 Router 가 25 probe 중 23개를 PASS 로 끌어올림.
+| Surface | Probe ID | 측정 |
+|---------|----------|------|
+| 1. Endpoint coverage | 01-05 | 5 probes — `/v1/chat/completions` baseline / `/v1/completions` legacy / `/v1/models` GET / `/health` GET / `/v1/responses` (404 expected) |
+| 2. response_format | 06-08 | 3 probes — json_object / json_schema strict:true / json_object rerun (nondeterministic check) |
+| 3. Role handling | 09-10 | 2 probes — mid-conv system rejected (404) / start-only system (200 control) |
+| 4. Streaming SSE | 11-14 | 4 probes — chunk shape / role-on-every-chunk / `[DONE]` with include_usage / without include_usage |
+| 5. Schema enforcement (statistical) | 20-21 | 2 probes — temp=0.0 N=5 each (without/with response_format) for statistical compliance |
+| 6. Multi-call coherence | 23-25 | 3 probes — fresh conversation 3회로 KV isolation 검증 |
+| 7. Error surface | 16-19 | 4 probes — model 누락 / messages 빈 / max_tokens 음수 / invalid JSON body |
+| 8. Concurrency | 22 | 1 probe — N=2 simultaneous requests, wall_max vs sum 측정 |
+| Tools (BONUS) | 15 | 1 probe — `tools` + `tool_choice:auto` envelope 검증 |
 
-이게 Router 의 진짜 acceptance test — 단순 "test 통과" 가 아니라 "측정 가능한 conformance 향상".
+#### Verdict 변환 expected
+
+| 직접 mlx_lm verdict | Router 위 expected |
+|--------------------|-------------------|
+| HIGH × 3 (response_format silent-ignore — probes 06/07/08) | **PASS** (Strategy A/B 가 prompt-instructed + post-validate + retry 로 enforce) |
+| MEDIUM × 2 (n>1 silent-1 / logprobs unverified) | **PASS** (Strategy D fan-out / logprobs passthrough) |
+| LOW × 5 (error envelope, /v1/responses, [DONE] timing 등) | mostly **PASS**; 1-2 는 그대로 LOW (mlx_lm 의 OpenAI 외 동작이 의도된 경우) |
+| PASS × 15 (tools, parallel, role:system rejection 등) | **PASS** (passthrough — regression 없어야) |
+
+#### Acceptance criteria for v0.1.0
+
+**HIGH=0, MEDIUM=0, LOW≤2, PASS≥23.** 즉 Router 가 25 probe 중 23개 이상을 PASS 로 끌어올림.
+
+이게 Router 의 진짜 acceptance test — 단순 "test 통과" 가 아니라 **측정 가능한 conformance 향상**. probe driver 와 fixture JSONL 은 Stage 0 의 첫 작업.
 
 ### 9.5 Performance benchmarks
 
@@ -818,14 +833,15 @@ mlx_lm 의 자체 latency (TTFT 222ms warm) 대비 router overhead 는 무시할
 
 Standalone product 의 development phase. 각 phase = 1-2주 스프린트.
 
-### Phase 0: Project init
+### Stage 0: Project init
 - pyproject.toml + repo skeleton
 - README.md draft
-- Phase 42 findings summary 를 docs/compensation-matrix.md 로 import
+- Compensation matrix (7 gaps + strategies + verdict mapping) → docs/compensation-matrix.md
+- conformance probe driver + 25-record fixture JSONL → tests/fixtures/
 - License 결정 (MIT or Apache-2.0)
 - CI setup (GitHub Actions or local)
 
-### Phase 1: MVP forward proxy
+### Stage 1: MVP forward proxy
 - FastAPI app + uvicorn
 - `/v1/chat/completions`, `/v1/models`, `/v1/completions` passthrough
 - Strategy C (error envelope normalization) only
@@ -835,49 +851,49 @@ Standalone product 의 development phase. 각 phase = 1-2주 스프린트.
 
 **Acceptance:** OpenAI Python SDK 의 basic chat completion call 작동. Router 추가 latency p50 ≤ 20ms.
 
-### Phase 2: Compensation Strategies A + B + E
+### Stage 2: Compensation Strategies A + B + E
 - Strategy A (json_object enforce)
 - Strategy B (json_schema enforce)
 - Strategy E (mid-conv role:system rewrite)
 - Recovery (3-stage JSON extraction)
 
-**Acceptance:** Phase 42 의 HIGH×3 probe (06, 07, 08) 가 Router 위에서 PASS. Mid-conv probe (09) 가 PASS (mid → user 변환).
+**Acceptance:** 3 HIGH-severity probes (response_format json_object / json_schema strict / json_object rerun) 가 Router 위에서 PASS. Mid-conv role:system probe 가 PASS (mid → user 변환). 즉 conformance 가 mlx_lm 직접 vs Router 비교에서 +4 PASS 변환.
 
-### Phase 3: Streaming + n>1
+### Stage 3: Streaming + n>1
 - Strategy H (streaming chunk normalization)
 - Strategy D (n>1 fan-out)
 
-**Acceptance:** OpenAI SDK 의 `stream=True` 와 `n=3` 정상 작동.
+**Acceptance:** OpenAI SDK 의 `stream=True` 와 `n=3` 정상 작동. 4 streaming probes + concurrency probe (N=2) 모두 PASS.
 
-### Phase 4: Observability + admin
+### Stage 4: Observability + admin
 - Structured logging (structlog)
 - Prometheus metrics (`/metrics`)
 - `/admin/*` endpoints
 
 **Acceptance:** prometheus 스크래핑으로 in-flight count, p50/p99 latency, error rate 측정 가능.
 
-### Phase 5: Packaging + deployment
-- launchd plist + install/uninstall scripts
+### Stage 5: Packaging + deployment
+- launchd plist + install/uninstall scripts (with backend port migration helper)
 - README 마무리 + deployment.md
 - v0.1.0 PyPI release
 
-**Acceptance:** `pip install mlx-openai-router && mlx-openai-router-install` 한 줄로 배포.
+**Acceptance:** `pip install mlx-openai-router && mlx-openai-router-install` 한 줄로 배포. Conformance probe replay 결과 HIGH=0, MEDIUM=0, LOW≤2, PASS≥23 — v0.1.0 acceptance criteria 만족.
 
-### Phase 6 (v0.2): Stateful /v1/responses (G-b)
+### Stage 6 (v0.2): Stateful /v1/responses (G-b)
 - in-memory state store
 - TTL eviction
 - Optional 활성화
 
-### Phase 7 (v0.3): Multi-backend
+### Stage 7 (v0.3): Multi-backend
 - Config 의 `upstream_urls: [...]` 지원
 - Round-robin 또는 model-based routing
 - Fallback to cloud (OpenAI / Anthropic / etc.) 옵션
 
-### Phase 8 (v0.4): Auth + multi-tenant
+### Stage 8 (v0.4): Auth + multi-tenant
 - Bearer token + per-key rate limit
 - TLS
 
-총 8 phases. v0.1.0 = Phase 0-5 (5-10주), v0.2-v0.4 = 추가 6-12주.
+총 8 stages. v0.1.0 = Stage 0-5 (5-10주), v0.2-v0.4 = 추가 6-12주.
 
 ---
 
@@ -993,7 +1009,7 @@ v1.0 ship 후 가능한 확장:
 
 ### 15.4 Research / 측정 가능성
 - conformance test 가 versioned — mlx_lm 새 release 될 때마다 자동 회귀 검출
-- Phase 42 같은 empirical evaluation 이 future-proof — probe set 이 product 의 internal test fixture 됨
+- Empirical evaluation 이 future-proof — probe set 이 product 의 internal test fixture 가 되어 mlx_lm 새 release 마다 자동 회귀 검출
 
 ### 15.5 Observability 표준
 - 모든 LLM 호출이 한 process 에서 측정됨
@@ -1059,7 +1075,7 @@ EOF
 curl http://127.0.0.1:8001/health
 # {"status":"ok"}
 
-# 6. Iterate from here — Phase 1 starts.
+# 6. Iterate from here — Stage 1 starts.
 ```
 
 ---
@@ -1076,27 +1092,29 @@ curl http://127.0.0.1:8001/health
 | Scope v1 | 7 compensation strategies + capacity tracking + observability |
 | Constrained decoding | Best-effort (Strategy B); engine-level true enforcement 는 v3+ |
 | Deployment | macOS launchd plist; Docker (v2) |
-| Phasing | 5 phases to v0.1.0; 3 more to v0.4 |
+| Phasing | 6 stages to v0.1.0; 3 more to v0.4 |
 | License | MIT 권장 |
 | Naming | `mlx-openai-router` |
 
-**Source materials** (이미 갖춰져 있는 것):
-- 7 gap 의 empirical evidence (Phase 42)
-- 25 probe regression test fixture (`bench/runs/qwen35-eval-20260507-131320/probes.jsonl`)
-- conformance test driver (`bench/eval-openai-compat.py`)
+**Source materials — empirical foundation 으로 새 repo 에 import 필요:**
+- 7-gap compensation matrix (this 문서 §2 — 각 gap 의 expected vs observed 동작 + Strategy 매핑)
+- 25 conformance probe 명세 (this 문서 §9.4 — 8 surface 분포 + probe ID 별 측정 의도)
+- probe driver 의 architecture (probe-as-record JSONL append-flush per call; bash dispatcher + Python helper 패턴; bench gate sandwich invariant)
+- mlx_lm.server 0.31.3 source-code 의 결정적 fact: `parse_request_body()` 가 `response_format` 미인식; `chat_template.jinja:85` 의 `raise_exception('System message must be at the beginning.')` 가 mid-conv role:system 거부의 직접 원인; `BatchGenerator` capacity `--decode-concurrency 32 --prompt-concurrency 8`
 
-이 셋이 있어서 router 의 acceptance test 가 day 1 에 정의됨 — 즉 "Phase 42 probe 위에서 25개 중 23+ 가 PASS" 가 v0.1.0 의 acceptance.
+이 셋이 있어서 router 의 acceptance test 가 day 1 에 정의됨 — 즉 "25 conformance probe 위에서 23+ 가 PASS" 가 v0.1.0 의 acceptance criteria.
 
 **Next step** (만약 시작한다면):
 1. 새 repo 생성 (`mlx-openai-router`)
-2. Phase 0 (skeleton) — 1-2일
-3. Phase 1 (MVP forward proxy + 2 strategies) — 1주
-4. v0.1.0 alpha release — 5-6주
+2. Stage 0 (skeleton + compensation matrix import + probe fixture import) — 1-2일
+3. Stage 1 (MVP forward proxy + 2 strategies) — 1주
+4. Stage 2-5 — 4-5주
+5. v0.1.0 alpha release — 누적 5-6주
 
 이 문서 자체는 design RFC. 실제 implementation 결정 시 update.
 
 ---
 
 *문서 작성: 2026-05-07*
-*Source: Phase 42 empirical findings (mlx_lm.server 0.31.3 conformance probes)*
-*다음 step: design 검토 후 repo 생성 / 또는 v3.0+ 로 deferred*
+*Source: mlx_lm.server 0.31.3 OpenAI-API conformance evaluation (25 probes / 8 surfaces; HIGH=3 / MEDIUM=2 / LOW=5 / PASS=15)*
+*다음 step: design 검토 후 repo 생성*
