@@ -576,6 +576,28 @@ run_coldstart() {
   fi
   echo "coldstart: $out"
 }
+
+# ---------------------------------------------------------------------------
+# run_openai_compat — Phase 42: empirical OpenAI conformance probes.
+# Drives bench/eval-openai-compat.py; emits probes.jsonl to LOG_DIR.
+# Pre-requisite: bench/run.sh --gate must pass (run BEFORE this).
+# Post-requisite: bench/run.sh --gate must pass again (run AFTER this).
+# Plan 42-01: ~10 probes (Surfaces 1+2+3); Plan 42-02 extends to ~30; Plan 42-03 renders report.
+# ---------------------------------------------------------------------------
+run_openai_compat() {
+  require_port_8001
+  if [ ! -x "$VENV_PY" ]; then
+    echo "ERROR: $VENV_PY not found. Run: bash $0 --setup" >&2
+    exit 5
+  fi
+  mkdir -p "$LOG_DIR"
+  echo "===== OpenAI compat probes (LOG_DIR=$LOG_DIR) ====="
+  "$VENV_PY" bench/eval-openai-compat.py --output-dir "$LOG_DIR"
+  local probes="$LOG_DIR/probes.jsonl"
+  local count
+  count=$(wc -l < "$probes" | tr -d ' ')
+  echo "openai-compat: $count probes recorded in $probes"
+}
 run_full() {
   require_port_8001
   if [ ! -x "$VENV_PY" ]; then
@@ -614,7 +636,7 @@ run_full() {
 # ---------------------------------------------------------------------------
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [--setup|--throughput|--ttft|--multiturn|--refactor|--fs-idiomatic|--langcoverage|--schema-rate|--humaneval|--needle|--coldstart|--full]
+Usage: $(basename "$0") [--setup|--throughput|--ttft|--multiturn|--refactor|--fs-idiomatic|--langcoverage|--schema-rate|--humaneval|--needle|--coldstart|--openai-compat|--full]
   --setup        One-time: create bench/.venv-eval and pip install evalplus
   --throughput   tokens/sec via /v1/chat/completions (5 prompts x 3 trials = 15 entries)
   --ttft         time-to-first-token via SSE streaming (10 trials)
@@ -626,7 +648,8 @@ Usage: $(basename "$0") [--setup|--throughput|--ttft|--multiturn|--refactor|--fs
   --humaneval    HumanEval+ pass@1 chat + completion modes (implemented in 21-02)
   --needle       long-context needle-in-haystack 8k/16k/32k (implemented in 21-04)
   --coldstart    DISRUPTIVE launchctl kickstart timing (implemented in 21-04, gated)
-  --full         everything except --coldstart (~2hr; implemented in 21-04)
+  --openai-compat OpenAI compat probes (Phase 42; 10 probes Surfaces 1+2+3; ~10s)
+  --full         everything except --coldstart and --openai-compat (~2hr; implemented in 21-04)
 EOF
 }
 
@@ -645,6 +668,7 @@ case "${1:-}" in
   --humaneval)    run_humaneval ;;
   --needle)       run_needle ;;
   --coldstart)    run_coldstart ;;
+  --openai-compat) run_openai_compat ;;
   --full)         run_full ;;
   -h|--help|"")   usage ;;
   *)              echo "Unknown flag: $1" >&2; usage; exit 1 ;;
