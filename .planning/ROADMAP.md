@@ -1,9 +1,9 @@
 # Roadmap: blueCode v2.6 GSD self-planning
 
-**Defined:** 2026-05-06
-**Phases:** 37 → 41 (5 phases)
-**Total requirements:** 22 across 5 categories — 100% mapped (no orphans)
-**Depth:** standard (config.json) — 5 phases align with 5 natural delivery boundaries; no compression / no inflation
+**Defined:** 2026-05-06 (Phase 42 added 2026-05-06)
+**Phases:** 37 → 42 (6 phases — Phase 42 added via /gsd:add-phase)
+**Total requirements:** 22 across 5 categories — 100% mapped to Phases 37–41 (no orphans). Phase 42 is an exploratory/validation phase with requirements TBD pending /gsd:plan-phase 42.
+**Depth:** standard (config.json) — 5 implementation phases (37-41) + 1 validation phase (42)
 
 ## Current Milestone: v2.6 GSD self-planning (Robust MVP)
 
@@ -128,6 +128,45 @@ blueCode 자체가 사용자 task 를 1–3 sub-task 로 분해하고 사용자 
 - [ ] 41-01-TBD: TBD pending /gsd:plan-phase 41
 - [ ] 41-02-TBD: TBD pending /gsd:plan-phase 41
 
+### Phase 42: Qwen 122B OpenAI compatibility verification
+
+**Goal:** [To be planned] — User-stated intent: "Qwen 122B model 이 OpenAI compatible 한지 자세히 test 해 줘." Detailed empirical verification of `mlx_lm.server` @ 8001's `/v1/chat/completions` OpenAI-compatibility surface, both the parts blueCode currently exercises (agent-loop, `--plan` mode) and the new patterns v2.6 introduces (planner LLM call returning strict JSON for plan decomposition; executor LLM call with deviation-rules system prompt; per-task fresh conversation re-establishment).
+
+**Depends on:** Phase 41 (default per /gsd:add-phase). Reasonable alternatives at /gsd:plan-phase 42 time:
+- Move dependencies to "None" — pure investigation/measurement, can run independently of v2.6 implementation
+- Insert before Phase 37 (would require `/gsd:insert-phase` instead) if findings should gate implementation start
+
+**Requirements:** None mapped yet (TBD pending /gsd:plan-phase 42). Phase 42 is **exploratory/validation work** discovered post-roadmap; may surface new requirements (e.g., quirk-fix-up reqs) which would be added via /gsd:add-todo or amendment of REQUIREMENTS.md.
+
+**Pre-existing knowledge** (load-bearing for /gsd:plan-phase 42):
+- Phase 17-02 + 20-03: Qwen 3.5 122B REJECTS mid-conversation `Role = System` with HTTP 404 — ALL mid-conversation injections must be `Role = User`
+- Phase 19+: Single-model 122B canonical via `mlx_lm.server` + launchd; thinking-mode mitigation `--chat-template-args '{"enable_thinking": false}'` required (without it `<think>` tokens break strict JSON schema)
+- Phase 20-01: sampling defaults from Qwen 3.5 model card (`temp=0.7, top_p=0.8, top_k=20, presence_penalty=0.0`); HttpClient.Timeout 300s
+- Phase 21+: HumanEval+ chat pass@1 = 0.939; throughput median 34.6 tok/s; TTFT median 222 ms warm; schema rate 0/50 InvalidJsonOutput (perfect compliance under current setup)
+- v1.0 research SUMMARY.md: documents Qwen JSON output drift (5-15% prose-wrap rate at higher temps), tool_calls absent (custom JSON schema instead), repetition loops at extreme temps
+
+**Suggested investigation surface** (not exhaustive — refine at /gsd:plan-phase 42):
+1. **Endpoint surface coverage** — `/v1/chat/completions` (used) vs `/v1/completions` (legacy) vs `/v1/models` (probe); behavior of unsupported OpenAI fields (`tools`, `tool_choice`, `function_call`, `logit_bias`, `user`, `n>1`, `stream`)
+2. **`response_format` field** — does mlx_lm.server honor `{"type": "json_object"}` or `{"type": "json_schema", "json_schema": ...}`? If yes, can blueCode rely on it for v2.6 planner instead of custom prompt-instructed schema?
+3. **Role handling** — `system` (start vs mid-conversation), `user`, `assistant` (history replay); Phase 17-02 finding edge cases
+4. **Streaming (SSE)** — `stream: true` behavior; `[DONE]` sentinel; partial chunk boundaries; relevance to v2.6 not strict (sequential exec doesn't require streaming) but informs future v2.7+
+5. **Schema enforcement at server vs prompt** — does mlx_lm.server enforce response shape, or is it pure prompt+sampling? Affects v2.6 retry policy design
+6. **Multi-call coherence** — does the same model instance maintain consistent behavior across rapid sequential calls (planner → executor task 1 → executor task 2 → ...)? KV cache isolation between conversations?
+7. **Error surface** — HTTP status codes (200/400/404/500); body shape on errors; does it match OpenAI's `{error: {message, type, code}}`?
+8. **Capacity / concurrency** — single-model 122B server's behavior under concurrent requests (queue? reject? 429?); load-bearing for any future Phase F (wave-parallel) reconsideration
+
+**Output expectations:**
+- Empirical test transcript (likely `documentation/qwen35-122b-openai-compat.md` or extension of `documentation/qwen35-122b-coding-eval.md`)
+- Per-finding severity (HIGH/MEDIUM/LOW); HIGH findings may surface new v2.6 requirements
+- Mitigation patterns documented for blueCode to consume (system prompt clauses, retry policies, error mapping)
+- Updated CLAUDE.md "Key Seams" if quirks affect existing seams
+
+**Plans:** 3 plans (sequential 1→2→3 — Plans 02 + 03 depend on the harness scaffolded in Plan 01; Plan 03 needs Plan 02's complete probe transcript to render)
+
+- [ ] 42-01-PLAN.md — Test harness scaffolding + endpoint/response_format/role probes (Surfaces 1+2+3, ~10 probes; pre-flight bench gate)
+- [ ] 42-02-PLAN.md — Streaming + tools + error + concurrency + multi-call coherence probes (Surfaces 4+5+6+7+8, ~15 more probes → 25 total)
+- [ ] 42-03-PLAN.md — Render report `documentation/qwen35-122b-openai-compat.md` + conditional CLAUDE.md update + final post-flight bench gate
+
 ## Phase Dependencies
 
 ```
@@ -136,13 +175,18 @@ Phase 37 (Plan generation foundation + UX-01 decision)
         └─→ Phase 39 (Deviation rules + auth gate)
               └─→ Phase 40 (Atomic commit per task)
                     └─→ Phase 41 (CLI / REPL surface)
+                          └─→ Phase 42 (Qwen 122B OpenAI-compat verification)
+                              [DEFAULT: depends on 41 per /gsd:add-phase template]
+                              [LIKELY: deps adjustable to "None" at plan-phase time]
 
 Phase 37 = root (Plan types + planner prompt + flag-naming decision).
 Phase 38-41 chain linearly — each consumes prior phase's contract.
-No interleavable phases this milestone (each requires the prior's exports).
+Phase 42 = exploratory/validation work; default-linked to Phase 41 but
+investigation can run independently of implementation (deps may be
+re-evaluated at /gsd:plan-phase 42 time).
 ```
 
-**Note on linearity:** Unlike v2.5 (Phases 32-35 all stacked independently on Phase 31), v2.6 phases form a strict chain. Phase 38 imports `PlanRequest` from Phase 37; Phase 39 expands the `ExecutorOutcome` DU consumed by Phase 38's orchestrator dispatch; Phase 40 commits only when Phase 39's `Completed` variant returns; Phase 41 wires user-facing flow through Phases 38-40 outputs. `/gsd:execute-phase` waves should still parallelize within each phase, but phases themselves run sequentially.
+**Note on linearity:** Unlike v2.5 (Phases 32-35 all stacked independently on Phase 31), v2.6 phases 37-41 form a strict chain. Phase 38 imports `PlanRequest` from Phase 37; Phase 39 expands the `ExecutorOutcome` DU consumed by Phase 38's orchestrator dispatch; Phase 40 commits only when Phase 39's `Completed` variant returns; Phase 41 wires user-facing flow through Phases 38-40 outputs. Phase 42 (added 2026-05-06) breaks the chain pattern — it's an investigation phase that could naturally run anywhere in the milestone or even in parallel; its placement at end is by /gsd:add-phase contract, but `/gsd:plan-phase 42` may set deps to "None" for parallel execution. `/gsd:execute-phase` waves should still parallelize within each phase, but phases 37→38→39→40→41 themselves run sequentially.
 
 ## Coverage Validation
 
@@ -153,9 +197,12 @@ No interleavable phases this milestone (each requires the prior's exports).
 | DEV-* | 4 | Phase 39 (DEV-01..04) |
 | COMMIT-* | 4 | Phase 40 (COMMIT-01..04) |
 | UX-* | 5 | Phase 37 (UX-01) + Phase 41 (UX-02..05) |
-| **Total** | **22** | **22 mapped — 0 orphans** ✓ |
+| **Total mapped** | **22** | **22/22 mapped — 0 orphans** ✓ |
+| Phase 42 | 0 (TBD) | Exploratory/validation — requirements derived at /gsd:plan-phase 42 if any |
 
 UX-01 placement rationale: flag-naming decision must precede module/prompt naming (Phase 37) and CLI/REPL wiring (Phase 41). Splitting UX-* across two phases is correct — UX-01 is a decision artifact (PROJECT.md Key Decision); UX-02..05 are user-facing surface code.
+
+Phase 42 placement rationale: added via /gsd:add-phase 2026-05-06 in response to user's "Qwen 122B OpenAI compatibility 자세히 test" intent. Investigation/validation work that does NOT consume a v2.6 requirement directly but may surface follow-up requirements (added via /gsd:add-todo if found). Default `depends on Phase 41` per add-phase template; reconsider at /gsd:plan-phase 42.
 
 ## Out-of-scope (preserved from REQUIREMENTS.md "v2.7+")
 
@@ -184,19 +231,19 @@ Continues at 37. Project phase history:
 - v2.3: 24-27 (26 BLOCKED; 27 added mid-milestone)
 - v2.4: 28, 30 (29 SKIPPED-by-design)
 - v2.5: 31-36 (36 added mid-milestone)
-- **v2.6: 37-41** (5 phases planned; mid-milestone insertion possible per v2.0/v2.3/v2.5 precedent)
+- **v2.6: 37-42** (5 implementation phases planned + Phase 42 added 2026-05-06 via /gsd:add-phase for Qwen 122B OpenAI-compat verification; mid-milestone insertion possible per v2.0/v2.3/v2.5 precedent)
 
 ## Stats Target
 
-- 5 phases, ~10-13 plans (2-3 per phase), ~30-50 tests added (Plan parser/schema + orchestrator unit + deviation prompt + GitCommit boundary + REPL integration)
-- LOC estimate: ~600-900 (Core: Plan.fs + PlanOrchestrator.fs + ExecutorOutcome ≈ 250-350; Cli: GitCommit.fs + Program.fs / SlashCommand.fs deltas + Spectre table render ≈ 250-400; tests ≈ 200-300)
+- **6 phases** (5 implementation: 37-41 + 1 validation: 42), ~12-16 plans total (2-3 per phase), ~30-50 tests added (Plan parser/schema + orchestrator unit + deviation prompt + GitCommit boundary + REPL integration; Phase 42 may add no Expecto tests if compat work is bash/HTTP harness — TBD)
+- LOC estimate: ~600-900 src + ~200-400 docs (Core: Plan.fs + PlanOrchestrator.fs + ExecutorOutcome ≈ 250-350; Cli: GitCommit.fs + Program.fs / SlashCommand.fs deltas + Spectre table render ≈ 250-400; tests ≈ 200-300; Phase 42 likely heavier on docs/eval-harness than src/)
 - Bench gate 7/7 PASS preserved milestone-wide (`bench/baseline.json` byte-identical)
 - Core purity preserved: new `Plan.fs` + `PlanOrchestrator.fs` use only `task {}`, F# DUs, `ILlmClient` + `IToolExecutor` ports — zero Serilog/Spectre/Argu/HttpClient/file I/O imports
-- New NuGets: 0 expected (reuses `JsonSchema.Net` + `FSharp.SystemTextJson` from v1.0+v2.0)
+- New NuGets: 0 expected (reuses `JsonSchema.Net` + `FSharp.SystemTextJson` from v1.0+v2.0; Phase 42 may use existing `bench/eval-qwen35-122b.sh` harness or extend it without new deps)
 
 ## Progress
 
-**Execution Order:** 37 → 38 → 39 → 40 → 41 (strict linear chain)
+**Execution Order:** 37 → 38 → 39 → 40 → 41 (strict linear chain) + 42 (default after 41; deps reassessable at /gsd:plan-phase 42)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -205,8 +252,10 @@ Continues at 37. Project phase history:
 | 39. Deviation rules + auth gate | 0/TBD | Not started | - |
 | 40. Atomic commit per task | 0/TBD | Not started | - |
 | 41. CLI / REPL surface + UX polish | 0/TBD | Not started | - |
+| 42. Qwen 122B OpenAI-compat verification | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-05-06 by gsd-roadmapper agent*
 *Source: REQUIREMENTS.md (22 reqs) + `.planning/docs/gsd/05-ADOPTION-BLUEPRINT.md` Phase A+D+E scope*
-*Next: `/gsd:plan-phase 37` after milestone-init commit + `/clear`*
+*Phase 42 added: 2026-05-06 via /gsd:add-phase — "Qwen 122B OpenAI compatibility verification" (exploratory/validation; deps adjustable at plan-phase time)*
+*Next: `/gsd:plan-phase 37` after milestone-init commit + `/clear`. Phase 42 plannable any time after roadmap accepted.*
