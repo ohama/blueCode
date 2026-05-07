@@ -10,17 +10,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 starting v2.6 GSD self-planning 
 ## Current Position
 
 Phase: 42 of 42 (Qwen 122B OpenAI compatibility verification) — IN PROGRESS
-Plan: 01 of 03 — COMPLETE (probe harness scaffolding)
-Status: Plan 42-01 ✓ complete. Plan 42-02 (streaming/concurrency/errors) and Plan 42-03 (rendering) ready to execute.
-Last activity: 2026-05-07 — Plan 42-01 complete. 10 OpenAI-compat probes (Surfaces 1+2+3) reproduced RESEARCH preliminaries 1-7+11 verbatim; bench gate sandwich 7/7 PASS pre+post; zero src/ diff.
+Plan: 02 of 03 — COMPLETE (streaming + concurrency + errors + coherence probes)
+Status: Plans 42-01 + 42-02 ✓ complete. Plan 42-03 (rendering branch + final docs) ready to execute.
+Last activity: 2026-05-07 — Plan 42-02 complete. 25 OpenAI-compat probes total (10 from 42-01 + 15 from 42-02) covering all 8 RESEARCH surfaces + tools bonus. New helpers: probe_stream (SSE state-machine), probe_concurrent_pair (N=2 ThreadPool), _dispatch_stat_n (full-response N-repeat aggregator). Bench gate sandwich 7/7 PASS pre + mid + post; zero src/ diff.
 
 **v2.6 progression:** v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → v2.5 ✓ → **v2.6 (roadmap drafted, started 2026-05-06)**
 
-Progress: █░░░░░░░░░ 1/? plans (Phase 42 partial: 1/3 plans done; Phases 37-41 plan counts still TBD)
+Progress: ██░░░░░░░░ 2/? plans (Phase 42 partial: 2/3 plans done; Phases 37-41 plan counts still TBD)
 
-Next: Plan 42-02 (streaming + concurrency + errors; ~15 more probes extending Surfaces 4-7) OR Plan 42-03 (rendering — populates `--render` argparse branch + writes `documentation/qwen35-122b-openai-compat.md`). Plan 42-02 recommended next (probe content first, then render).
+Next: Plan 42-03 (rendering — populates `--render` argparse branch in bench/eval-openai-compat.py + writes `documentation/qwen35-122b-openai-compat.md` from the 25-record probes.jsonl).
 
-**Next Phase:** Phase 42 in flight — continue with Plan 42-02 / 42-03 before pivoting to Phase 37 implementation work.
+**Next Phase:** Phase 42 in flight — continue with Plan 42-03 before pivoting to Phase 37 implementation work.
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -86,6 +86,7 @@ Mid-milestone phase additions/changes for v2.6:
 
 - **2026-05-06: Phase 42 added** — "Qwen 122B OpenAI compatibility verification" via `/gsd:add-phase`. Investigation/validation work to empirically verify `mlx_lm.server` @ 8001's `/v1/chat/completions` OpenAI-compat surface (endpoint coverage, `response_format` field, role handling, streaming, schema enforcement, multi-call coherence, error surface, concurrency). Default `depends_on: Phase 41`; reassessable at `/gsd:plan-phase 42` time. No requirements mapped yet (Phase 42 may surface new v2.6 requirements via `/gsd:add-todo` if HIGH-severity findings emerge). Pre-existing knowledge: Role=System mid-conversation REJECTED (Phase 17-02 + 20-03), thinking-mode `<think>` token mitigation, schema rate 0/50 perfect under current setup (v2.1).
 - **2026-05-07: Plan 42-01 complete** — Probe harness scaffolding shipped. `bench/eval-openai-compat.py` (318 LOC, dict-list PROBES + probe()/probe_get() helpers + per-record fp.flush()), `bench/eval-qwen35-122b.sh --openai-compat` mode wired (intentionally NOT in `--full`), `jsonschema>=4.21` added to venv. 10 probes (Surface 1: 5 endpoint + Surface 2: 3 response_format + Surface 3: 2 role) ran end-to-end; all HTTP codes match RESEARCH preliminaries 1-7+11 verbatim. Bench-gate sandwich 7/7 PASS pre (02:36:44Z) + 7/7 PASS post (02:43:26Z). Zero `src/` diff. LOG_DIR: `bench/runs/qwen35-eval-20260507-114034/probes.jsonl`. Decisions: dict-list shape (vs RESEARCH skeleton's tuples) for forward compat; PROBES populated in Task 1 not Task 2 (Task 1 verify required ≥10 records); `--full` intentionally NOT calling `run_openai_compat` per RESEARCH anti-pattern (parallel probes contaminate KV).
+- **2026-05-07: Plan 42-02 complete** — Probe surface extended from 10 → 25 records covering all 8 RESEARCH surfaces + tools bonus. `bench/eval-openai-compat.py` extended 318 → 870 LOC with three new helpers: `probe_stream` (SSE state-machine via `requests.iter_lines()` classifying keepalive / data:[DONE] / data:{json}); `probe_concurrent_pair` (N=2 `ThreadPoolExecutor`, captures wall_clock vs sum vs max); `_dispatch_stat_n` (full-response N-repeat aggregator bypassing the 300-char excerpt cap). `probe()` extended with three orthogonal optional flags (raw_body / omit_model_field / body_model_override) for the error-surface probes. **Empirical findings:** probe 22 wall_clock=0.39s ≈ max(0.38,0.38) sum=0.76s → BatchGenerator parallel decode confirmed at N=2 (matches RESEARCH preliminary 10); probes 20+21 5/5 valid_json + 5/5 prose_wrap with IDENTICAL "Alice/28" output at temp=0.0 → **response_format has zero effect at temp=0.0** (answers RESEARCH Open Question 2); probe 15 tool_choice=auto returns full OpenAI envelope with finish_reason=tool_calls (CONFORMANT, v2.7+ candidate per RESEARCH preliminary 8); probe 18 (omit model field) elapsed 83.4s — server falls back to default_model via HF reload but probe 19 immediately after returns 0.18s with qwen122b path → **non-contaminating**; mid-flight bench gate 7/7 PASS confirms invariant. **Deviation from RESEARCH preliminary 9:** SSE `[DONE]` sentinel emitted even WITHOUT `stream_options.include_usage` on current build (`system_fingerprint=0.31.3-0.31.2-...`) — RESEARCH Pitfall 5 mitigation needs updating in Plan 42-03 docs. Bench-gate sandwich 7/7 PASS pre + mid + post. Zero `src/` diff. LOG_DIR: `bench/runs/qwen35-eval-20260507-131320/probes.jsonl`. **Auto-fixes:** Rule 1 STAT_N excerpt-truncation regression caught Task 2 mid-verify (probe()'s 300-char cap consumed entire response envelope before content; refactored STAT_N to fetch full r.json() directly; same commit `a02dfd3`). Decisions: STAT_N stores `content_excerpts` (not `excerpts`) — JSONL contract baseline for Plan 42-03 renderer.
 
 ### Pending Todos
 
@@ -106,10 +107,10 @@ Plus v2.5 tech debt aggregated in `.planning/milestones/v2.5-MILESTONE-AUDIT.md`
 
 ## Session Continuity
 
-Last session: 2026-05-07 (Plan 42-01 executed by gsd-executor agent; pre+post bench-gate sandwich both 7/7 PASS)
-Stopped at: **Plan 42-01 complete** — 10-probe harness ready; LOG_DIR `bench/runs/qwen35-eval-20260507-114034/probes.jsonl`. NEXT: `/gsd:execute-phase 42` Plan 42-02 (streaming + concurrency + errors; ~15 more probes for Surfaces 4-7) OR Plan 42-03 (rendering branch + final docs/qwen35-122b-openai-compat.md).
+Last session: 2026-05-07 (Plan 42-02 executed by gsd-executor agent; pre + mid + post bench-gate sandwich all 7/7 PASS)
+Stopped at: **Plan 42-02 complete** — 25-probe transcript ready covering all 8 RESEARCH surfaces; LOG_DIR `bench/runs/qwen35-eval-20260507-131320/probes.jsonl`. NEXT: `/gsd:execute-phase 42` Plan 42-03 (populate `--render` argparse branch in `bench/eval-openai-compat.py` + write `documentation/qwen35-122b-openai-compat.md` from the 25-record JSONL).
 Resume file: None
-Next workflow trigger: `/gsd:execute-phase 42` to continue Plans 42-02/42-03, OR pivot to `/gsd:plan-phase 37` for v2.6 implementation start (Phase 42 plannable independently per ROADMAP).
+Next workflow trigger: `/gsd:execute-phase 42` to continue Plan 42-03, OR pivot to `/gsd:plan-phase 37` for v2.6 implementation start (Phase 42 plannable independently per ROADMAP).
 
 **v2.6 inputs (load-bearing for downstream phases):**
 - `.planning/docs/gsd/00-OVERVIEW.md` — 5 invariants (Plans Are Prompts, Quality Curve, Goal-Backward, File-as-State, Atomic+Wave)
