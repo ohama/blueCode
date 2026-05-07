@@ -163,9 +163,9 @@ blueCode 자체가 사용자 task 를 1–3 sub-task 로 분해하고 사용자 
 
 **Plans:** 3 plans (sequential 1→2→3 — Plans 02 + 03 depend on the harness scaffolded in Plan 01; Plan 03 needs Plan 02's complete probe transcript to render)
 
-- [ ] 42-01-PLAN.md — Test harness scaffolding + endpoint/response_format/role probes (Surfaces 1+2+3, ~10 probes; pre-flight bench gate)
-- [ ] 42-02-PLAN.md — Streaming + tools + error + concurrency + multi-call coherence probes (Surfaces 4+5+6+7+8, ~15 more probes → 25 total)
-- [ ] 42-03-PLAN.md — Render report `documentation/qwen35-122b-openai-compat.md` + conditional CLAUDE.md update + final post-flight bench gate
+- [x] 42-01-PLAN.md — Test harness scaffolding + endpoint/response_format/role probes (Surfaces 1+2+3, 10 probes; pre + post bench gate 7/7) ✓ 2026-05-07
+- [x] 42-02-PLAN.md — Streaming + tools + error + concurrency + multi-call coherence probes (Surfaces 4+5+6+7+8 + tools bonus, 15 more probes → 25 total; mid + post bench gate 7/7) ✓ 2026-05-07
+- [x] 42-03-PLAN.md — Render report `documentation/qwen35-122b-openai-compat.md` (252 lines, HIGH=3/MED=2/LOW=5/PASS=15) + CLAUDE.md Bench-section bullet + FINAL post-flight bench gate 7/7 at 2026-05-07T05:07:41Z ✓ 2026-05-07
 
 ## Phase Dependencies
 
@@ -198,7 +198,7 @@ re-evaluated at /gsd:plan-phase 42 time).
 | COMMIT-* | 4 | Phase 40 (COMMIT-01..04) |
 | UX-* | 5 | Phase 37 (UX-01) + Phase 41 (UX-02..05) |
 | **Total mapped** | **22** | **22/22 mapped — 0 orphans** ✓ |
-| Phase 42 | 0 (TBD) | Exploratory/validation — requirements derived at /gsd:plan-phase 42 if any |
+| Phase 42 | 3/3 ✓ done (no v2.6 reqs mapped) | Verifier 14/14 must-haves passed 2026-05-07; 3 v2.7+ candidates surfaced (native tools, wave-parallel, capture_full_content) |
 
 UX-01 placement rationale: flag-naming decision must precede module/prompt naming (Phase 37) and CLI/REPL wiring (Phase 41). Splitting UX-* across two phases is correct — UX-01 is a decision artifact (PROJECT.md Key Decision); UX-02..05 are user-facing surface code.
 
@@ -252,7 +252,7 @@ Continues at 37. Project phase history:
 | 39. Deviation rules + auth gate | 0/TBD | Not started | - |
 | 40. Atomic commit per task | 0/TBD | Not started | - |
 | 41. CLI / REPL surface + UX polish | 0/TBD | Not started | - |
-| 42. Qwen 122B OpenAI-compat verification | 0/3 | Not started | - |
+| 42. Qwen 122B OpenAI-compat verification | 3/3 | ✓ Verified | 2026-05-07 |
 
 ---
 *Roadmap created: 2026-05-06 by gsd-roadmapper agent*
