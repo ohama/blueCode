@@ -19,6 +19,7 @@ See ``.planning/phases/42-qwen-122b-openai-compat-test/42-RESEARCH.md`` for
 preliminary probe results that the suite reproduces verbatim.
 """
 import argparse
+import concurrent.futures
 import json
 import sys
 import time
@@ -35,7 +36,8 @@ MODEL_PATH = "/Users/ohama/llm-system/models/qwen122b"
 # do not crash the suite. Returns a dict that becomes one JSONL record.
 # ---------------------------------------------------------------------------
 def probe(label, category, body, expected, severity_hint,
-          path="/v1/chat/completions", max_tokens=8, timeout=120):
+          path="/v1/chat/completions", max_tokens=8, timeout=120,
+          raw_body=None, omit_model_field=False, body_model_override=None):
     """POST ``body`` (merged with model + max_tokens) to ``path``; capture excerpt.
 
     The probe() helper deliberately avoids r.json(): some probes (malformed
@@ -45,13 +47,42 @@ def probe(label, category, body, expected, severity_hint,
     A probe that crashes (network error, server kill mid-flight) returns an
     "error" record but does NOT abort the suite — Plan 42-01 explicit
     resumability requirement.
+
+    Plan 42-02 Task 2 extensions for the error-surface probes (16-19):
+      * ``raw_body`` — when set (e.g., the literal string "NOT JSON"), POST it
+        as ``data=raw_body`` (NOT JSON-encoded). Used by probe 16 to test
+        malformed-body error envelope.
+      * ``omit_model_field`` — when True, skip the default MODEL_PATH merge so
+        the body has no "model" key. Used by probe 18 to confirm mlx_lm.server's
+        silent fallback to ``"default_model"``.
+      * ``body_model_override`` — when set, replaces MODEL_PATH with the supplied
+        string (e.g., "BOGUS_MODEL"). Used by probe 17 to confirm HF-fetch error.
+        SAFETY: never pass a real-but-incorrect HF id; that would swap the
+        loaded Instruct tokenizer per CLAUDE.md "Key Seams" / RESEARCH.md
+        Pitfall 3.
     """
-    full = {"model": MODEL_PATH, "max_tokens": max_tokens, **body}
-    request_excerpt = json.dumps(full)[:300]
+    if raw_body is not None:
+        request_excerpt = raw_body[:300]
+    else:
+        if omit_model_field:
+            full = {"max_tokens": max_tokens, **body}
+        elif body_model_override is not None:
+            full = {"model": body_model_override, "max_tokens": max_tokens, **body}
+        else:
+            full = {"model": MODEL_PATH, "max_tokens": max_tokens, **body}
+        request_excerpt = json.dumps(full)[:300]
     url = f"{ENDPOINT}{path}"
     t0 = time.time()
     try:
-        r = requests.post(url, json=full, timeout=timeout)
+        if raw_body is not None:
+            r = requests.post(
+                url,
+                data=raw_body,
+                headers={"Content-Type": "application/json"},
+                timeout=timeout,
+            )
+        else:
+            r = requests.post(url, json=full, timeout=timeout)
         elapsed = time.time() - t0
         return {
             "label": label,
@@ -261,14 +292,77 @@ def probe_stream(label, category, body, expected, severity_hint,
 
 
 # ---------------------------------------------------------------------------
-# PROBES — Plan 42-01 (10) + Plan 42-02 Task 1 (5: streaming + tools) = 15.
-# Plan 42-02 Task 2 will append 10 more (Surfaces 5+6+7+8) → 25 total.
+# probe_concurrent_pair — Surface 8 (concurrency). Submits two POSTs to
+# /v1/chat/completions in parallel via ThreadPoolExecutor(max_workers=2).
+# Captures both per-request elapsed plus pair-level wall_clock_s.
+#
+# RESEARCH.md preliminary 10: BatchGenerator is expected to merge the two
+# decode streams (wall_clock ≈ max(elapsed_each)). If wall_clock ≈ sum →
+# requests serialized → NON-CONFORMANT.
+#
+# N=2 ONLY per RESEARCH.md Pitfall 1 (don't disrupt daily driver). N>2 knee
+# finding is v2.7+ work.
+# ---------------------------------------------------------------------------
+def probe_concurrent_pair(label, category, body_a, body_b, expected, severity_hint,
+                          path="/v1/chat/completions", max_tokens=8, timeout=60):
+    """Two simultaneous POSTs; record per-request + pair-wall timings."""
+    full_a = {"model": MODEL_PATH, "max_tokens": max_tokens, **body_a}
+    full_b = {"model": MODEL_PATH, "max_tokens": max_tokens, **body_b}
+    url = f"{ENDPOINT}{path}"
+
+    def _one(full):
+        t0 = time.time()
+        try:
+            r = requests.post(url, json=full, timeout=timeout)
+            return {
+                "http_code": r.status_code,
+                "elapsed_s": round(time.time() - t0, 2),
+                "excerpt": r.text[:200],
+                "error": None,
+            }
+        except Exception as e:
+            return {
+                "http_code": None,
+                "elapsed_s": round(time.time() - t0, 2),
+                "excerpt": None,
+                "error": repr(e),
+            }
+
+    pair_t0 = time.time()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+        fa = ex.submit(_one, full_a)
+        fb = ex.submit(_one, full_b)
+        ra = fa.result()
+        rb = fb.result()
+    wall_clock_s = round(time.time() - pair_t0, 2)
+    elapsed_each = [ra["elapsed_s"], rb["elapsed_s"]]
+    return {
+        "label": label,
+        "category": category,
+        "method": "POST",
+        "path": path,
+        "http_codes": [ra["http_code"], rb["http_code"]],
+        "elapsed_s_each": elapsed_each,
+        "wall_clock_s": wall_clock_s,
+        "elapsed_s_sum": round(sum(elapsed_each), 2),
+        "elapsed_s_max": round(max(elapsed_each), 2),
+        "excerpts": [ra["excerpt"], rb["excerpt"]],
+        "errors": [ra["error"], rb["error"]],
+        "expected": expected,
+        "severity_hint": severity_hint,
+        "request_excerpts": [json.dumps(full_a)[:200], json.dumps(full_b)[:200]],
+    }
+
+
+# ---------------------------------------------------------------------------
+# PROBES — Plan 42-01 (10) + Plan 42-02 (15) = 25 probes covering Surfaces 1-8.
 # Each entry is a dict so adding fields stays non-breaking.
 # Driver dispatches on entry["method"]:
 #   GET    -> probe_get
 #   STREAM -> probe_stream (Surface 4)
-#   POST   -> probe (default; Surfaces 1,2,3, tools)
-# Task 2 will add: STAT_N (Surface 5), PAIR (Surface 8).
+#   PAIR   -> probe_concurrent_pair (Surface 8; uses body_a + body_b)
+#   STAT_N -> probe() called n_repeats times; aggregated record (Surface 5)
+#   POST   -> probe (default; Surfaces 1,2,3,7, tools, coherence)
 # ---------------------------------------------------------------------------
 PROBES = [
     # ----- Surface 1: endpoint coverage (5 probes) -----
@@ -479,19 +573,135 @@ PROBES = [
         "expected": "finish_reason=tool_calls; message.tool_calls[0].function.name=get_weather (RESEARCH preliminary 8 CONFORMANT)",
         "severity_hint": "PASS",
     },
-    # NOTE: Task 2 of Plan 42-02 will append probes 16-25 (Surfaces 5+6+7+8).
+    # ----- Surface 7: error surface (4 probes) -----
+    {
+        "label": "16-malformed-json-body",
+        "category": "error",
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "body": {},
+        "raw_body": "NOT JSON",
+        "max_tokens": 8,
+        "expected": "HTTP 400 + flat {error:'Invalid JSON in request body...'} envelope (RESEARCH preliminary 5)",
+        "severity_hint": "LOW",
+    },
+    {
+        "label": "17-bogus-model-id",
+        "category": "error",
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "body": {"messages": [{"role": "user", "content": "hi"}]},
+        "body_model_override": "BOGUS_MODEL",
+        "max_tokens": 4,
+        "expected": "HTTP 404 + HF-fetch error string (RESEARCH preliminary 4); SAFE: BOGUS_MODEL fails at HF metadata-fetch step BEFORE tokenizer swap",
+        "severity_hint": "MEDIUM",
+    },
+    {
+        "label": "18-missing-model-field",
+        "category": "error",
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "body": {"messages": [{"role": "user", "content": "hi"}]},
+        "omit_model_field": True,
+        "max_tokens": 4,
+        "expected": "HTTP 200 + response.model=='default_model' (RESEARCH preliminary 6: silent fallback)",
+        "severity_hint": "MEDIUM",
+    },
+    {
+        "label": "19-n-greater-than-1",
+        "category": "error",
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "body": {"messages": [{"role": "user", "content": "hi"}], "n": 3},
+        "max_tokens": 4,
+        "expected": "HTTP 200 + choices.length==1 (RESEARCH preliminary 3: n silently ignored)",
+        "severity_hint": "LOW",
+    },
+    # ----- Surface 5: schema-rate at temp=0 with response_format (1 stat + 1 control) -----
+    {
+        "label": "20-response-format-rate-temp0-N5",
+        "category": "response_format_stat",
+        "method": "STAT_N",
+        "n_repeats": 5,
+        "path": "/v1/chat/completions",
+        "body": {
+            "messages": [{"role": "user", "content": "Return one user with name and age as JSON"}],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.0,
+        },
+        "max_tokens": 80,
+        "expected": "Aggregate valid_json_count vs prose_wrap_count over N=5 — informs response_format efficacy at temp=0",
+        "severity_hint": "HIGH",
+    },
+    {
+        "label": "21-no-response-format-rate-temp0-N5",
+        "category": "response_format_stat",
+        "method": "STAT_N",
+        "n_repeats": 5,
+        "path": "/v1/chat/completions",
+        "body": {
+            "messages": [{"role": "user", "content": "Return one user with name and age as JSON"}],
+            "temperature": 0.0,
+        },
+        "max_tokens": 80,
+        "expected": "Control: prompt-only JSON ask. Compare to probe 20 — informs RESEARCH Open Question 2",
+        "severity_hint": "LOW",
+    },
+    # ----- Surface 8: concurrency (1 probe, N=2 ONLY per RESEARCH Pitfall 1) -----
+    {
+        "label": "22-concurrent-pair",
+        "category": "concurrency",
+        "method": "PAIR",
+        "path": "/v1/chat/completions",
+        "body_a": {"messages": [{"role": "user", "content": "say A"}]},
+        "body_b": {"messages": [{"role": "user", "content": "say B"}]},
+        "max_tokens": 8,
+        "expected": "wall_clock ≈ max(elapsed_each), not sum — confirms BatchGenerator parallel decode (RESEARCH preliminary 10)",
+        "severity_hint": "PASS",
+    },
+    # ----- Surface 6: multi-call coherence (3 sequential probes; Plan 42-03 joins them) -----
+    {
+        "label": "23-coherence-call-1",
+        "category": "coherence",
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "body": {"messages": [{"role": "user", "content": "What is 2+2?"}]},
+        "max_tokens": 8,
+        "expected": "response_excerpt contains '4'; no leakage from prior calls (none yet)",
+        "severity_hint": "PASS",
+    },
+    {
+        "label": "24-coherence-call-2",
+        "category": "coherence",
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "body": {"messages": [{"role": "user", "content": "What is 3+3?"}]},
+        "max_tokens": 8,
+        "expected": "response_excerpt contains '6'; no leakage from probe 23 (must NOT contain '4' as the answer)",
+        "severity_hint": "PASS",
+    },
+    {
+        "label": "25-coherence-call-3",
+        "category": "coherence",
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "body": {"messages": [{"role": "user", "content": "What is 5+5?"}]},
+        "max_tokens": 8,
+        "expected": "response_excerpt contains '10'; no leakage from probes 23/24 (must NOT contain '4' or '6' as the answer)",
+        "severity_hint": "PASS",
+    },
 ]
 
 
 def _dispatch(entry):
     """Dispatch one PROBES entry to the right helper based on entry["method"].
 
-    Supported methods after Plan 42-02 Task 1:
+    Supported methods (Plan 42-01 + Plan 42-02):
       * GET    -> probe_get
       * STREAM -> probe_stream (Surface 4)
-      * POST   -> probe (default; Surfaces 1,2,3, tools)
-
-    Task 2 will add PAIR (Surface 8) and STAT_N (Surface 5) arms.
+      * PAIR   -> probe_concurrent_pair (Surface 8)
+      * STAT_N -> probe() called n_repeats times; aggregated record (Surface 5)
+      * POST   -> probe (default; Surfaces 1,2,3,7, tools, coherence)
     """
     label = entry["label"]
     category = entry["category"]
@@ -506,10 +716,109 @@ def _dispatch(entry):
         max_tokens = entry.get("max_tokens", 64)
         return probe_stream(label, category, body, expected, severity_hint,
                             path=path, max_tokens=max_tokens)
+    if method == "PAIR":
+        body_a = entry.get("body_a", {})
+        body_b = entry.get("body_b", {})
+        max_tokens = entry.get("max_tokens", 8)
+        return probe_concurrent_pair(label, category, body_a, body_b,
+                                     expected, severity_hint,
+                                     path=path, max_tokens=max_tokens)
+    if method == "STAT_N":
+        return _dispatch_stat_n(entry)
     body = entry.get("body", {})
     max_tokens = entry.get("max_tokens", 8)
+    raw_body = entry.get("raw_body")
+    omit_model_field = entry.get("omit_model_field", False)
+    body_model_override = entry.get("body_model_override")
     return probe(label, category, body, expected, severity_hint,
-                 path=path, max_tokens=max_tokens)
+                 path=path, max_tokens=max_tokens,
+                 raw_body=raw_body,
+                 omit_model_field=omit_model_field,
+                 body_model_override=body_model_override)
+
+
+def _dispatch_stat_n(entry):
+    """Run a probe N times; aggregate JSON-content stats into one record.
+
+    Used by Surface 5 schema-rate probes (20 + 21). Per record:
+      * http_codes: list of N status codes
+      * valid_json_count: how many .choices[0].message.content parsed as JSON
+      * prose_wrap_count: how many content bodies begin with "```json"
+      * content_excerpts: leading 200 chars of each repeat's content for
+        human inspection in Plan 42-03
+      * elapsed_s_total: total wall-clock across N requests
+    Aggregate keeps the JSONL one-line-per-probe invariant intact.
+
+    Unlike probe(), this helper fetches the FULL response body (no 300-char
+    excerpt cap) so the JSON parse + ```json detection is reliable on
+    response_format probes whose content can exceed the cap.
+    """
+    label = entry["label"]
+    category = entry["category"]
+    expected = entry["expected"]
+    severity_hint = entry["severity_hint"]
+    path = entry.get("path", "/v1/chat/completions")
+    body = entry.get("body", {})
+    max_tokens = entry.get("max_tokens", 80)
+    n_repeats = entry.get("n_repeats", 5)
+    http_codes = []
+    valid_json_count = 0
+    prose_wrap_count = 0
+    content_excerpts = []
+    elapsed_total = 0.0
+    full = {"model": MODEL_PATH, "max_tokens": max_tokens, **body}
+    request_excerpt = json.dumps(full)[:300]
+    url = f"{ENDPOINT}{path}"
+    for _ in range(n_repeats):
+        t0 = time.time()
+        try:
+            r = requests.post(url, json=full, timeout=120)
+            elapsed_total += time.time() - t0
+            http_codes.append(r.status_code)
+            try:
+                obj = r.json()
+                content = (
+                    obj.get("choices", [{}])[0].get("message", {}).get("content") or ""
+                )
+            except Exception:
+                content = ""
+        except Exception:
+            elapsed_total += time.time() - t0
+            http_codes.append(None)
+            content = ""
+        content_excerpts.append(content[:200])
+        stripped = content.strip()
+        if stripped.startswith("```json"):
+            prose_wrap_count += 1
+            fenced = stripped[len("```json"):].strip()
+            if fenced.endswith("```"):
+                fenced = fenced[:-3].strip()
+            try:
+                json.loads(fenced)
+                valid_json_count += 1
+            except Exception:
+                pass
+        elif stripped.startswith("{") or stripped.startswith("["):
+            try:
+                json.loads(stripped)
+                valid_json_count += 1
+            except Exception:
+                pass
+    return {
+        "label": label,
+        "category": category,
+        "method": "STAT_N",
+        "path": path,
+        "n_repeats": n_repeats,
+        "http_codes": http_codes,
+        "valid_json_count": valid_json_count,
+        "prose_wrap_count": prose_wrap_count,
+        "content_excerpts": content_excerpts,
+        "elapsed_s_total": round(elapsed_total, 2),
+        "expected": expected,
+        "severity_hint": severity_hint,
+        "request_excerpt": request_excerpt,
+    }
 
 
 def main() -> int:
