@@ -2,20 +2,23 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-05 after v2.5 REPL ergonomics milestone shipped)
+See: `.planning/PROJECT.md` (updated 2026-05-06 starting v2.6 GSD self-planning milestone)
 
-**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.4 verdict 96/100 KEEP; all 4 dimensions ≥80%; widest KEEP margin in project history). **v2.5 ships REPL ergonomics**: 9 slash commands + $EDITOR multi-line + PrettyPrompt readline + cross-session history.
-**Current focus:** **Between milestones.** v2.5 SHIPPED 2026-05-05; v2.6 unscoped (observation-driven from daily-driver use). Run `/gsd:new-milestone` when ready to scope.
+**Core value:** Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **empirically** 안정적으로 돌린다 (post-v2.4 verdict 96/100 KEEP). v2.5 shipped REPL ergonomics. **v2.6 introduces self-planning**: blueCode 자체가 사용자 task 를 분해하고 실행한다 — Plan generation + PlanOrchestrator + Deviation Rules + Atomic commit per task.
+**Current focus:** **v2.6 in flight (roadmap drafted).** GSD-style self-planning Robust MVP (A + D + E from `.planning/docs/gsd/05-ADOPTION-BLUEPRINT.md`). Phase numbers 37–41 (5 phases, strict linear chain).
 
 ## Current Position
 
-**Between milestones — v2.5 SHIPPED.**
+Phase: 37 of 41 (Plan generation foundation) — not started
+Plan: — (TBD pending /gsd:plan-phase 37)
+Status: Roadmap drafted, awaiting user approval before /gsd:plan-phase 37
+Last activity: 2026-05-06 — Roadmap drafted by gsd-roadmapper agent (5 phases, 22/22 requirements mapped)
 
-11 milestones total. Most recent: v2.5 REPL ergonomics (6 phases / 13 plans / 12 reqs / +83 tests / bench 7/7 PASS preserved / zero Core diff / shipped 2026-05-05).
+**v2.6 progression:** v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → v2.5 ✓ → **v2.6 (roadmap drafted, started 2026-05-06)**
 
-Progress: v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → **v2.5 ✓ (shipped 2026-05-05)** → v2.6 (unscoped)
+Progress: ░░░░░░░░░░ 0/? plans (plan counts TBD pending phase planning)
 
-Next: `/gsd:new-milestone` to scope v2.6 (observation-driven; not from carried-forward backlog).
+Next: User approves ROADMAP.md → milestone-init commit → `/clear` → `/gsd:plan-phase 37`.
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -94,10 +97,18 @@ Plus v2.5 tech debt aggregated in `.planning/milestones/v2.5-MILESTONE-AUDIT.md`
 
 ## Session Continuity
 
-Last session: 2026-05-05 (v2.5 milestone close — audit + complete-milestone same session)
-Stopped at: **v2.5 MILESTONE COMPLETE.** All 6 phases shipped + verified + user-approved. Audit ran (status: tech_debt — no critical gaps; 7/7 cross-phase integration; 7/7 E2E flows). Milestone archived to `.planning/milestones/v2.5-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `.planning/milestones/v2.5-phases/`. PROJECT.md evolved with 8 v2.5 Validated requirements + v2.6 candidates. ROADMAP.md + REQUIREMENTS.md + .planning/phases/ deleted (fresh for next milestone).
+Last session: 2026-05-06 (v2.6 milestone start — analysis + new-milestone + roadmap drafted same session)
+Stopped at: **v2.6 ROADMAP.md drafted by gsd-roadmapper agent.** 5 phases (37–41) covering 22/22 requirements (PLANGEN×4 → 37, PLANORCH×5 → 38, DEV×4 → 39, COMMIT×4 → 40, UX×5 → 37+41). Strict linear chain. NEXT: user approves roadmap → milestone-init commit → `/clear` → `/gsd:plan-phase 37`.
 Resume file: None
-Next workflow trigger: `/gsd:new-milestone` to scope v2.6 (observation-driven; not from carried-forward backlog). Recommended `/clear` first.
+Next workflow trigger: User approval of ROADMAP.md → milestone-init commit → recommended `/clear` → `/gsd:plan-phase 37` to draft Phase 37 plans (PLANGEN-01..04 + UX-01).
+
+**v2.6 inputs (load-bearing for downstream phases):**
+- `.planning/docs/gsd/00-OVERVIEW.md` — 5 invariants (Plans Are Prompts, Quality Curve, Goal-Backward, File-as-State, Atomic+Wave)
+- `.planning/docs/gsd/01-PLANNING-PIPELINE.md` — research → plan → check → revise loop algorithm
+- `.planning/docs/gsd/02-EXECUTION-PIPELINE.md` — wave-parallel + deviation rules + atomic commit + verifier (Rules 1–4 verbatim text source for DEV-01/DEV-02 prompts)
+- `.planning/docs/gsd/03-AGENT-CONTRACTS.md` — 5 agent input/output contracts
+- `.planning/docs/gsd/04-FILE-PROTOCOL.md` — file system as state machine (PLAN.md / SUMMARY.md frontmatter conventions for PLANORCH-03)
+- `.planning/docs/gsd/05-ADOPTION-BLUEPRINT.md` — 6 phase adoption plan with F# code sketches; v2.6 = Phase A + D + E (load-bearing for phase planning)
 
 ## Empirical Baselines (post-v2.5)
 

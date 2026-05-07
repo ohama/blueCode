@@ -20,13 +20,27 @@ v2.5 REPL ergonomics shipped 2026-05-05. Fifth-generation **Cli-only** milestone
 
 Detailed history: `.planning/MILESTONES.md` + `.planning/milestones/v{1.0,1.1,1.2,1.3,1.4,2.0,2.1,2.2,2.3,2.4,2.5}-ROADMAP.md`.
 
-## Next Milestone: v2.6 (unscoped)
+## Current Milestone: v2.6 GSD self-planning
 
-v2.5 closed all v2.5-scoped REPL ergonomic gaps. Next milestone scope is **observation-driven** — start daily-driver use of the new REPL surface (PrettyPrompt + 9 slash commands + /edit) and let pain signals from real coding sessions surface v2.6 candidates via `/gsd:add-todo`. Run `/gsd:new-milestone` when ready to scope.
+**Started:** 2026-05-06.
 
-## Future Milestone Goals (post-v2.5)
+**Goal:** blueCode 가 사용자에게서 **단일 큰 task** 를 받았을 때, 그 task 를 **1–3개 sub-task 로 자동 분해 → 사용자 confirm → sequential 실행 → per-task atomic commit** 까지 자체 수행하는 self-planning agent 능력을 도입한다. 분해/실행 정책은 GSD-style (deviation rules + auth gates) 로 system-prompt 에 박혀 일관된 self-correction 을 보장.
 
-v2.6+ candidates (observation-driven; not yet scoped):
+**Target features (Robust MVP — A + D + E from `.planning/docs/gsd/05-ADOPTION-BLUEPRINT.md`):**
+
+- **Plan schema + planner system prompt** — F# Plan/PlanTask records, JSON schema validation, prescriptive decomposition rules (2–3 task max, vertical slice, specific files/action/verify/done)
+- **PlanOrchestrator** — sequential executor across decomposed tasks, `.planning/quick/NNN-slug/` session dirs, PLAN.md + SUMMARY.md output
+- **Deviation Rules baked in executor system prompt** — Rules 1–3 auto-fix policy (bug / missing critical / blocker), Rule 4 stop-and-ask (architectural), authentication gate detection
+- **Atomic commit protocol per task** — F# helper for individual file staging (no `git add .` / `-A`), commit type heuristic, rollback on verify failure
+- **CLI/REPL surface** — `--plan2` flag (or rename `--plan`/`/plan` per architecture decision), Spectre.Console plan display, user confirm gate, sequential progress UX
+
+**Source materials:** `.planning/docs/gsd/00..05` (6 docs, 86KB) — analysis of `.claude/commands/gsd/` + `.claude/agents/gsd-*.md` written 2026-05-06 in pre-milestone session. `05-ADOPTION-BLUEPRINT.md` is the load-bearing input for requirements + roadmap (replaces the project-research phase that would otherwise spawn 4 parallel researchers).
+
+**Quality bar (matches v2.5):** ~5 phases, ~13–15 plans, ~10–12 requirements, bench gate 7/7 PASS preserved milestone-wide. Cli-first preferred but Plan schema may require Core additions (`BlueCode.Core.Plan` module) — Cli-only invariant **NOT** locked for this milestone (architectural milestone like v2.0).
+
+## Future Milestone Goals (post-v2.6)
+
+v2.7+ candidates (deferred from prior PROJECT.md; observation-driven; not yet scoped):
 
 - **MODEL-SWITCH-01** — `/model 35b` / `/model 122b` mid-session switch (carried-forward from v2.5; requires `--with-35b` opt-in + 35B service load probe at runtime)
 - **SLASH-COMP-01** — Slash command auto-completion via PrettyPrompt completion API (newly-surfaced from v2.5)
@@ -133,6 +147,22 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Per-port `MaxModelLen` visibility (OBS-06) — minor
 - Prompt cache hygiene / launchd kickstart (OPS-01) — zero kickstarts in v1.3
 - Multi-platform `tryParseModelId` — Windows OOS so likely permanent
+
+### Active (v2.6 — in flight)
+
+<!-- Current milestone target features. Categories derived from `.planning/docs/gsd/05-ADOPTION-BLUEPRINT.md` Phase A + D + E scope. -->
+
+- [ ] **Plan generation** — F# `BlueCode.Core.Plan` module: `PlanRequest` / `PlanTask` records, JSON schema validation, `plannerSystemPrompt` enforcing 2–3 task max + vertical slice + specific Files/Action/Verify/Done per task
+- [ ] **PlanOrchestrator** — Sequential task execution across decomposed plan, `.planning/quick/NNN-slug/` session dirs, PLAN.md + SUMMARY.md output, STATE.md "Quick Tasks Completed" row append
+- [ ] **Deviation Rules in executor** — Rules 1–3 auto-fix policy (bug / missing critical / blocker) baked in executor `system` prompt; Rule 4 stop-and-return with `architectural_decision_needed` status
+- [ ] **Authentication gate detection** — Executor recognizes "Not authenticated" / "401" / "403" / "Please run X login" patterns and returns `auth_required` status (NOT failure)
+- [ ] **Atomic commit per task** — F# helper for individual file staging (rejects `git add .`/`-A`), commit type heuristic (feat/fix/test/refactor/perf/docs/style/chore), commit message format `{type}(quick-{NNN}): {task name}`, hash captured for SUMMARY
+- [ ] **CLI/REPL surface** — `--plan` flag evolution OR new flag (`--decompose`?) + REPL slash command (`/plan2` or extension of `/plan`); architecture decision in early phase
+- [ ] **User confirm gate** — Spectre.Console plan display with task table; `IKeyReader` reuse from PlanGate (v2.0 pattern) for y/n/edit responses
+- [ ] **Sequential progress UX** — Per-task progress indicator (▶ Task N/M), commit hash echo on completion
+- [ ] **Session resumability** — Mid-plan crash recovery: re-invocation with same session id continues from incomplete task (read SUMMARY.md, skip completed)
+
+(Total ≈ 9 active candidates pending requirements scoping; categorize via REQUIREMENTS.md generation in next phase)
 
 ### Out of Scope
 
@@ -297,4 +327,6 @@ Mac 로컬 Qwen 3.5 122B를 strong-typed F# agent loop로 **안정적으로** �
 - Project memory (`CLAUDE.md` discovery)
 
 ---
-*Last updated: 2026-05-05 after v2.5 REPL ergonomics milestone shipped — 6 phases (31-36; Phase 36 inserted), 13 plans, 12 requirements (all satisfied), +83 tests (282→365), bench gate 7/7 PASS preserved milestone-wide, zero `src/BlueCode.Core/` diff. Port-template (IKeyReader v2.0 → IEditorLauncher Phase 34 → IPromptReader Phase 35) crystallized as load-bearing. 11 milestones shipped.*
+*Last updated: 2026-05-06 starting v2.6 GSD self-planning milestone — Robust MVP scope (Phases A + D + E from `.planning/docs/gsd/05-ADOPTION-BLUEPRINT.md`). Pre-milestone session produced `.planning/docs/gsd/` (6 docs / 86KB / 2,324 lines analyzing `.claude/commands/gsd/` + `.claude/agents/gsd-*.md`). Targets ~5 phases / ~13–15 plans / ~10–12 requirements. v2.5 final state preserved: 365 tests, bench gate 7/7 PASS, port-template (IKeyReader → IEditorLauncher → IPromptReader) load-bearing.*
+
+*Prior update: 2026-05-05 after v2.5 REPL ergonomics milestone shipped — 6 phases (31-36; Phase 36 inserted), 13 plans, 12 requirements (all satisfied), +83 tests (282→365), bench gate 7/7 PASS preserved milestone-wide, zero `src/BlueCode.Core/` diff. Port-template (IKeyReader v2.0 → IEditorLauncher Phase 34 → IPromptReader Phase 35) crystallized as load-bearing. 11 milestones shipped.*
