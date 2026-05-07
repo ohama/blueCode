@@ -9,16 +9,18 @@ See: `.planning/PROJECT.md` (updated 2026-05-06 starting v2.6 GSD self-planning 
 
 ## Current Position
 
-Phase: 37 of 41 (Plan generation foundation) — not started
-Plan: — (TBD pending /gsd:plan-phase 37)
-Status: Roadmap drafted, awaiting user approval before /gsd:plan-phase 37
-Last activity: 2026-05-06 — Roadmap drafted by gsd-roadmapper agent (5 phases, 22/22 requirements mapped)
+Phase: 42 of 42 (Qwen 122B OpenAI compatibility verification) — IN PROGRESS
+Plan: 01 of 03 — COMPLETE (probe harness scaffolding)
+Status: Plan 42-01 ✓ complete. Plan 42-02 (streaming/concurrency/errors) and Plan 42-03 (rendering) ready to execute.
+Last activity: 2026-05-07 — Plan 42-01 complete. 10 OpenAI-compat probes (Surfaces 1+2+3) reproduced RESEARCH preliminaries 1-7+11 verbatim; bench gate sandwich 7/7 PASS pre+post; zero src/ diff.
 
 **v2.6 progression:** v1.0 ✓ → v1.1 ✓ → v1.2 ✓ → v1.3 ✓ → v1.4 ✓ → v2.0 ✓ → v2.1 ✓ → v2.2 ✓ → v2.3 ✓ → v2.4 ✓ → v2.5 ✓ → **v2.6 (roadmap drafted, started 2026-05-06)**
 
-Progress: ░░░░░░░░░░ 0/? plans (plan counts TBD pending phase planning)
+Progress: █░░░░░░░░░ 1/? plans (Phase 42 partial: 1/3 plans done; Phases 37-41 plan counts still TBD)
 
-Next: User approves ROADMAP.md → milestone-init commit → `/clear` → `/gsd:plan-phase 37`.
+Next: Plan 42-02 (streaming + concurrency + errors; ~15 more probes extending Surfaces 4-7) OR Plan 42-03 (rendering — populates `--render` argparse branch + writes `documentation/qwen35-122b-openai-compat.md`). Plan 42-02 recommended next (probe content first, then render).
+
+**Next Phase:** Phase 42 in flight — continue with Plan 42-02 / 42-03 before pivoting to Phase 37 implementation work.
 
 ## Performance Metrics (cumulative, frozen)
 
@@ -78,6 +80,13 @@ Stable patterns established across milestones (load-bearing for next session):
 - **Zero-source-diff milestone pattern (v2.1 + v2.4)** — Eval/measurement work can ship meaningful capability without `src/` changes. **Cli-only milestone variant (v2.5)** — meaningful Cli expansion ships with `git diff milestone-v<prev> HEAD -- src/BlueCode.Core/` empty assertion as established invariant.
 - **Measurement-first scoping (v2.4)** — Inverted v2.2/v2.3's intervention-first pattern. *"Is the score real, or is the measurement instrument wrong?"*
 
+### Roadmap Evolution
+
+Mid-milestone phase additions/changes for v2.6:
+
+- **2026-05-06: Phase 42 added** — "Qwen 122B OpenAI compatibility verification" via `/gsd:add-phase`. Investigation/validation work to empirically verify `mlx_lm.server` @ 8001's `/v1/chat/completions` OpenAI-compat surface (endpoint coverage, `response_format` field, role handling, streaming, schema enforcement, multi-call coherence, error surface, concurrency). Default `depends_on: Phase 41`; reassessable at `/gsd:plan-phase 42` time. No requirements mapped yet (Phase 42 may surface new v2.6 requirements via `/gsd:add-todo` if HIGH-severity findings emerge). Pre-existing knowledge: Role=System mid-conversation REJECTED (Phase 17-02 + 20-03), thinking-mode `<think>` token mitigation, schema rate 0/50 perfect under current setup (v2.1).
+- **2026-05-07: Plan 42-01 complete** — Probe harness scaffolding shipped. `bench/eval-openai-compat.py` (318 LOC, dict-list PROBES + probe()/probe_get() helpers + per-record fp.flush()), `bench/eval-qwen35-122b.sh --openai-compat` mode wired (intentionally NOT in `--full`), `jsonschema>=4.21` added to venv. 10 probes (Surface 1: 5 endpoint + Surface 2: 3 response_format + Surface 3: 2 role) ran end-to-end; all HTTP codes match RESEARCH preliminaries 1-7+11 verbatim. Bench-gate sandwich 7/7 PASS pre (02:36:44Z) + 7/7 PASS post (02:43:26Z). Zero `src/` diff. LOG_DIR: `bench/runs/qwen35-eval-20260507-114034/probes.jsonl`. Decisions: dict-list shape (vs RESEARCH skeleton's tuples) for forward compat; PROBES populated in Task 1 not Task 2 (Task 1 verify required ≥10 records); `--full` intentionally NOT calling `run_openai_compat` per RESEARCH anti-pattern (parallel probes contaminate KV).
+
 ### Pending Todos
 
 None pending.
@@ -97,10 +106,10 @@ Plus v2.5 tech debt aggregated in `.planning/milestones/v2.5-MILESTONE-AUDIT.md`
 
 ## Session Continuity
 
-Last session: 2026-05-06 (v2.6 milestone start — analysis + new-milestone + roadmap drafted same session)
-Stopped at: **v2.6 ROADMAP.md drafted by gsd-roadmapper agent.** 5 phases (37–41) covering 22/22 requirements (PLANGEN×4 → 37, PLANORCH×5 → 38, DEV×4 → 39, COMMIT×4 → 40, UX×5 → 37+41). Strict linear chain. NEXT: user approves roadmap → milestone-init commit → `/clear` → `/gsd:plan-phase 37`.
+Last session: 2026-05-07 (Plan 42-01 executed by gsd-executor agent; pre+post bench-gate sandwich both 7/7 PASS)
+Stopped at: **Plan 42-01 complete** — 10-probe harness ready; LOG_DIR `bench/runs/qwen35-eval-20260507-114034/probes.jsonl`. NEXT: `/gsd:execute-phase 42` Plan 42-02 (streaming + concurrency + errors; ~15 more probes for Surfaces 4-7) OR Plan 42-03 (rendering branch + final docs/qwen35-122b-openai-compat.md).
 Resume file: None
-Next workflow trigger: User approval of ROADMAP.md → milestone-init commit → recommended `/clear` → `/gsd:plan-phase 37` to draft Phase 37 plans (PLANGEN-01..04 + UX-01).
+Next workflow trigger: `/gsd:execute-phase 42` to continue Plans 42-02/42-03, OR pivot to `/gsd:plan-phase 37` for v2.6 implementation start (Phase 42 plannable independently per ROADMAP).
 
 **v2.6 inputs (load-bearing for downstream phases):**
 - `.planning/docs/gsd/00-OVERVIEW.md` — 5 invariants (Plans Are Prompts, Quality Curve, Goal-Backward, File-as-State, Atomic+Wave)
