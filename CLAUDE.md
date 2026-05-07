@@ -197,6 +197,7 @@ Gate labels: T6_122b W1_122b W2_122b T1_122b T5_122b B2_122b (6 entries in basel
 Fixtures live in `bench/fixtures/`. Logs land in `bench/runs/<timestamp>/`
 (gitignored). See `documentation/bench.md` for full usage and fixture conventions.
 - `documentation/qwen35-122b-coding-eval.md` — empirical 100-point scorecard verdict for Qwen 3.5 122B coding capability (v2.1 milestone). Reproduce via `bash bench/eval-qwen35-122b.sh --full`.
+- `documentation/qwen35-122b-openai-compat.md` — Phase 42 empirical OpenAI-compat conformance report (8 surfaces, 25 probes). HIGH-severity finding: `response_format` field is silently ignored by mlx_lm.server even at temp=0.0 — blueCode v2.6+ MUST NOT rely on it; use prompt-instructed schema with retry. PASS finding (v2.7+ candidate): native `tools`/`tool_choice` envelope is honored (probe 15) — replacement candidate for the custom JSON-schema action DU. Reproduce via `bash bench/eval-qwen35-122b.sh --openai-compat` then `bench/.venv-eval/bin/python bench/eval-openai-compat.py --render <jsonl>`.
 - Bench gate (`bench/run.sh --gate`) is the regression authority; eval doc is observational. Run gate after any eval invocation to confirm fixtures restored cleanly by EXIT trap.
 
 ## When Stuck
